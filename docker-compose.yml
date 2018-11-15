@@ -1,6 +1,14 @@
 version: '3'
 
 services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.8
+    container_name: jaeger
+    ports:
+    - 16686:16686
+    environment:
+    - COLLECTOR_ZIPKIN_HTTP_PORT=9411
+
   db:
     image: postgres
     ports: ["6543:5432"]
@@ -28,6 +36,8 @@ services:
     - CONCOURSE_ADD_LOCAL_USER=test:test,guest:guest
     - CONCOURSE_MAIN_TEAM_LOCAL_USER=test
     - CONCOURSE_LOG_LEVEL=debug
+    - CONCOURSE_ZIPKIN_URL=http://jaeger:9411/api/v1/spans
+    - CONCOURSE_ZIPKIN_COMPONENT=atc
 
   worker:
     build:

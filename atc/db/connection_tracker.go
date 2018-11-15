@@ -1,8 +1,11 @@
 package db
 
 import (
+	"context"
 	"runtime/debug"
 	"sync"
+
+	"github.com/opentracing/opentracing-go"
 )
 
 var GlobalConnectionTracker = NewConnectionTracker()
@@ -19,10 +22,15 @@ func NewConnectionTracker() *ConnectionTracker {
 	}
 }
 
-func (tracker *ConnectionTracker) Track() *ConnectionSession {
+func (tracker *ConnectionTracker) Track(ctx context.Context) *ConnectionSession {
+	// CC: Track() could take a context that we just propagate...
+	span := opentracing.SpanFromContext(ctx)
+	span.LogEvent("started")
+
 	session := &ConnectionSession{
 		tracker: tracker,
 		stack:   string(debug.Stack()),
+		ctx:     opentracing.ContextWithSpan(context.Background(), span),
 	}
 
 	tracker.sessionsL.Lock()
@@ -54,9 +62,15 @@ func (tracker *ConnectionTracker) remove(session *ConnectionSession) {
 
 type ConnectionSession struct {
 	tracker *ConnectionTracker
+	ctx     context.Context
 	stack   string
 }
 
 func (session *ConnectionSession) Release() {
+	span := opentracing.SpanFromContext(session.ctx)
+	span.LogEvent("release")
+
 	session.tracker.remove(session)
+
+	span.Finish()
 }

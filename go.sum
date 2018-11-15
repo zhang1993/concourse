@@ -89,6 +89,8 @@ github.com/cloudfoundry/socks5-proxy v0.0.0-20180530211953-3659db090cb2 h1:9j2Kb
 github.com/cloudfoundry/socks5-proxy v0.0.0-20180530211953-3659db090cb2/go.mod h1:0a+Ghg38uB86Dx+de84dFSkILTnBHzCpFMRnjHgSzi4=
 github.com/cockroachdb/cockroach-go v0.0.0-20160916181719-31611c0501c8 h1:0qNPJvn7to269Uth4ChEH1SkIUkFlT/SlvWkaXerGgk=
 github.com/cockroachdb/cockroach-go v0.0.0-20160916181719-31611c0501c8/go.mod h1:XGLbWH/ujMcbPbhZq52Nv6UrCghb1yGn//133kEsvDk=
+github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd h1:qMd81Ts1T2OTKmB4acZcyKaMtRnY5Y44NuXGX2GFJ1w=
+github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
 github.com/concourse/baggageclaim v1.2.0 h1:f6xithGCrPlWsaFTvlp+O5B1fmjub9Rt30TdAVhSv/w=
 github.com/concourse/baggageclaim v1.2.0/go.mod h1:8tZxZHd3i7B3hrqxPc52gBCWDtWmJkMN5+gBVZ9E+y4=
 github.com/concourse/baggageclaim v1.3.0 h1:OjPyzcHSvY6REqobqv1V2oKxvZg/FH/lh473YkWh2JI=
@@ -378,6 +380,10 @@ github.com/opencontainers/image-spec v1.0.1 h1:JMemWkRwHx4Zj+fVxWoMCFm/8sYGGrUVo
 github.com/opencontainers/image-spec v1.0.1/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zMzWCbyJoFRP3s7yZA0=
 github.com/opencontainers/runc v0.1.1 h1:GlxAyO6x8rfZYN9Tt0Kti5a/cP41iuiO2yYT0IJGY8Y=
 github.com/opencontainers/runc v0.1.1/go.mod h1:qT5XzbpPznkRYVz/mWwUaVBUv2rmF59PVA73FjuZG0U=
+github.com/opentracing-contrib/go-stdlib v0.0.0-20181101210145-c9628a4f0148 h1:2ZkMXNaD27GtWBdoUfsh6n6tY+qSoAEgLfKJV6ImK7k=
+github.com/opentracing-contrib/go-stdlib v0.0.0-20181101210145-c9628a4f0148/go.mod h1:PLldrQSroqzH70Xl+1DQcGnefIbqsKR7UDaiux3zV+w=
+github.com/opentracing/opentracing-go v1.0.2 h1:3jA2P6O1F9UOrWVpwrIo17pu01KWvNWg4X946/Y5Zwg=
+github.com/opentracing/opentracing-go v1.0.2/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/ory/dockertest v3.3.2+incompatible h1:uO+NcwH6GuFof/Uz8yzjNi1g0sGT5SLAJbdBvD8bUYc=
 github.com/ory/dockertest v3.3.2+incompatible/go.mod h1:1vX4m9wsvi00u5bseYwXaSnhNrne+V0E6LAcBILJdPs=
 github.com/otiai10/copy v0.0.0-20180813032824-7e9a647135a1 h1:QJNFh2XEtzwESNsblZgBuCsv38DU5vC/u+5DNBekwJM=
@@ -448,6 +454,10 @@ github.com/tedsuo/rata v1.0.1-0.20170830210128-07d200713958 h1:mueRRuRjR35dEOkHd
 github.com/tedsuo/rata v1.0.1-0.20170830210128-07d200713958/go.mod h1:X47ELzhOoLbfFIY0Cql9P6yo3Cdwf2CMX3FVZxRzJPc=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926 h1:G3dpKMzFDjgEh2q1Z7zUUtKa8ViPtH+ocF0bE0g00O8=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
+github.com/uber/jaeger-client-go v2.15.0+incompatible h1:NP3qsSqNxh8VYr956ur1N/1C1PjvOJnJykCzcD5QHbk=
+github.com/uber/jaeger-client-go v2.15.0+incompatible/go.mod h1:WVhlPFC8FDjOFMMWRy2pZqQJSXxYSwNYOkTr/Z6d3Kk=
+github.com/uber/jaeger-lib v1.5.0 h1:OHbgr8l656Ub3Fw5k9SWnBfIEwvoHQ+W2y+Aa9D1Uyo=
+github.com/uber/jaeger-lib v1.5.0/go.mod h1:ComeNDZlWwrWnDv8aPp0Ba6+uUTzImX/AauajbLI56U=
 github.com/vito/go-interact v0.0.0-20171111012221-fa338ed9e9ec h1:Klu98tQ9Z1t23gvC7p7sCmvxkZxLhBHLNyrUPsWsYFg=
 github.com/vito/go-interact v0.0.0-20171111012221-fa338ed9e9ec/go.mod h1:wPlfmglZmRWMYv/qJy3P+fK/UnoQB5ISk4txfNd9tDo=
 github.com/vito/go-sse v0.0.0-20160212001227-fd69d275caac h1:W7dFvBGUW6cNTGkOzxnb/zIPTrJiM/biDuycvlo3/ek=

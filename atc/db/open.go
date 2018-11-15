@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"errors"
@@ -17,6 +18,8 @@ import (
 	"github.com/concourse/concourse/atc/db/migration"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/lib/pq"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/log"
 )
 
 //go:generate counterfeiter . Conn
@@ -375,27 +378,50 @@ func (db *db) Begin() (Tx, error) {
 		return nil, err
 	}
 
-	return &dbTx{tx, GlobalConnectionTracker.Track()}, nil
+	span := opentracing.StartSpan("db-begin")
+	ctx := opentracing.ContextWithSpan(context.Background(), span)
+
+	return &dbTx{tx, GlobalConnectionTracker.Track(ctx)}, nil
 }
 
 func (db *db) Exec(query string, args ...interface{}) (sql.Result, error) {
-	defer GlobalConnectionTracker.Track().Release()
+	span := opentracing.StartSpan("db-exec")
+	ctx := opentracing.ContextWithSpan(context.Background(), span)
+
+	span.LogFields(log.String("query", query))
+
+	defer GlobalConnectionTracker.Track(ctx).Release()
 	return db.DB.Exec(query, args...)
 }
 
 func (db *db) Prepare(query string) (*sql.Stmt, error) {
-	defer GlobalConnectionTracker.Track().Release()
+	span := opentracing.StartSpan("db-prepare")
+	ctx := opentracing.ContextWithSpan(context.Background(), span)
+
+	span.LogFields(log.String("query", query))
+
+	defer GlobalConnectionTracker.Track(ctx).Release()
 	return db.DB.Prepare(query)
 }
 
 func (db *db) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	defer GlobalConnectionTracker.Track().Release()
+	span := opentracing.StartSpan("db-query")
+	ctx := opentracing.ContextWithSpan(context.Background(), span)
+
+	span.LogFields(log.String("query", query))
+
+	defer GlobalConnectionTracker.Track(ctx).Release()
 	return db.DB.Query(query, args...)
 }
 
 // to conform to squirrel.Runner interface
 func (db *db) QueryRow(query string, args ...interface{}) squirrel.RowScanner {
-	defer GlobalConnectionTracker.Track().Release()
+	span := opentracing.StartSpan("db-queryrow")
+	ctx := opentracing.ContextWithSpan(context.Background(), span)
+
+	span.LogFields(log.String("query", query))
+
+	defer GlobalConnectionTracker.Track(ctx).Release()
 	return db.DB.QueryRow(query, args...)
 }
 

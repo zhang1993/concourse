@@ -40,6 +40,7 @@ import (
 	"github.com/concourse/concourse/atc/resource"
 	"github.com/concourse/concourse/atc/scheduler"
 	"github.com/concourse/concourse/atc/syslog"
+	"github.com/concourse/concourse/atc/tracing"
 	"github.com/concourse/concourse/atc/worker"
 	"github.com/concourse/concourse/atc/worker/image"
 	"github.com/concourse/concourse/atc/wrappa"
@@ -125,6 +126,11 @@ type RunCommand struct {
 		HostName   string            `long:"metrics-host-name"   description:"Host string to attach to emitted metrics."`
 		Attributes map[string]string `long:"metrics-attribute"   description:"A key-value attribute to attach to emitted metrics. Can be specified multiple times." value-name:"NAME:VALUE"`
 	} `group:"Metrics & Diagnostics"`
+
+	Tracing struct {
+		ZipkinUrl       string `long:"zipkin-url" description:"URL of a zipkin server"`
+		ZipkinComponent string `long:"zipkin-component" default:"atc" description:"Name of the component to report"`
+	} `group:"Tracing"`
 
 	Server struct {
 		XFrameOptions string `long:"x-frame-options" description:"The value to set for X-Frame-Options. If omitted, the header is not set."`
@@ -374,6 +380,17 @@ func (cmd *RunCommand) Runner(positionalArguments []string) (ifrit.Runner, error
 		return nil, err
 	}
 
+	closers := []Closer{lockConn, apiConn, backendConn, storage}
+
+	if cmd.Tracing.ZipkinUrl != "" {
+		tracer, err := tracing.NewTracer(cmd.Tracing.ZipkinUrl, cmd.Tracing.ZipkinComponent)
+		if err != nil {
+			return nil, err
+		}
+
+		closers = append(closers, tracer)
+	}
+
 	members, err := cmd.constructMembers(logger, reconfigurableSink, apiConn, backendConn, storage, lockFactory)
 	if err != nil {
 		return nil, err
@@ -401,7 +418,7 @@ func (cmd *RunCommand) Runner(positionalArguments []string) (ifrit.Runner, error
 	}
 
 	onExit := func() {
-		for _, closer := range []Closer{lockConn, apiConn, backendConn, storage} {
+		for _, closer := range closers {
 			closer.Close()
 		}
 	}
@@ -1269,6 +1286,7 @@ func (cmd *RunCommand) constructAPIHandler(
 
 	apiWrapper := wrappa.MultiWrappa{
 		wrappa.NewAPIMetricsWrappa(logger),
+		wrappa.NewAPITracingWrappa(logger),
 		wrappa.NewAPIAuthWrappa(
 			checkPipelineAccessHandlerFactory,
 			checkBuildReadAccessHandlerFactory,
