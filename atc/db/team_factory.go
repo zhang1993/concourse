@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 
@@ -16,7 +17,7 @@ import (
 type TeamFactory interface {
 	CreateTeam(atc.Team) (Team, error)
 	FindTeam(string) (Team, bool, error)
-	GetTeams() ([]Team, error)
+	GetTeams(ctx context.Context) ([]Team, error)
 	GetByID(teamID int) Team
 	CreateDefaultTeamIfNotExists() (Team, error)
 }
@@ -107,11 +108,11 @@ func (factory *teamFactory) FindTeam(teamName string) (Team, bool, error) {
 	return team, true, nil
 }
 
-func (factory *teamFactory) GetTeams() ([]Team, error) {
+func (factory *teamFactory) GetTeams(ctx context.Context) ([]Team, error) {
 	rows, err := psql.Select("id, name, admin, auth").
 		From("teams").
 		OrderBy("id ASC").
-		RunWith(factory.conn).
+		RunWith(&connWithTracing{ctx, factory.conn}).
 		Query()
 	if err != nil {
 		return nil, err

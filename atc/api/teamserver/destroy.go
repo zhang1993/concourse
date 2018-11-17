@@ -1,6 +1,7 @@
 package teamserver
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/concourse/concourse/atc/api/accessor"
@@ -33,7 +34,7 @@ func (s *Server) DestroyTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if team.Admin() {
-		allTeams, err := s.teamFactory.GetTeams()
+		allTeams, err := s.teamFactory.GetTeams(context.TODO())
 		if err != nil {
 			hLog.Error("failed-to-get-teams", err)
 			w.WriteHeader(http.StatusInternalServerError)

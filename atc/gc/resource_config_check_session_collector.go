@@ -6,6 +6,7 @@ import (
 	"code.cloudfoundry.org/lager/lagerctx"
 	"github.com/concourse/concourse/atc/db"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/opentracing/opentracing-go"
 )
 
 type resourceConfigCheckSessionCollector struct {
@@ -21,8 +22,10 @@ func NewResourceConfigCheckSessionCollector(
 }
 
 func (rccsc *resourceConfigCheckSessionCollector) Run(ctx context.Context) error {
-	logger := lagerctx.FromContext(ctx).Session("resource-config-check-session-collector")
+	span, ctx := opentracing.StartSpanFromContext(ctx, "resource-config-check-session-collector")
+	defer span.Finish()
 
+	logger := lagerctx.FromContext(ctx).Session("resource-config-check-session-collector")
 	logger.Debug("start")
 	defer logger.Debug("done")
 

@@ -12,6 +12,7 @@ import (
 	"github.com/concourse/concourse/atc/metric"
 	"github.com/concourse/concourse/atc/worker"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/opentracing/opentracing-go"
 )
 
 const HijackedContainerTimeout = 5 * time.Minute
@@ -48,8 +49,10 @@ func (j *job) Run(w worker.Worker) {
 }
 
 func (c *containerCollector) Run(ctx context.Context) error {
-	logger := lagerctx.FromContext(ctx).Session("container-collector")
+	span, ctx := opentracing.StartSpanFromContext(ctx, "container-collector")
+	defer span.Finish()
 
+	logger := lagerctx.FromContext(ctx).Session("container-collector")
 	logger.Debug("start")
 	defer logger.Debug("done")
 

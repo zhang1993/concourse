@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strconv"
@@ -20,7 +21,7 @@ type BuildFactory interface {
 	GetAllStartedBuilds() ([]Build, error)
 	GetDrainableBuilds() ([]Build, error)
 	// TODO: move to BuildLifecycle, new interface (see WorkerLifecycle)
-	MarkNonInterceptibleBuilds() error
+	MarkNonInterceptibleBuilds(ctx context.Context) error
 }
 
 type buildFactory struct {
@@ -85,7 +86,7 @@ func (f *buildFactory) PublicBuilds(page Page) ([]Build, Pagination, error) {
 		page, f.conn, f.lockFactory)
 }
 
-func (f *buildFactory) MarkNonInterceptibleBuilds() error {
+func (f *buildFactory) MarkNonInterceptibleBuilds(ctx context.Context) error {
 	_, err := psql.Update("builds b").
 		Set("interceptible", false).
 		Where(sq.Eq{
@@ -100,7 +101,7 @@ func (f *buildFactory) MarkNonInterceptibleBuilds() error {
 			sq.Expr("NOT EXISTS (SELECT 1 FROM jobs j WHERE j.latest_completed_build_id = b.id)"),
 			sq.Eq{"status": string(BuildStatusSucceeded)},
 		}).
-		RunWith(f.conn).
+		RunWith(&connWithTracing{ctx, f.conn}).
 		Exec()
 	return err
 }

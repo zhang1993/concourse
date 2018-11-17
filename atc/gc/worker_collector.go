@@ -1,11 +1,13 @@
 package gc
 
 import (
+	"context"
+
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagerctx"
-	"context"
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/metric"
+	"github.com/opentracing/opentracing-go"
 )
 
 type workerCollector struct {
@@ -19,8 +21,10 @@ func NewWorkerCollector(workerLifecycle db.WorkerLifecycle) Collector {
 }
 
 func (wc *workerCollector) Run(ctx context.Context) error {
-	logger := lagerctx.FromContext(ctx).Session("worker-collector")
+	span, ctx := opentracing.StartSpanFromContext(ctx, "worker-collector")
+	defer span.Finish()
 
+	logger := lagerctx.FromContext(ctx).Session("worker-collector")
 	logger.Debug("start")
 	defer logger.Debug("done")
 

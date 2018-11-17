@@ -1,6 +1,7 @@
 package token
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
@@ -47,7 +48,7 @@ func (self *issuer) Issue(verifiedClaims *VerifiedClaims) (*oauth2.Token, error)
 		return nil, errors.New("Missing connector id in verified claims")
 	}
 
-	dbTeams, err := self.TeamFactory.GetTeams()
+	dbTeams, err := self.TeamFactory.GetTeams(context.TODO())
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +114,7 @@ func (self *issuer) Issue(verifiedClaims *VerifiedClaims) (*oauth2.Token, error)
 
 	teams := map[string][]string{}
 	for team, roles := range teamSet {
-		for role, _ := range roles {
+		for role := range roles {
 			teams[team] = append(teams[team], role)
 		}
 	}

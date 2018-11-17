@@ -13,7 +13,7 @@ import (
 func (s *Server) ListTeams(w http.ResponseWriter, r *http.Request) {
 	hLog := s.logger.Session("list-teams")
 
-	teams, err := s.teamFactory.GetTeams()
+	teams, err := s.teamFactory.GetTeams(r.Context())
 	if err != nil {
 		hLog.Error("failed-to-get-teams", errors.New("sorry"))
 		w.WriteHeader(http.StatusInternalServerError)

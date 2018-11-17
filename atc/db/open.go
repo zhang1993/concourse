@@ -339,6 +339,56 @@ type db struct {
 	name       string
 }
 
+type connWithTracing struct {
+	ctx context.Context
+	Conn
+}
+
+func (d *connWithTracing) Begin() (Tx, error) {
+	span, _ := opentracing.StartSpanFromContext(d.ctx, "db-begin")
+	defer span.Finish()
+
+	span.LogEvent("start")
+
+	return d.Conn.Begin()
+}
+
+func (d *connWithTracing) Exec(query string, args ...interface{}) (sql.Result, error) {
+	span, _ := opentracing.StartSpanFromContext(d.ctx, "db-exec")
+	defer span.Finish()
+
+	span.LogFields(log.String("sql", query))
+
+	return d.Conn.Exec(query, args...)
+}
+
+func (d *connWithTracing) Prepare(query string) (*sql.Stmt, error) {
+	span, _ := opentracing.StartSpanFromContext(d.ctx, "db-prepare")
+	defer span.Finish()
+
+	span.LogFields(log.String("sql", query))
+
+	return d.Conn.Prepare(query)
+}
+
+func (d *connWithTracing) QueryRow(query string, args ...interface{}) squirrel.RowScanner {
+	span, _ := opentracing.StartSpanFromContext(d.ctx, "db-queryrow")
+	defer span.Finish()
+
+	span.LogFields(log.String("sql", query))
+
+	return d.Conn.QueryRow(query, args...)
+}
+
+func (d *connWithTracing) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	span, _ := opentracing.StartSpanFromContext(d.ctx, "db-query")
+	defer span.Finish()
+
+	span.LogFields(log.String("sql", query))
+
+	return d.Conn.Query(query, args...)
+}
+
 func (db *db) Name() string {
 	return db.name
 }
@@ -378,56 +428,32 @@ func (db *db) Begin() (Tx, error) {
 		return nil, err
 	}
 
-	span := opentracing.StartSpan("db-begin")
-	ctx := opentracing.ContextWithSpan(context.Background(), span)
-
-	return &dbTx{tx, GlobalConnectionTracker.Track(ctx)}, nil
+	return &dbTx{tx, GlobalConnectionTracker.Track()}, nil
 }
 
 func (db *db) Exec(query string, args ...interface{}) (sql.Result, error) {
-	span := opentracing.StartSpan("db-exec")
-	ctx := opentracing.ContextWithSpan(context.Background(), span)
-
-	span.LogFields(log.String("query", query))
-
-	defer GlobalConnectionTracker.Track(ctx).Release()
+	defer GlobalConnectionTracker.Track().Release()
 	return db.DB.Exec(query, args...)
 }
 
 func (db *db) Prepare(query string) (*sql.Stmt, error) {
-	span := opentracing.StartSpan("db-prepare")
-	ctx := opentracing.ContextWithSpan(context.Background(), span)
-
-	span.LogFields(log.String("query", query))
-
-	defer GlobalConnectionTracker.Track(ctx).Release()
+	defer GlobalConnectionTracker.Track().Release()
 	return db.DB.Prepare(query)
 }
 
 func (db *db) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	span := opentracing.StartSpan("db-query")
-	ctx := opentracing.ContextWithSpan(context.Background(), span)
-
-	span.LogFields(log.String("query", query))
-
-	defer GlobalConnectionTracker.Track(ctx).Release()
+	defer GlobalConnectionTracker.Track().Release()
 	return db.DB.Query(query, args...)
 }
 
 // to conform to squirrel.Runner interface
 func (db *db) QueryRow(query string, args ...interface{}) squirrel.RowScanner {
-	span := opentracing.StartSpan("db-queryrow")
-	ctx := opentracing.ContextWithSpan(context.Background(), span)
-
-	span.LogFields(log.String("query", query))
-
-	defer GlobalConnectionTracker.Track(ctx).Release()
+	defer GlobalConnectionTracker.Track().Release()
 	return db.DB.QueryRow(query, args...)
 }
 
 type dbTx struct {
 	*sql.Tx
-
 	session *ConnectionSession
 }
 

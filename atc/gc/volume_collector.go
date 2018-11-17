@@ -9,6 +9,7 @@ import (
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/metric"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/opentracing/opentracing-go"
 )
 
 type volumeCollector struct {
@@ -27,8 +28,10 @@ func NewVolumeCollector(
 }
 
 func (vc *volumeCollector) Run(ctx context.Context) error {
-	logger := lagerctx.FromContext(ctx).Session("volume-collector")
+	span, ctx := opentracing.StartSpanFromContext(ctx, "volume-collector")
+	defer span.Finish()
 
+	logger := lagerctx.FromContext(ctx).Session("volume-collector")
 	logger.Debug("start")
 	defer logger.Debug("done")
 

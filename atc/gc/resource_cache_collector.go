@@ -5,6 +5,7 @@ import (
 
 	"code.cloudfoundry.org/lager/lagerctx"
 	"github.com/concourse/concourse/atc/db"
+	"github.com/opentracing/opentracing-go"
 )
 
 type resourceCacheCollector struct {
@@ -18,8 +19,10 @@ func NewResourceCacheCollector(cacheLifecycle db.ResourceCacheLifecycle) Collect
 }
 
 func (rcc *resourceCacheCollector) Run(ctx context.Context) error {
-	logger := lagerctx.FromContext(ctx).Session("resource-cache-collector")
+	span, ctx := opentracing.StartSpanFromContext(ctx, "resource-cache-collector")
+	defer span.Finish()
 
+	logger := lagerctx.FromContext(ctx).Session("resource-cache-collector")
 	logger.Debug("start")
 	defer logger.Debug("done")
 

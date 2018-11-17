@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"code.cloudfoundry.org/lager/lagerctx"
+	"github.com/opentracing/opentracing-go"
 )
 
 //go:generate counterfeiter . Collector
@@ -46,9 +47,12 @@ func NewCollector(
 }
 
 func (c *aggregateCollector) Run(ctx context.Context) error {
-	logger := lagerctx.FromContext(ctx)
-
 	var err error
+
+	span, ctx := opentracing.StartSpanFromContext(ctx, "aggregate-collector")
+	defer span.Finish()
+
+	logger := lagerctx.FromContext(ctx)
 
 	err = c.buildCollector.Run(ctx)
 	if err != nil {

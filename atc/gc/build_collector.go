@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"code.cloudfoundry.org/lager/lagerctx"
+	"github.com/opentracing/opentracing-go"
 )
 
 type buildCollector struct {
@@ -11,7 +12,7 @@ type buildCollector struct {
 }
 
 type buildFactory interface {
-	MarkNonInterceptibleBuilds() error
+	MarkNonInterceptibleBuilds(ctx context.Context) error
 }
 
 func NewBuildCollector(buildFactory buildFactory) *buildCollector {
@@ -23,8 +24,11 @@ func NewBuildCollector(buildFactory buildFactory) *buildCollector {
 func (b *buildCollector) Run(ctx context.Context) error {
 	logger := lagerctx.FromContext(ctx).Session("build-collector")
 
+	span, ctx := opentracing.StartSpanFromContext(ctx, "build-collector")
+	defer span.Finish()
+
 	logger.Debug("start")
 	defer logger.Debug("done")
 
-	return b.buildFactory.MarkNonInterceptibleBuilds()
+	return b.buildFactory.MarkNonInterceptibleBuilds(ctx)
 }
