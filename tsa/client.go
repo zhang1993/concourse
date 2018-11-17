@@ -17,6 +17,8 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagerctx"
 	"github.com/concourse/concourse/atc"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/log"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -96,6 +98,9 @@ type RegisterOptions struct {
 // configured, the connection will be terminated after no data has gone to/from
 // the SSH gateway for the configured duration.
 func (client *Client) Register(ctx context.Context, opts RegisterOptions) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "tsa_client-register")
+	defer span.Finish()
+
 	logger := lagerctx.FromContext(ctx)
 
 	sshClient, tcpConn, err := client.dial(ctx, opts.DrainTimeout)
@@ -277,6 +282,9 @@ func (client *Client) ReportContainers(ctx context.Context, handles []string) er
 func (client *Client) VolumesToDestroy(ctx context.Context) ([]string, error) {
 	logger := lagerctx.FromContext(ctx)
 
+	span, ctx := opentracing.StartSpanFromContext(ctx, "tsa_client-volumes-to-destroy")
+	defer span.Finish()
+
 	sshClient, _, err := client.dial(ctx, 0)
 	if err != nil {
 		logger.Error("failed-to-dial", err)
@@ -305,6 +313,9 @@ func (client *Client) VolumesToDestroy(ctx context.Context) ([]string, error) {
 // worker's container handles to Concourse.
 func (client *Client) ReportVolumes(ctx context.Context, handles []string) error {
 	logger := lagerctx.FromContext(ctx)
+
+	span, ctx := opentracing.StartSpanFromContext(ctx, "tsa_client-report-volumes")
+	defer span.Finish()
 
 	sshClient, _, err := client.dial(ctx, 0)
 	if err != nil {
@@ -371,7 +382,7 @@ func (client *Client) tryDialAll(ctx context.Context) (net.Conn, string, error) 
 		hosts[host] = struct{}{}
 	}
 
-	for host, _ := range hosts {
+	for host := range hosts {
 		conn, err := keepaliveDialer("tcp", host, 10*time.Second)
 		if err != nil {
 			logger.Error("failed-to-connect-to-tsa", err)
@@ -429,12 +440,25 @@ func (client *Client) keepAlive(ctx context.Context, sshClient *ssh.Client, tcpC
 	}
 }
 
-func (client *Client) run(ctx context.Context, sshClient *ssh.Client, command string, stdout io.Writer) error {
+func (client *Client) run(ctx context.Context, sshClient *ssh.Client, command string, stdout io.Writer) (err error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "tsa_client-run")
+	defer span.Finish()
+
+	defer func() {
+		if err != nil {
+			span.SetTag("error", true)
+			span.LogFields(
+				log.Error(err))
+		}
+	}()
+
 	argv := strings.Split(command, " ")
 	commandName := ""
 	if len(argv) > 0 {
 		commandName = argv[0]
 	}
+
+	span.SetTag("command", commandName)
 
 	logger := lagerctx.WithSession(ctx, "run", lager.Data{
 		"command": commandName,
@@ -443,14 +467,14 @@ func (client *Client) run(ctx context.Context, sshClient *ssh.Client, command st
 	sess, err := sshClient.NewSession()
 	if err != nil {
 		logger.Error("failed-to-open-session", err)
-		return err
+		return
 	}
 
 	defer sess.Close()
 
 	workerPayload, err := json.Marshal(client.Worker)
 	if err != nil {
-		return err
+		return
 	}
 
 	sess.Stdin = bytes.NewBuffer(workerPayload)
@@ -460,7 +484,7 @@ func (client *Client) run(ctx context.Context, sshClient *ssh.Client, command st
 	err = sess.Start(command)
 	if err != nil {
 		logger.Error("failed-to-start-command", err)
-		return err
+		return
 	}
 
 	errs := make(chan error, 1)
@@ -474,10 +498,10 @@ func (client *Client) run(ctx context.Context, sshClient *ssh.Client, command st
 			"context-error": ctx.Err(),
 		})
 
-		err := sess.Signal(ssh.SIGINT)
+		err = sess.Signal(ssh.SIGINT)
 		if err != nil {
 			logger.Error("failed-to-send-signal", err)
-			return err
+			return
 		}
 
 		logger.Info("signal-sent")
@@ -489,15 +513,15 @@ func (client *Client) run(ctx context.Context, sshClient *ssh.Client, command st
 			logger.Debug("command-exited-after-signal")
 		}
 
-		return err
-	case err := <-errs:
+		return
+	case err = <-errs:
 		if err != nil {
 			logger.Error("command-failed", err)
-			return err
+			return
 		}
 
 		logger.Debug("command-exited")
-		return nil
+		return
 	}
 }
 

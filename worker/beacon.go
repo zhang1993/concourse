@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagerctx"
 	"github.com/concourse/concourse/tsa"
+	"github.com/opentracing/opentracing-go"
 )
 
 type Beacon struct {
@@ -112,6 +113,9 @@ func (beacon *Beacon) registerWorker(
 	defer cwg.Done()
 
 	logger := lagerctx.FromContext(ctx)
+
+	span, ctx := opentracing.StartSpanFromContext(ctx, "register-worker")
+	defer span.Finish()
 
 	errs <- beacon.Client.Register(ctx, tsa.RegisterOptions{
 		LocalGardenNetwork: beacon.LocalGardenNetwork,

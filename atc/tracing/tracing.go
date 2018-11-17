@@ -17,7 +17,7 @@ type tracer struct {
 }
 
 func (t *tracer) Close() error {
-	return t.Close()
+	return t.closer.Close()
 }
 
 type TracingHandler struct{}
