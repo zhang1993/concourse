@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/concourse/baggageclaim/baggageclaimcmd"
 	bclient "github.com/concourse/baggageclaim/client"
 	"github.com/concourse/concourse"
+	"github.com/concourse/concourse/atc/tracing"
 	"github.com/concourse/concourse/worker"
 	"github.com/concourse/flag"
 	"github.com/tedsuo/ifrit"
@@ -50,6 +52,11 @@ type WorkerCommand struct {
 	ResourceTypes flag.Dir `long:"resource-types" description:"Path to directory containing resource types the worker should advertise."`
 
 	Logger flag.Lager
+
+	Tracing struct {
+		ZipkinUrl       string `long:"zipkin-url" description:"URL of a zipkin server"`
+		ZipkinComponent string `long:"zipkin-component" default:"atc" description:"Name of the component to report"`
+	} `group:"Tracing"`
 }
 
 func (cmd *WorkerCommand) Execute(args []string) error {
@@ -64,6 +71,17 @@ func (cmd *WorkerCommand) Execute(args []string) error {
 func (cmd *WorkerCommand) Runner(args []string) (ifrit.Runner, error) {
 	if cmd.ResourceTypes == "" {
 		cmd.ResourceTypes = flag.Dir(discoverAsset("resource-types"))
+	}
+
+	closers := []io.Closer{}
+
+	if cmd.Tracing.ZipkinUrl != "" {
+		tracer, err := tracing.NewTracer(cmd.Tracing.ZipkinUrl, cmd.Tracing.ZipkinComponent)
+		if err != nil {
+			return nil, err
+		}
+
+		closers = append(closers, tracer)
 	}
 
 	logger, _ := cmd.Logger.Logger("worker")
@@ -177,7 +195,35 @@ func (cmd *WorkerCommand) Runner(args []string) (ifrit.Runner, error) {
 
 	}
 
-	return grouper.NewParallel(os.Interrupt, members), nil
+	onExit := func() {
+		for _, closer := range closers {
+			closer.Close()
+		}
+	}
+
+	return run(grouper.NewParallel(os.Interrupt, members), onExit), nil
+}
+
+func run(runner ifrit.Runner, onExit func()) ifrit.Runner {
+	return ifrit.RunFunc(func(signals <-chan os.Signal, ready chan<- struct{}) error {
+		process := ifrit.Background(runner)
+
+		subExited := process.Wait()
+		subReady := process.Ready()
+
+		for {
+			select {
+			case <-subReady:
+				close(ready)
+				subReady = nil
+			case err := <-subExited:
+				onExit()
+				return err
+			case sig := <-signals:
+				process.Signal(sig)
+			}
+		}
+	})
 }
 
 func (cmd *WorkerCommand) gardenAddr() string {

@@ -52,6 +52,8 @@ services:
     - CONCOURSE_LOG_LEVEL=debug
     - CONCOURSE_TSA_HOST=web:2222
     - CONCOURSE_EPHEMERAL=true
+    - CONCOURSE_ZIPKIN_URL=http://jaeger:9411/api/v1/spans
+    - CONCOURSE_ZIPKIN_COMPONENT=worker
 
       # avoid using loopbacks
     - CONCOURSE_BAGGAGECLAIM_DRIVER=overlay
