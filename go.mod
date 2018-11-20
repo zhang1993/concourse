@@ -37,7 +37,7 @@ require (
 	github.com/cloudfoundry/bosh-utils v0.0.0-20180919212956-15c556314b68 // indirect
 	github.com/cloudfoundry/go-socks5 v0.0.0-20180221174514-54f73bdb8a8e // indirect
 	github.com/cloudfoundry/socks5-proxy v0.0.0-20180530211953-3659db090cb2 // indirect
-	github.com/cockroachdb/cockroach-go v0.0.0-20160916181719-31611c0501c8 // indirect
+	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
 	github.com/concourse/baggageclaim v1.3.0
 	github.com/concourse/dex v0.0.0-20181119164634-7f0c91c63428
 	github.com/concourse/flag v0.0.0-20180907155614-cb47f24fff1c
@@ -133,6 +133,8 @@ require (
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect
+	github.com/opentracing-contrib/go-stdlib v0.0.0-20181101210145-c9628a4f0148
+	github.com/opentracing/opentracing-go v1.0.2
 	github.com/ory/dockertest v3.3.2+incompatible // indirect
 	github.com/papertrail/remote_syslog2 v0.0.0-20170912230402-5bae4a1ac1c2
 	github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c // indirect
@@ -152,6 +154,8 @@ require (
 	github.com/tedsuo/ifrit v0.0.0-20180802180643-bea94bb476cc
 	github.com/tedsuo/rata v1.0.1-0.20170830210128-07d200713958
 	github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926 // indirect
+	github.com/uber/jaeger-client-go v2.15.0+incompatible
+	github.com/uber/jaeger-lib v1.5.0 // indirect
 	github.com/vito/go-interact v0.0.0-20171111012221-fa338ed9e9ec
 	github.com/vito/go-sse v0.0.0-20160212001227-fd69d275caac
 	github.com/vito/houdini v0.0.0-20170630141751-8dda540e3245

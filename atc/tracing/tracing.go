@@ -11,6 +11,24 @@ import (
 	"github.com/uber/jaeger-client-go/transport/zipkin"
 )
 
+type roundTripper struct {
+	nestedRoundTripper http.RoundTripper
+}
+
+func (r roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	req, ht := nethttp.TraceRequest(opentracing.GlobalTracer(), req)
+	defer ht.Finish()
+
+	transport := nethttp.Transport{ r.nestedRoundTripper }
+	return transport.RoundTrip(req)
+}
+
+func NewRoundTripper(nestedRoundTripper http.RoundTripper) http.RoundTripper {
+	return roundTripper{
+		nestedRoundTripper,
+	}
+}
+
 type tracer struct {
 	tracer opentracing.Tracer
 	closer io.Closer

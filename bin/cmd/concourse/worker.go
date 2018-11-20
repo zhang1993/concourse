@@ -171,11 +171,11 @@ func (cmd *WorkerCommand) Runner(args []string) (ifrit.Runner, error) {
 			// we don't want a retry loop to block up sweeping and prevent the worker
 			// from existing.
 			&http.Client{
-				Transport: &http.Transport{
+				Transport: tracing.NewRoundTripper(&http.Transport{
 					// don't let a slow (possibly stuck) baggageclaim server slow down
 					// sweeping too much
 					ResponseHeaderTimeout: 1 * time.Minute,
-				},
+				}),
 			},
 		)
 
