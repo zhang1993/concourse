@@ -14,8 +14,6 @@ func (s *Server) ListJobInputs(pipeline db.Pipeline) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		jobName := r.FormValue(":job_name")
 
-		variables := s.variablesFactory.NewVariables(pipeline.TeamName(), pipeline.Name())
-
 		job, found, err := pipeline.Job(jobName)
 		if err != nil {
 			logger.Error("failed-to-get-job", err)
@@ -28,17 +26,9 @@ func (s *Server) ListJobInputs(pipeline db.Pipeline) http.Handler {
 			return
 		}
 
-		scheduler := s.schedulerFactory.BuildScheduler(pipeline, s.externalURL, variables)
-
 		resources, err := pipeline.Resources()
 		if err != nil {
 			logger.Error("failed-to-get-resources", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		err = scheduler.SaveNextInputMapping(logger, job, resources)
-		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

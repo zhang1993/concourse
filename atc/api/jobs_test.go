@@ -9,15 +9,14 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/bosh-cli/director/template"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/api/accessor/accessorfakes"
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/db/dbfakes"
 	"github.com/concourse/concourse/atc/scheduler/schedulerfakes"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Jobs API", func() {
@@ -1606,7 +1605,6 @@ var _ = Describe("Jobs API", func() {
 				var fakeJob *dbfakes.FakeJob
 
 				Context("when it contains the requested job", func() {
-					var fakeScheduler *schedulerfakes.FakeBuildScheduler
 					BeforeEach(func() {
 						fakeJob = new(dbfakes.FakeJob)
 						fakeJob.NameReturns("some-job")
@@ -1630,9 +1628,6 @@ var _ = Describe("Jobs API", func() {
 						})
 						fakePipeline.JobReturns(fakeJob, true, nil)
 
-						fakeScheduler = new(schedulerfakes.FakeBuildScheduler)
-						fakeSchedulerFactory.BuildSchedulerReturns(fakeScheduler)
-
 						resource1 := new(dbfakes.FakeResource)
 						resource1.IDReturns(1)
 						resource1.NameReturns("some-resource")
@@ -1651,7 +1646,6 @@ var _ = Describe("Jobs API", func() {
 						BeforeEach(func() {
 							fakeJob.GetNextBuildInputsStub = func() ([]db.BuildInput, bool, error) {
 								defer GinkgoRecover()
-								Expect(fakeScheduler.SaveNextInputMappingCallCount()).To(Equal(1))
 								return []db.BuildInput{
 									{
 										Name:       "some-input",
@@ -1673,18 +1667,6 @@ var _ = Describe("Jobs API", func() {
 
 						It("returns Content-Type 'application/json'", func() {
 							Expect(response.Header.Get("Content-Type")).To(Equal("application/json"))
-						})
-
-						It("created the scheduler with the correct fakePipeline and external URL", func() {
-							actualPipeline, actualExternalURL, actualVariables := fakeSchedulerFactory.BuildSchedulerArgsForCall(0)
-							Expect(actualPipeline.Name()).To(Equal(fakePipeline.Name()))
-							Expect(actualExternalURL).To(Equal(externalURL))
-							Expect(actualVariables).To(Equal(variables))
-						})
-
-						It("determined the inputs with the correct job config", func() {
-							_, receivedJob, _ := fakeScheduler.SaveNextInputMappingArgsForCall(0)
-							Expect(receivedJob.Name()).To(Equal(fakeJob.Name()))
 						})
 
 						It("returns the inputs", func() {
