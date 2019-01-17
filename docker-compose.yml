@@ -28,6 +28,17 @@ services:
     - CONCOURSE_ADD_LOCAL_USER=test:test,guest:guest
     - CONCOURSE_MAIN_TEAM_LOCAL_USER=test
     - CONCOURSE_LOG_LEVEL=debug
+    - CONCOURSE_INFLUXDB_URL=http://influx_tunnel:8086
+    - CONCOURSE_INFLUXDB_DATABASE=foobar
+    - CONCOURSE_INFLUXDB_USERNAME=concourse
+    - CONCOURSE_INFLUXDB_PASSWORD=concourse
+
+  influx_tunnel:
+    image: polandj/alpine-ssh
+    volumes:
+      - ${BOSH_KEY:-/tmp/bosh.key}:/tmp/bosh.key
+    command: ssh -N -o StrictHostKeyChecking=no -i /tmp/bosh.key -L 0.0.0.0:8086:10.2.0.2:8086 bosh@bosh.concourse-ci.org
+    ports: ["8086:8086"]
 
   worker:
     build:
