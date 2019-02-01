@@ -1,16 +1,10 @@
 module Dashboard.Group exposing
     ( DragState(..)
-    , DropState(..)
     , Group
-    , PipelineIndex
     , StickyHeaderConfig
     , allPipelines
     , allTeamNames
-    , dragIndex
-    , dragIndexOptional
-    , dropIndex
-    , dropIndexOptional
-    , findGroupOptional
+    , drop
     , group
     , groups
     , hdView
@@ -19,14 +13,10 @@ module Dashboard.Group exposing
     , pipelineDropAreaView
     , pipelineNotSetView
     , pipelineStatus
-    , setDragIndex
-    , setDropIndex
-    , setTeamName
     , shiftPipelineTo
     , shiftPipelines
+    , startDrag
     , stickyHeaderConfig
-    , teamName
-    , teamNameOptional
     , transition
     , view
     )
@@ -37,7 +27,7 @@ import Concourse.PipelineStatus as PipelineStatus
 import Dashboard.APIData exposing (APIData)
 import Dashboard.Group.Tag as Tag
 import Dashboard.Models as Models
-import Dashboard.Msgs exposing (Msg(..))
+import Dashboard.Msgs exposing (DragOver(..), Msg(..))
 import Dashboard.Pipeline as Pipeline
 import Dashboard.Styles as Styles
 import Date exposing (Date)
@@ -47,7 +37,6 @@ import Html.Events exposing (on, onMouseEnter)
 import Json.Decode
 import List.Extra
 import Maybe.Extra
-import Monocle.Optional
 import NewTopBar.Styles as NTBS
 import Ordering exposing (Ordering)
 import Set
@@ -86,107 +75,82 @@ stickyHeaderConfig =
     }
 
 
-findGroupOptional : String -> Monocle.Optional.Optional (List Group) Group
-findGroupOptional teamName =
-    let
-        predicate =
-            .teamName >> (==) teamName
-    in
-    Monocle.Optional.Optional (List.Extra.find predicate)
-        (\g gs ->
-            List.Extra.findIndex predicate gs
-                |> Maybe.andThen (\i -> List.Extra.setAt i g gs)
-                |> Maybe.withDefault gs
-        )
-
-
-type alias PipelineIndex =
-    Int
-
-
 type DragState
     = NotDragging
-    | Dragging Concourse.TeamName PipelineIndex
+    | Dragging Concourse.PipelineIdentifier Dashboard.Msgs.DragOver
 
 
-teamNameOptional : Monocle.Optional.Optional DragState Concourse.TeamName
-teamNameOptional =
-    Monocle.Optional.Optional teamName setTeamName
+startDrag : Group -> Concourse.PipelineIdentifier -> DragState
+startDrag group pid =
+    if group.teamName /= pid.teamName then
+        NotDragging
+
+    else
+        let
+            idx =
+                group.pipelines
+                    |> List.Extra.findIndex (.name >> (==) pid.pipelineName)
+        in
+        case idx of
+            Nothing ->
+                NotDragging
+
+            Just i ->
+                case List.Extra.getAt (i + 1) group.pipelines of
+                    Nothing ->
+                        Dragging pid End
+
+                    Just p ->
+                        Dragging pid
+                            (Before
+                                { pipelineName = p.name
+                                , teamName = p.teamName
+                                }
+                            )
 
 
-dragIndexOptional : Monocle.Optional.Optional DragState PipelineIndex
-dragIndexOptional =
-    Monocle.Optional.Optional dragIndex setDragIndex
+drop :
+    { pipelineName : String, over : DragOver }
+    -> Group
+    -> Group
+drop { pipelineName, over } ({ pipelines } as g) =
+    let
+        draggedPipeline =
+            List.Extra.find (.name >> (==) pipelineName)
+                pipelines
+
+        newPipelines =
+            case ( draggedPipeline, over ) of
+                ( Just dragged, Before beforePid ) ->
+                    pipelines
+                        |> List.filter ((/=) dragged)
+                        |> insertBefore
+                            (.name >> (==) beforePid.pipelineName)
+                            dragged
+
+                ( Just dragged, End ) ->
+                    pipelines
+                        |> List.filter ((/=) dragged)
+                        |> flip List.append [ dragged ]
+
+                _ ->
+                    pipelines
+    in
+    { g | pipelines = newPipelines }
 
 
-dropIndexOptional : Monocle.Optional.Optional DropState PipelineIndex
-dropIndexOptional =
-    Monocle.Optional.Optional dropIndex setDropIndex
+insertBefore : (a -> Bool) -> a -> List a -> List a
+insertBefore pred x xs =
+    case xs of
+        [] ->
+            [ x ]
 
+        y :: ys ->
+            if pred y then
+                x :: y :: ys
 
-teamName : DragState -> Maybe Concourse.TeamName
-teamName dragState =
-    case dragState of
-        Dragging teamName _ ->
-            Just teamName
-
-        NotDragging ->
-            Nothing
-
-
-setTeamName : Concourse.TeamName -> DragState -> DragState
-setTeamName teamName dragState =
-    case dragState of
-        Dragging _ dragIndex ->
-            Dragging teamName dragIndex
-
-        NotDragging ->
-            NotDragging
-
-
-dragIndex : DragState -> Maybe PipelineIndex
-dragIndex dragState =
-    case dragState of
-        Dragging _ dragIndex ->
-            Just dragIndex
-
-        NotDragging ->
-            Nothing
-
-
-setDragIndex : PipelineIndex -> DragState -> DragState
-setDragIndex dragIndex dragState =
-    case dragState of
-        Dragging teamName _ ->
-            Dragging teamName dragIndex
-
-        NotDragging ->
-            NotDragging
-
-
-type DropState
-    = NotDropping
-    | Dropping PipelineIndex
-
-
-dropIndex : DropState -> Maybe PipelineIndex
-dropIndex dropState =
-    case dropState of
-        Dropping dropIndex ->
-            Just dropIndex
-
-        NotDropping ->
-            Nothing
-
-
-setDropIndex : PipelineIndex -> DropState -> DropState
-setDropIndex dropIndex dropState =
-    case dropState of
-        Dropping _ ->
-            Dropping dropIndex
-
-        NotDropping ->
-            NotDropping
+            else
+                y :: insertBefore pred x ys
 
 
 allPipelines : APIData -> List Models.Pipeline
@@ -408,15 +372,18 @@ group allPipelines user teamName =
 
 view :
     { dragState : DragState
-    , dropState : DropState
     , now : Time
     , hoveredPipeline : Maybe Models.Pipeline
     , pipelineRunningKeyframes : String
+    , dragChanged : Bool
     }
     -> Group
     -> Html Msg
-view { dragState, dropState, now, hoveredPipeline, pipelineRunningKeyframes } group =
+view { dragState, dragChanged, now, hoveredPipeline, pipelineRunningKeyframes } group =
     let
+        active =
+            dragState /= NotDragging
+
         pipelines =
             if List.isEmpty group.pipelines then
                 [ Pipeline.pipelineNotSetView ]
@@ -425,36 +392,55 @@ view { dragState, dropState, now, hoveredPipeline, pipelineRunningKeyframes } gr
                 List.append
                     (List.indexedMap
                         (\i pipeline ->
-                            Html.div [ class "pipeline-wrapper" ]
-                                [ pipelineDropAreaView dragState dropState group.teamName i
-                                , Html.div
-                                    [ classList
-                                        [ ( "card", True )
-                                        , ( "dragging"
-                                          , dragState == Dragging pipeline.teamName i
-                                          )
-                                        ]
-                                    , attribute "data-pipeline-name" pipeline.name
-                                    , attribute
-                                        "ondragstart"
-                                        "event.dataTransfer.setData('text/plain', '');"
-                                    , draggable "true"
-                                    , on "dragstart"
-                                        (Json.Decode.succeed (DragStart pipeline.teamName i))
-                                    , on "dragend" (Json.Decode.succeed DragEnd)
-                                    ]
-                                    [ Pipeline.pipelineView
-                                        { now = now
-                                        , pipeline = pipeline
-                                        , hovered = hoveredPipeline == Just pipeline
-                                        , pipelineRunningKeyframes = pipelineRunningKeyframes
+                            let
+                                myPid =
+                                    { teamName = pipeline.teamName
+                                    , pipelineName = pipeline.name
+                                    }
+
+                                dragging =
+                                    case dragState of
+                                        Dragging pid _ ->
+                                            pid == myPid
+
+                                        _ ->
+                                            False
+                            in
+                            Html.div [ class "pipeline-wrapper" ] <|
+                                (if dragging then
+                                    []
+
+                                 else
+                                    [ pipelineDropAreaView
+                                        { active = active
+                                        , dragState = dragState
+                                        , dragChanged = dragChanged
                                         }
+                                        (Just myPid)
                                     ]
-                                ]
+                                )
+                                    ++ [ Pipeline.pipelineView
+                                            { now = now
+                                            , pipeline = pipeline
+                                            , hovered =
+                                                hoveredPipeline
+                                                    == Just pipeline
+                                            , dragging = dragging
+                                            , pipelineRunningKeyframes =
+                                                pipelineRunningKeyframes
+                                            , index = i
+                                            }
+                                       ]
                         )
                         group.pipelines
                     )
-                    [ pipelineDropAreaView dragState dropState group.teamName (List.length group.pipelines) ]
+                    [ pipelineDropAreaView
+                        { active = active
+                        , dragState = dragState
+                        , dragChanged = dragChanged
+                        }
+                        Nothing
+                    ]
     in
     Html.div
         [ id group.teamName
@@ -518,22 +504,36 @@ pipelineNotSetView =
         ]
 
 
-pipelineDropAreaView : DragState -> DropState -> String -> Int -> Html Msg
-pipelineDropAreaView dragState dropState teamName index =
+pipelineDropAreaView :
+    { active : Bool, dragState : DragState, dragChanged : Bool }
+    -> Maybe Concourse.PipelineIdentifier
+    -> Html Msg
+pipelineDropAreaView { active, dragState, dragChanged } pid =
     let
-        ( active, over ) =
-            case ( dragState, dropState ) of
-                ( Dragging team dragIndex, NotDropping ) ->
-                    ( team == teamName, index == dragIndex )
+        dragOver =
+            case pid of
+                Nothing ->
+                    End
 
-                ( Dragging team dragIndex, Dropping dropIndex ) ->
-                    ( team == teamName, index == dropIndex )
+                Just pid ->
+                    Before pid
+
+        over =
+            case dragState of
+                Dragging _ over ->
+                    over == dragOver
 
                 _ ->
-                    ( False, False )
+                    False
     in
     Html.div
-        [ classList [ ( "drop-area", True ), ( "active", active ), ( "over", over ), ( "animation", dropState /= NotDropping ) ]
-        , on "dragenter" (Json.Decode.succeed (DragOver teamName index))
+        [ classList
+            [ ( "drop-area", True )
+            , ( "active", active )
+            ]
+        , style <|
+            Styles.pipelineDropArea
+                { over = over, dragChanged = dragChanged }
+        , on "dragenter" (Json.Decode.succeed (DragOver dragOver))
         ]
         [ Html.text "" ]

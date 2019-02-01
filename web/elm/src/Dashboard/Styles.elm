@@ -23,6 +23,7 @@ module Dashboard.Styles exposing
     , pipelineCardHd
     , pipelineCardHeader
     , pipelineCardTransitionAge
+    , pipelineDropArea
     , pipelineName
     , pipelineStatusIcon
     , previewPlaceholder
@@ -63,11 +64,19 @@ statusColor status =
             Colors.aborted
 
 
-pipelineCard : List ( String, String )
-pipelineCard =
+pipelineCard : Bool -> List ( String, String )
+pipelineCard dragging =
     [ ( "cursor", "move" )
-    , ( "margin", "25px" )
     ]
+        ++ (if dragging then
+                [ ( "width", "0" )
+                , ( "overflow", "hidden" )
+                , ( "margin", "12.5px" )
+                ]
+
+            else
+                [ ( "margin", "25px" ) ]
+           )
 
 
 pipelineCardBanner :
@@ -311,6 +320,24 @@ pipelineCardTransitionAge status =
     , ( "letter-spacing", "0.05em" )
     , ( "margin-left", "8px" )
     ]
+
+
+pipelineDropArea :
+    { over : Bool, dragChanged : Bool }
+    -> List ( String, String )
+pipelineDropArea { over, dragChanged } =
+    (if over then
+        [ ( "padding", "0 198.5px" ) ]
+
+     else
+        [ ( "padding", "0 50px" ) ]
+    )
+        ++ (if dragChanged then
+                [ ( "transition", "all .2s ease-in-out" ) ]
+
+            else
+                []
+           )
 
 
 infoBar :

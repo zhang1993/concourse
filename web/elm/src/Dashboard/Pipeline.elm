@@ -13,6 +13,7 @@ import Duration
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (on, onMouseEnter, onMouseLeave)
+import Json.Decode
 import Routes
 import StrictEvents exposing (onLeftClick)
 import Time exposing (Time)
@@ -82,12 +83,26 @@ pipelineView :
     { now : Time
     , pipeline : Pipeline
     , hovered : Bool
+    , dragging : Bool
     , pipelineRunningKeyframes : String
+    , index : Int
     }
     -> Html Msg
-pipelineView { now, pipeline, hovered, pipelineRunningKeyframes } =
+pipelineView { now, pipeline, hovered, dragging, pipelineRunningKeyframes, index } =
     Html.div
-        [ style Styles.pipelineCard
+        [ style <| Styles.pipelineCard dragging
+        , class "card"
+        , attribute "data-pipeline-name" pipeline.name
+        , on "dragstart"
+            (Json.Decode.succeed
+                (DragStart
+                    { pipelineName = pipeline.name
+                    , teamName = pipeline.teamName
+                    }
+                )
+            )
+        , on "dragend" (Json.Decode.succeed DragEnd)
+        , draggable "true"
         ]
         [ Html.div
             [ class "banner"

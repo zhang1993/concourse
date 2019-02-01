@@ -230,7 +230,7 @@ handleCallback action model =
             )
 
         ResourceFetched (Err err) ->
-            case Debug.log "failed to fetch resource" err of
+            case err of
                 Http.BadStatus { status } ->
                     if status.code == 401 then
                         ( model, [ RedirectToLogin ] )

@@ -15,7 +15,6 @@ import Concourse.Cli as Cli
 import Concourse.PipelineStatus as PipelineStatus exposing (PipelineStatus(..))
 import Concourse.User
 import Dashboard.APIData as APIData
-import Dashboard.Details as Details
 import Dashboard.Footer as Footer
 import Dashboard.Group as Group
 import Dashboard.Models as Models
@@ -39,10 +38,7 @@ import Html.Styled.Attributes
         )
 import Html.Styled.Events exposing (onMouseEnter, onMouseLeave)
 import Http
-import Monocle.Common exposing ((<|>), (=>))
-import Monocle.Lens
-import Monocle.Optional
-import MonocleHelpers exposing (..)
+import List.Extra
 import NewTopBar
 import Regex exposing (HowMany(All), regex, replace)
 import RemoteData
@@ -88,12 +84,8 @@ type alias Model =
     , hideFooter : Bool
     , hideFooterCounter : Int
     , showHelp : Bool
+    , dragChanged : Bool
     }
-
-
-substateOptional : Monocle.Optional.Optional Model SubState.SubState
-substateOptional =
-    Monocle.Optional.Optional (.state >> Result.toMaybe) (\s m -> { m | state = Ok s })
 
 
 init : Flags -> ( Model, List Effect )
@@ -124,6 +116,7 @@ init flags =
       , hideFooterCounter = 0
       , showHelp = False
       , searchBar = searchBar
+      , dragChanged = False
       }
     , [ FetchData
       , PinTeamNames Group.stickyHeaderConfig
@@ -167,7 +160,6 @@ handleCallback msg model =
                                     Ok
                                         { now = now
                                         , dragState = Group.NotDragging
-                                        , dropState = Group.NotDropping
                                         }
                             }
 
@@ -274,19 +266,19 @@ update msg model =
               ]
             )
 
-        DragStart teamName index ->
+        DragStart pid ->
             let
+                group =
+                    model.groups |> List.Extra.find (.teamName >> (==) pid.teamName)
+
                 newModel =
-                    case model.state of
-                        Ok substate ->
+                    case ( group, model.state ) of
+                        ( Just g, Ok substate ) ->
                             { model
                                 | state =
                                     Ok
                                         { substate
-                                            | dragState =
-                                                Group.Dragging
-                                                    teamName
-                                                    index
+                                            | dragState = Group.startDrag g pid
                                         }
                             }
 
@@ -295,18 +287,21 @@ update msg model =
             in
             ( newModel, [] )
 
-        DragOver teamName index ->
+        DragOver o ->
             let
                 newModel =
-                    case model.state of
-                        Ok substate ->
+                    case ( model.state, model.state |> Result.map .dragState ) of
+                        ( Ok substate, Ok (Group.Dragging pid _) ) ->
                             { model
                                 | state =
                                     Ok
                                         { substate
-                                            | dropState =
-                                                Group.Dropping index
+                                            | dragState =
+                                                Group.Dragging
+                                                    pid
+                                                    o
                                         }
+                                , dragChanged = True
                             }
 
                         _ ->
@@ -322,68 +317,42 @@ update msg model =
 
         DragEnd ->
             let
-                updatePipelines :
-                    ( Group.PipelineIndex, Group.PipelineIndex )
-                    -> Group.Group
-                    -> ( Group.Group, List Effect )
-                updatePipelines ( dragIndex, dropIndex ) group =
-                    let
-                        newGroup =
-                            Group.shiftPipelines dragIndex dropIndex group
-                    in
-                    ( newGroup
-                    , [ SendOrderPipelinesRequest
-                            newGroup.teamName
-                            newGroup.pipelines
-                            model.csrfToken
-                      ]
-                    )
+                newModel =
+                    case model.state of
+                        Ok substate ->
+                            let
+                                newGroups =
+                                    case substate.dragState of
+                                        Group.NotDragging ->
+                                            model.groups
 
-                dragDropOptional : Monocle.Optional.Optional Model ( Group.DragState, Group.DropState )
-                dragDropOptional =
-                    substateOptional
-                        =|> Monocle.Lens.tuple
-                                Details.dragStateLens
-                                Details.dropStateLens
+                                        Group.Dragging pid over ->
+                                            let
+                                                tn =
+                                                    pid.teamName
 
-                dragDropIndexOptional : Monocle.Optional.Optional Model ( Group.PipelineIndex, Group.PipelineIndex )
-                dragDropIndexOptional =
-                    dragDropOptional
-                        => Monocle.Optional.zip
-                            Group.dragIndexOptional
-                            Group.dropIndexOptional
+                                                pn =
+                                                    pid.pipelineName
+                                            in
+                                            model.groups
+                                                |> List.Extra.updateIf
+                                                    (.teamName >> (==) tn)
+                                                    (Group.drop
+                                                        { pipelineName = pn
+                                                        , over = over
+                                                        }
+                                                    )
+                            in
+                            { model
+                                | state =
+                                    Ok { substate | dragState = Group.NotDragging }
+                                , groups = newGroups
+                            }
 
-                groupsLens : Monocle.Lens.Lens Model (List Group.Group)
-                groupsLens =
-                    Monocle.Lens.Lens .groups (\b a -> { a | groups = b })
-
-                groupOptional : Monocle.Optional.Optional Model Group.Group
-                groupOptional =
-                    (substateOptional
-                        =|> Details.dragStateLens
-                        => Group.teamNameOptional
-                    )
-                        >>= (\teamName ->
-                                groupsLens
-                                    <|= Group.findGroupOptional teamName
-                            )
-
-                bigOptional : Monocle.Optional.Optional Model ( ( Group.PipelineIndex, Group.PipelineIndex ), Group.Group )
-                bigOptional =
-                    Monocle.Optional.tuple
-                        dragDropIndexOptional
-                        groupOptional
+                        _ ->
+                            model
             in
-            model
-                |> modifyWithEffect bigOptional
-                    (\( t, g ) ->
-                        let
-                            ( newG, msg ) =
-                                updatePipelines t g
-                        in
-                        ( ( t, newG ), msg )
-                    )
-                |> Tuple.mapFirst (dragDropOptional.set ( Group.NotDragging, Group.NotDropping ))
+            ( newModel, [] )
 
         PipelineButtonHover state ->
             ( { model | hoveredPipeline = state }, [] )
@@ -691,6 +660,7 @@ dashboardView model =
                                     model.pipelineRunningKeyframes
                                 , userState = model.userState
                                 , highDensity = model.highDensity
+                                , dragChanged = model.dragChanged
                                 }
                     ]
                         ++ (List.map Html.fromUnstyled <| Footer.view model)
@@ -858,16 +828,18 @@ turbulenceView path =
 
 
 pipelinesView :
-    { groups : List Group.Group
-    , substate : SubState.SubState
-    , hoveredPipeline : Maybe Models.Pipeline
-    , pipelineRunningKeyframes : String
-    , query : String
-    , userState : UserState.UserState
-    , highDensity : Bool
+    { a
+        | groups : List Group.Group
+        , substate : SubState.SubState
+        , hoveredPipeline : Maybe Models.Pipeline
+        , pipelineRunningKeyframes : String
+        , query : String
+        , userState : UserState.UserState
+        , highDensity : Bool
+        , dragChanged : Bool
     }
     -> List (Html Msg)
-pipelinesView { groups, substate, hoveredPipeline, pipelineRunningKeyframes, query, userState, highDensity } =
+pipelinesView { groups, substate, hoveredPipeline, pipelineRunningKeyframes, query, userState, highDensity, dragChanged } =
     let
         filteredGroups =
             groups |> filter query |> List.sortWith Group.ordering
@@ -889,7 +861,7 @@ pipelinesView { groups, substate, hoveredPipeline, pipelineRunningKeyframes, que
                     |> List.map
                         (Group.view
                             { dragState = substate.dragState
-                            , dropState = substate.dropState
+                            , dragChanged = dragChanged
                             , now = substate.now
                             , hoveredPipeline = hoveredPipeline
                             , pipelineRunningKeyframes = pipelineRunningKeyframes

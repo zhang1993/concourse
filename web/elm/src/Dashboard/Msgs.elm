@@ -1,5 +1,6 @@
-module Dashboard.Msgs exposing (Msg(..))
+module Dashboard.Msgs exposing (DragOver(..), Msg(..))
 
+import Concourse
 import Concourse.Cli as Cli
 import Dashboard.Models as Models
 import Keyboard
@@ -13,8 +14,8 @@ type Msg
     | ShowFooter
     | KeyPressed Keyboard.KeyCode
     | KeyDowns Keyboard.KeyCode
-    | DragStart String Int
-    | DragOver String Int
+    | DragStart Concourse.PipelineIdentifier
+    | DragOver DragOver
     | DragEnd
     | Tooltip String String
     | TooltipHd String String
@@ -31,3 +32,8 @@ type Msg
     | SelectMsg Int
     | ToggleUserMenu
     | ShowSearchInput
+
+
+type DragOver
+    = Before Concourse.PipelineIdentifier
+    | End
