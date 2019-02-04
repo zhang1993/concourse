@@ -1,6 +1,7 @@
 module DashboardDragDropTests exposing (all)
 
 import Callback
+import Concourse.PipelineStatus as PipelineStatus
 import Dashboard.Msgs
 import Dict
 import Effects
@@ -111,10 +112,7 @@ all =
             dragStartMsg =
                 Msgs.SubMsg 1 <|
                     SubPage.Msgs.DashboardMsg <|
-                        Dashboard.Msgs.DragStart
-                            { pipelineName = "pipeline"
-                            , teamName = "team"
-                            }
+                        Dashboard.Msgs.DragStart "team" 0
         in
         [ context "'pipeline' card properties"
             (queryView >> pipelineCard "pipeline")
@@ -134,7 +132,7 @@ all =
                 dragEnterMsg =
                     Msgs.SubMsg 1 <|
                         SubPage.Msgs.DashboardMsg <|
-                            Dashboard.Msgs.DragOver Dashboard.Msgs.End
+                            Dashboard.Msgs.DragOver 2
 
                 dragEndMsg =
                     Msgs.SubMsg 1 <|
@@ -166,7 +164,7 @@ all =
                     >> Query.each
                         (Query.hasNot
                             [ style
-                                [ ( "transition", "all .2s ease-in-out" ) ]
+                                [ ( "transition", "all .2s ease-in-out 0s" ) ]
                             ]
                         )
             , it "middle drop area has default size" <|
@@ -208,17 +206,53 @@ all =
                         >> Query.has
                             [ style
                                 [ ( "padding", "0 198.5px" )
-                                , ( "transition", "all .2s ease-in-out" )
+                                , ( "transition", "all .2s ease-in-out 0s" )
                                 ]
                             ]
                 , context "after dropping 'pipeline' card on rightmost drop area"
-                    (Layout.update dragEndMsg >> Tuple.first)
+                    (Layout.update dragEndMsg)
                     [ it "drop areas return to normal size" <|
-                        queryView
+                        Tuple.first
+                            >> queryView
                             >> Query.findAll [ class "drop-area" ]
                             >> Query.each dropAreaNormalState
+                    , it "sends a request to order pipelines" <|
+                        Tuple.second
+                            >> Expect.equal
+                                [ ( Effects.SubPage 1
+                                  , Effects.SendOrderPipelinesRequest
+                                        "team"
+                                        [ { id = 1
+                                          , name = "other-pipeline"
+                                          , teamName = "team"
+                                          , public = True
+                                          , jobs = []
+                                          , resourceError = False
+                                          , status = PipelineStatus.PipelineStatusPending False
+                                          }
+                                        , { id = 2
+                                          , name = "third-pipeline"
+                                          , teamName = "team"
+                                          , public = True
+                                          , jobs = []
+                                          , resourceError = False
+                                          , status = PipelineStatus.PipelineStatusPending False
+                                          }
+                                        , { id = 0
+                                          , name = "pipeline"
+                                          , teamName = "team"
+                                          , public = True
+                                          , jobs = []
+                                          , resourceError = False
+                                          , status = PipelineStatus.PipelineStatusPending False
+                                          }
+                                        ]
+                                        ""
+                                  )
+                                ]
                     , it "cards are in opposite order" <|
-                        queryView
+                        Tuple.first
+                            >> queryView
                             >> Query.findAll [ class "card" ]
                             >> Expect.all
                                 [ Query.count (Expect.equal 3)

@@ -1,5 +1,5 @@
 module Dashboard.Group exposing
-    ( DragState(..)
+    ( DragState
     , Group
     , StickyHeaderConfig
     , allPipelines
@@ -15,7 +15,6 @@ module Dashboard.Group exposing
     , pipelineStatus
     , shiftPipelineTo
     , shiftPipelines
-    , startDrag
     , stickyHeaderConfig
     , transition
     , view
@@ -75,82 +74,36 @@ stickyHeaderConfig =
     }
 
 
-type DragState
-    = NotDragging
-    | Dragging Concourse.PipelineIdentifier Dashboard.Msgs.DragOver
-
-
-startDrag : Group -> Concourse.PipelineIdentifier -> DragState
-startDrag group pid =
-    if group.teamName /= pid.teamName then
-        NotDragging
-
-    else
-        let
-            idx =
-                group.pipelines
-                    |> List.Extra.findIndex (.name >> (==) pid.pipelineName)
-        in
-        case idx of
-            Nothing ->
-                NotDragging
-
-            Just i ->
-                case List.Extra.getAt (i + 1) group.pipelines of
-                    Nothing ->
-                        Dragging pid End
-
-                    Just p ->
-                        Dragging pid
-                            (Before
-                                { pipelineName = p.name
-                                , teamName = p.teamName
-                                }
-                            )
+type alias DragState =
+    { teamName : String
+    , from : Int
+    , to : Int
+    }
 
 
 drop :
-    { pipelineName : String, over : DragOver }
+    DragState
     -> Group
     -> Group
-drop { pipelineName, over } ({ pipelines } as g) =
+drop { from, to } ({ pipelines } as g) =
     let
         draggedPipeline =
-            List.Extra.find (.name >> (==) pipelineName)
-                pipelines
+            List.Extra.getAt from pipelines
 
         newPipelines =
-            case ( draggedPipeline, over ) of
-                ( Just dragged, Before beforePid ) ->
-                    pipelines
-                        |> List.filter ((/=) dragged)
-                        |> insertBefore
-                            (.name >> (==) beforePid.pipelineName)
-                            dragged
+            case draggedPipeline of
+                Just dragged ->
+                    let
+                        withoutDragged =
+                            List.filter ((/=) dragged) pipelines
+                    in
+                    List.take to withoutDragged
+                        ++ (dragged :: List.drop to withoutDragged)
 
-                ( Just dragged, End ) ->
-                    pipelines
-                        |> List.filter ((/=) dragged)
-                        |> flip List.append [ dragged ]
-
-                _ ->
+                Nothing ->
                     pipelines
     in
     { g | pipelines = newPipelines }
-
-
-insertBefore : (a -> Bool) -> a -> List a -> List a
-insertBefore pred x xs =
-    case xs of
-        [] ->
-            [ x ]
-
-        y :: ys ->
-            if pred y then
-                x :: y :: ys
-
-            else
-                y :: insertBefore pred x ys
 
 
 allPipelines : APIData -> List Models.Pipeline
@@ -371,7 +324,7 @@ group allPipelines user teamName =
 
 
 view :
-    { dragState : DragState
+    { dragState : Maybe DragState
     , now : Time
     , hoveredPipeline : Maybe Models.Pipeline
     , pipelineRunningKeyframes : String
@@ -382,7 +335,7 @@ view :
 view { dragState, dragChanged, now, hoveredPipeline, pipelineRunningKeyframes } group =
     let
         active =
-            dragState /= NotDragging
+            dragState /= Nothing
 
         pipelines =
             if List.isEmpty group.pipelines then
@@ -391,7 +344,7 @@ view { dragState, dragChanged, now, hoveredPipeline, pipelineRunningKeyframes } 
             else
                 List.append
                     (List.indexedMap
-                        (\i pipeline ->
+                        (\idx pipeline ->
                             let
                                 myPid =
                                     { teamName = pipeline.teamName
@@ -400,10 +353,10 @@ view { dragState, dragChanged, now, hoveredPipeline, pipelineRunningKeyframes } 
 
                                 dragging =
                                     case dragState of
-                                        Dragging pid _ ->
-                                            pid == myPid
+                                        Just { from } ->
+                                            from == idx
 
-                                        _ ->
+                                        Nothing ->
                                             False
                             in
                             Html.div [ class "pipeline-wrapper" ] <|
@@ -416,7 +369,17 @@ view { dragState, dragChanged, now, hoveredPipeline, pipelineRunningKeyframes } 
                                         , dragState = dragState
                                         , dragChanged = dragChanged
                                         }
-                                        (Just myPid)
+                                        (case dragState of
+                                            Just { from } ->
+                                                if idx > from then
+                                                    idx - 1
+
+                                                else
+                                                    idx
+
+                                            Nothing ->
+                                                idx
+                                        )
                                     ]
                                 )
                                     ++ [ Pipeline.pipelineView
@@ -428,7 +391,7 @@ view { dragState, dragChanged, now, hoveredPipeline, pipelineRunningKeyframes } 
                                             , dragging = dragging
                                             , pipelineRunningKeyframes =
                                                 pipelineRunningKeyframes
-                                            , index = i
+                                            , index = idx
                                             }
                                        ]
                         )
@@ -439,7 +402,7 @@ view { dragState, dragChanged, now, hoveredPipeline, pipelineRunningKeyframes } 
                         , dragState = dragState
                         , dragChanged = dragChanged
                         }
-                        Nothing
+                        (List.length group.pipelines - 1)
                     ]
     in
     Html.div
@@ -505,25 +468,17 @@ pipelineNotSetView =
 
 
 pipelineDropAreaView :
-    { active : Bool, dragState : DragState, dragChanged : Bool }
-    -> Maybe Concourse.PipelineIdentifier
+    { active : Bool, dragState : Maybe DragState, dragChanged : Bool }
+    -> Int
     -> Html Msg
-pipelineDropAreaView { active, dragState, dragChanged } pid =
+pipelineDropAreaView { active, dragState, dragChanged } idx =
     let
-        dragOver =
-            case pid of
-                Nothing ->
-                    End
-
-                Just pid ->
-                    Before pid
-
         over =
             case dragState of
-                Dragging _ over ->
-                    over == dragOver
+                Just { to } ->
+                    to == idx
 
-                _ ->
+                Nothing ->
                     False
     in
     Html.div
@@ -534,6 +489,6 @@ pipelineDropAreaView { active, dragState, dragChanged } pid =
         , style <|
             Styles.pipelineDropArea
                 { over = over, dragChanged = dragChanged }
-        , on "dragenter" (Json.Decode.succeed (DragOver dragOver))
+        , on "dragenter" (Json.Decode.succeed <| DragOver idx)
         ]
         [ Html.text "" ]

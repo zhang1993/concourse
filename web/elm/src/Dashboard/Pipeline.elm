@@ -94,13 +94,7 @@ pipelineView { now, pipeline, hovered, dragging, pipelineRunningKeyframes, index
         , class "card"
         , attribute "data-pipeline-name" pipeline.name
         , on "dragstart"
-            (Json.Decode.succeed
-                (DragStart
-                    { pipelineName = pipeline.name
-                    , teamName = pipeline.teamName
-                    }
-                )
-            )
+            (Json.Decode.succeed <| DragStart pipeline.teamName index)
         , on "dragend" (Json.Decode.succeed DragEnd)
         , draggable "true"
         ]

@@ -159,7 +159,7 @@ handleCallback msg model =
                                 | state =
                                     Ok
                                         { now = now
-                                        , dragState = Group.NotDragging
+                                        , dragState = Nothing
                                         }
                             }
 
@@ -266,10 +266,10 @@ update msg model =
               ]
             )
 
-        DragStart pid ->
+        DragStart teamName idx ->
             let
                 group =
-                    model.groups |> List.Extra.find (.teamName >> (==) pid.teamName)
+                    model.groups |> List.Extra.find (.teamName >> (==) teamName)
 
                 newModel =
                     case ( group, model.state ) of
@@ -278,7 +278,12 @@ update msg model =
                                 | state =
                                     Ok
                                         { substate
-                                            | dragState = Group.startDrag g pid
+                                            | dragState =
+                                                Just
+                                                    { teamName = teamName
+                                                    , from = idx
+                                                    , to = idx
+                                                    }
                                         }
                             }
 
@@ -287,19 +292,23 @@ update msg model =
             in
             ( newModel, [] )
 
-        DragOver o ->
+        DragOver idx ->
             let
                 newModel =
-                    case ( model.state, model.state |> Result.map .dragState ) of
-                        ( Ok substate, Ok (Group.Dragging pid _) ) ->
+                    case
+                        ( model.state
+                        , model.state
+                            |> Result.toMaybe
+                            |> Maybe.andThen .dragState
+                        )
+                    of
+                        ( Ok substate, Just ds ) ->
                             { model
                                 | state =
                                     Ok
                                         { substate
                                             | dragState =
-                                                Group.Dragging
-                                                    pid
-                                                    o
+                                                Just { ds | to = idx }
                                         }
                                 , dragChanged = True
                             }
@@ -316,43 +325,45 @@ update msg model =
             ( model, [ ShowTooltip ( pipelineName, teamName ) ] )
 
         DragEnd ->
-            let
-                newModel =
-                    case model.state of
-                        Ok substate ->
-                            let
-                                newGroups =
-                                    case substate.dragState of
-                                        Group.NotDragging ->
-                                            model.groups
+            case model.state of
+                Ok substate ->
+                    let
+                        ( newGroups, effects ) =
+                            case substate.dragState of
+                                Nothing ->
+                                    ( model.groups, [] )
 
-                                        Group.Dragging pid over ->
-                                            let
-                                                tn =
-                                                    pid.teamName
+                                Just ds ->
+                                    case
+                                        model.groups
+                                            |> List.Extra.find
+                                                (.teamName >> (==) ds.teamName)
+                                    of
+                                        Nothing ->
+                                            ( model.groups, [] )
 
-                                                pn =
-                                                    pid.pipelineName
-                                            in
-                                            model.groups
-                                                |> List.Extra.updateIf
-                                                    (.teamName >> (==) tn)
-                                                    (Group.drop
-                                                        { pipelineName = pn
-                                                        , over = over
-                                                        }
-                                                    )
-                            in
-                            { model
-                                | state =
-                                    Ok { substate | dragState = Group.NotDragging }
-                                , groups = newGroups
-                            }
+                                        Just g ->
+                                            ( List.Extra.updateIf
+                                                (.teamName >> (==) ds.teamName)
+                                                (Group.drop ds)
+                                                model.groups
+                                            , [ SendOrderPipelinesRequest
+                                                    g.teamName
+                                                    (Group.drop ds g).pipelines
+                                                    model.csrfToken
+                                              ]
+                                            )
+                    in
+                    ( { model
+                        | state =
+                            Ok { substate | dragState = Nothing }
+                        , groups = newGroups
+                      }
+                    , effects
+                    )
 
-                        _ ->
-                            model
-            in
-            ( newModel, [] )
+                _ ->
+                    ( model, [] )
 
         PipelineButtonHover state ->
             ( { model | hoveredPipeline = state }, [] )

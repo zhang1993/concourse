@@ -6,7 +6,7 @@ import Time exposing (Time)
 
 type alias SubState =
     { now : Time
-    , dragState : Group.DragState
+    , dragState : Maybe Group.DragState
     }
 
 

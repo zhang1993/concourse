@@ -14,8 +14,8 @@ type Msg
     | ShowFooter
     | KeyPressed Keyboard.KeyCode
     | KeyDowns Keyboard.KeyCode
-    | DragStart Concourse.PipelineIdentifier
-    | DragOver DragOver
+    | DragStart Concourse.TeamName Int
+    | DragOver Int
     | DragEnd
     | Tooltip String String
     | TooltipHd String String
