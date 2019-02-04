@@ -30,9 +30,8 @@ import Http
 import Json.Encode
 import Navigation
 import Process
-import QueryString
-import RemoteData
 import Resource.Models exposing (VersionId, VersionToggleAction(..))
+import Routes
 import Scroll
 import Task
 import Time exposing (Time)
@@ -93,7 +92,6 @@ type Effect
     | FetchBuildPrep Time Int Int
     | FetchBuildPlan Concourse.BuildId
     | FetchBuildPlanAndResources Concourse.BuildId
-    | FocusSearchInput
     | GetCurrentTime
     | DoTriggerBuild Concourse.JobIdentifier String
     | DoAbortBuild Int Concourse.CSRFToken
@@ -121,6 +119,7 @@ type Effect
     | SetFavIcon (Maybe Concourse.BuildStatus)
     | SaveToken String
     | LoadToken
+    | ForceFocus String
 
 
 type ScrollDirection
@@ -220,9 +219,6 @@ runEffect effect =
         SendTokenToFly authToken flyPort ->
             sendTokenToFly authToken flyPort
 
-        FocusSearchInput ->
-            Task.attempt (always EmptyCallback) (Dom.focus "search-input-field")
-
         ModifyUrl url ->
             Navigation.modifyUrl url
 
@@ -285,6 +281,10 @@ runEffect effect =
 
         LoadToken ->
             loadToken ()
+
+        ForceFocus dom ->
+            Dom.focus dom
+                |> Task.attempt (always EmptyCallback)
 
 
 fetchJobBuilds : Concourse.JobIdentifier -> Maybe Concourse.Pagination.Page -> Cmd Callback
@@ -381,16 +381,10 @@ unpauseJob jobIdentifier csrfToken =
 
 sendTokenToFly : String -> Int -> Cmd Callback
 sendTokenToFly authToken flyPort =
-    let
-        queryString =
-            QueryString.empty
-                |> QueryString.add "token" authToken
-                |> QueryString.render
-    in
     Http.request
         { method = "GET"
         , headers = []
-        , url = "http://127.0.0.1:" ++ toString flyPort ++ queryString
+        , url = Routes.tokenToFlyRoute authToken flyPort
         , body = Http.emptyBody
         , expect = Http.expectStringResponse (\_ -> Ok ())
         , timeout = Nothing
@@ -403,8 +397,7 @@ fetchData : Cmd Callback
 fetchData =
     Dashboard.APIData.remoteData
         |> Task.map2 (,) Time.now
-        |> RemoteData.asCmd
-        |> Cmd.map APIDataFetched
+        |> Task.attempt APIDataFetched
 
 
 togglePipelinePaused : { pipeline : Dashboard.Models.Pipeline, csrfToken : Concourse.CSRFToken } -> Cmd Callback

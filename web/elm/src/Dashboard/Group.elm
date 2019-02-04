@@ -26,7 +26,7 @@ import Concourse.PipelineStatus as PipelineStatus
 import Dashboard.APIData exposing (APIData)
 import Dashboard.Group.Tag as Tag
 import Dashboard.Models as Models
-import Dashboard.Msgs exposing (DragOver(..), Msg(..))
+import Dashboard.Msgs exposing (Msg(..))
 import Dashboard.Pipeline as Pipeline
 import Dashboard.Styles as Styles
 import Date exposing (Date)

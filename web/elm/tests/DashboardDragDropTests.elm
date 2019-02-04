@@ -61,8 +61,8 @@ all =
             |> Tuple.first
             |> Layout.handleCallback
                 (Effects.SubPage 1)
-                (Callback.APIDataFetched
-                    (RemoteData.Success
+                (Callback.APIDataFetched <|
+                    Ok
                         ( 0
                         , { teams = [ { id = 0, name = "team" } ]
                           , pipelines =
@@ -103,7 +103,6 @@ all =
                           , version = "0.0.0-dev"
                           }
                         )
-                    )
                 )
             |> Tuple.first
         )
@@ -164,7 +163,7 @@ all =
                     >> Query.each
                         (Query.hasNot
                             [ style
-                                [ ( "transition", "all .2s ease-in-out 0s" ) ]
+                                [ ( "transition", "all .2s ease-in-out" ) ]
                             ]
                         )
             , it "middle drop area has default size" <|
@@ -206,7 +205,7 @@ all =
                         >> Query.has
                             [ style
                                 [ ( "padding", "0 198.5px" )
-                                , ( "transition", "all .2s ease-in-out 0s" )
+                                , ( "transition", "all .2s ease-in-out" )
                                 ]
                             ]
                 , context "after dropping 'pipeline' card on rightmost drop area"

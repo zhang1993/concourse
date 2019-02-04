@@ -1,9 +1,10 @@
-module Dashboard.Msgs exposing (DragOver(..), Msg(..))
+module Dashboard.Msgs exposing (Msg(..), fromDashboardMsg)
 
 import Concourse
 import Concourse.Cli as Cli
 import Dashboard.Models as Models
 import Keyboard
+import NewTopBar.Msgs as NTB
 import Time
 import Window
 
@@ -13,7 +14,6 @@ type Msg
     | AutoRefresh Time.Time
     | ShowFooter
     | KeyPressed Keyboard.KeyCode
-    | KeyDowns Keyboard.KeyCode
     | DragStart Concourse.TeamName Int
     | DragOver Int
     | DragEnd
@@ -24,16 +24,20 @@ type Msg
     | CliHover (Maybe Cli.Cli)
     | TopCliHover (Maybe Cli.Cli)
     | ResizeScreen Window.Size
-    | LogIn
-    | LogOut
-    | FilterMsg String
-    | FocusMsg
-    | BlurMsg
-    | SelectMsg Int
-    | ToggleUserMenu
-    | ShowSearchInput
+    | FromTopBar NTB.Msg
 
 
-type DragOver
-    = Before Concourse.PipelineIdentifier
-    | End
+fromDashboardMsg : Msg -> NTB.Msg
+fromDashboardMsg msg =
+    case msg of
+        KeyPressed k ->
+            NTB.KeyPressed k
+
+        ResizeScreen s ->
+            NTB.ResizeScreen s
+
+        FromTopBar m ->
+            m
+
+        _ ->
+            NTB.Noop

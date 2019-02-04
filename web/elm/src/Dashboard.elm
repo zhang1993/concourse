@@ -7,7 +7,6 @@ module Dashboard exposing
     , view
     )
 
-import Array
 import Callback exposing (Callback(..))
 import Char
 import Concourse
@@ -18,7 +17,7 @@ import Dashboard.APIData as APIData
 import Dashboard.Footer as Footer
 import Dashboard.Group as Group
 import Dashboard.Models as Models
-import Dashboard.Msgs as Msgs exposing (Msg(..))
+import Dashboard.Msgs as Msgs exposing (Msg(..), fromDashboardMsg)
 import Dashboard.Styles as Styles
 import Dashboard.SubState as SubState
 import Dashboard.Text as Text
@@ -39,12 +38,12 @@ import Html.Styled.Attributes
 import Html.Styled.Events exposing (onMouseEnter, onMouseLeave)
 import Http
 import List.Extra
-import NewTopBar
+import NewTopBar.Msgs
+import NewestTopBar as NewTopBar
 import Regex exposing (HowMany(All), regex, replace)
 import RemoteData
 import Routes
 import ScreenSize
-import SearchBar exposing (SearchBar(..))
 import Simple.Fuzzy exposing (filter, match, root)
 import Subscription exposing (Subscription(..))
 import Task
@@ -58,17 +57,17 @@ type alias Flags =
     , search : String
     , highDensity : Bool
     , pipelineRunningKeyframes : String
+    , route : Routes.Route
     }
 
 
 type DashboardError
-    = NotAsked
-    | Turbulence String
+    = Turbulence String
 
 
 type alias Model =
     { csrfToken : String
-    , state : Result DashboardError SubState.SubState
+    , state : RemoteData.RemoteData DashboardError SubState.SubState
     , turbulencePath : String
     , highDensity : Bool
     , hoveredPipeline : Maybe Models.Pipeline
@@ -80,7 +79,7 @@ type alias Model =
     , version : String
     , userState : UserState.UserState
     , userMenuVisible : Bool
-    , searchBar : SearchBar
+    , topBar : NewTopBar.Model
     , hideFooter : Bool
     , hideFooterCounter : Int
     , showHelp : Bool
@@ -91,15 +90,10 @@ type alias Model =
 init : Flags -> ( Model, List Effect )
 init flags =
     let
-        searchBar =
-            Expanded
-                { query = flags.search
-                , selectionMade = False
-                , showAutocomplete = False
-                , selection = 0
-                }
+        ( topBar, topBarEffects ) =
+            NewTopBar.init { route = flags.route }
     in
-    ( { state = Err NotAsked
+    ( { state = RemoteData.NotAsked
       , csrfToken = flags.csrfToken
       , turbulencePath = flags.turbulencePath
       , highDensity = flags.highDensity
@@ -115,30 +109,39 @@ init flags =
       , hideFooter = False
       , hideFooterCounter = 0
       , showHelp = False
-      , searchBar = searchBar
       , dragChanged = False
+      , topBar = topBar
       }
     , [ FetchData
       , PinTeamNames Group.stickyHeaderConfig
       , SetTitle <| "Dashboard" ++ " - "
       , GetScreenSize
       ]
+        ++ topBarEffects
     )
 
 
 handleCallback : Callback -> Model -> ( Model, List Effect )
 handleCallback msg model =
+    let
+        ( newTopBar, topBarEffects ) =
+            NewTopBar.handleCallback msg model.topBar
+
+        ( newModel, dashboardEffects ) =
+            handleCallbackWithoutTopBar msg model
+    in
+    ( { newModel | topBar = newTopBar }
+    , topBarEffects ++ dashboardEffects
+    )
+
+
+handleCallbackWithoutTopBar : Callback -> Model -> ( Model, List Effect )
+handleCallbackWithoutTopBar msg model =
     case msg of
-        APIDataFetched RemoteData.NotAsked ->
-            ( { model | state = Err NotAsked }, [] )
+        APIDataFetched (Err _) ->
+            ( { model | state = RemoteData.Failure (Turbulence model.turbulencePath) }, [] )
 
-        APIDataFetched RemoteData.Loading ->
-            ( { model | state = Err NotAsked }, [] )
-
-        APIDataFetched (RemoteData.Failure _) ->
-            ( { model | state = Err (Turbulence model.turbulencePath) }, [] )
-
-        APIDataFetched (RemoteData.Success ( now, apiData )) ->
+        APIDataFetched (Ok ( now, apiData )) ->
             let
                 groups =
                     Group.groups apiData
@@ -148,16 +151,16 @@ handleCallback msg model =
 
                 newModel =
                     case model.state of
-                        Ok substate ->
+                        RemoteData.Success substate ->
                             { model
                                 | state =
-                                    Ok (SubState.tick now substate)
+                                    RemoteData.Success (SubState.tick now substate)
                             }
 
                         _ ->
                             { model
                                 | state =
-                                    Ok
+                                    RemoteData.Success
                                         { now = now
                                         , dragState = Nothing
                                         }
@@ -178,7 +181,7 @@ handleCallback msg model =
                     , version = apiData.version
                     , userState = userState
                   }
-                , [ ModifyUrl Routes.dashboardRoute ]
+                , [ ModifyUrl (Routes.dashboardRoute False) ]
                 )
 
             else
@@ -191,19 +194,13 @@ handleCallback msg model =
                 )
 
         LoggedOut (Ok ()) ->
-            let
-                redirectUrl =
-                    if model.highDensity then
-                        Routes.dashboardHdRoute
-
-                    else
-                        Routes.dashboardRoute
-            in
             ( { model
                 | userState = UserState.UserStateLoggedOut
                 , userMenuVisible = False
               }
-            , [ NavigateTo redirectUrl, FetchData ]
+            , [ NavigateTo (Routes.dashboardRoute model.highDensity)
+              , FetchData
+              ]
             )
 
         LoggedOut (Err err) ->
@@ -215,17 +212,7 @@ handleCallback msg model =
                 newSize =
                     ScreenSize.fromWindowSize size
             in
-            ( { model
-                | screenSize = newSize
-                , searchBar =
-                    SearchBar.screenSizeChanged
-                        { oldSize = model.screenSize
-                        , newSize = newSize
-                        }
-                        model.searchBar
-              }
-            , []
-            )
+            ( { model | screenSize = newSize }, [] )
 
         _ ->
             ( model, [] )
@@ -233,25 +220,32 @@ handleCallback msg model =
 
 update : Msg -> Model -> ( Model, List Effect )
 update msg model =
+    let
+        ( newTopBar, topBarEffects ) =
+            NewTopBar.update (fromDashboardMsg msg) model.topBar
+
+        ( newModel, dashboardEffects ) =
+            updateWithoutTopBar msg model
+    in
+    ( { newModel | topBar = newTopBar }
+    , topBarEffects ++ dashboardEffects
+    )
+
+
+updateWithoutTopBar : Msg -> Model -> ( Model, List Effect )
+updateWithoutTopBar msg model =
     case msg of
         ClockTick now ->
             ( let
                 newModel =
                     Footer.tick model
               in
-              case model.state of
-                Ok substate ->
-                    { newModel | state = Ok (SubState.tick now substate) }
-
-                _ ->
-                    newModel
+              { newModel | state = RemoteData.map (SubState.tick now) newModel.state }
             , []
             )
 
         AutoRefresh _ ->
-            ( model
-            , [ FetchData ]
-            )
+            ( model, [ FetchData ] )
 
         KeyPressed keycode ->
             handleKeyPressed (Char.fromCode keycode) model
@@ -267,56 +261,41 @@ update msg model =
             )
 
         DragStart teamName idx ->
-            let
-                group =
-                    model.groups |> List.Extra.find (.teamName >> (==) teamName)
-
-                newModel =
-                    case ( group, model.state ) of
-                        ( Just g, Ok substate ) ->
-                            { model
-                                | state =
-                                    Ok
-                                        { substate
-                                            | dragState =
-                                                Just
-                                                    { teamName = teamName
-                                                    , from = idx
-                                                    , to = idx
-                                                    }
+            ( { model
+                | state =
+                    RemoteData.map
+                        (\s ->
+                            { s
+                                | dragState =
+                                    Just
+                                        { teamName = teamName
+                                        , from = idx
+                                        , to = idx
                                         }
                             }
-
-                        _ ->
-                            model
-            in
-            ( newModel, [] )
+                        )
+                        model.state
+              }
+            , []
+            )
 
         DragOver idx ->
-            let
-                newModel =
-                    case
-                        ( model.state
-                        , model.state
-                            |> Result.toMaybe
-                            |> Maybe.andThen .dragState
-                        )
-                    of
-                        ( Ok substate, Just ds ) ->
-                            { model
-                                | state =
-                                    Ok
-                                        { substate
-                                            | dragState =
-                                                Just { ds | to = idx }
-                                        }
-                                , dragChanged = True
+            ( { model
+                | state =
+                    RemoteData.map
+                        (\s ->
+                            { s
+                                | dragState =
+                                    Maybe.map
+                                        (\ds -> { ds | to = idx })
+                                        s.dragState
                             }
-
-                        _ ->
-                            model
-            in
-            ( newModel, [] )
+                        )
+                        model.state
+                , dragChanged = True
+              }
+            , []
+            )
 
         TooltipHd pipelineName teamName ->
             ( model, [ ShowTooltipHd ( pipelineName, teamName ) ] )
@@ -326,7 +305,7 @@ update msg model =
 
         DragEnd ->
             case model.state of
-                Ok substate ->
+                RemoteData.Success substate ->
                     let
                         ( newGroups, effects ) =
                             case substate.dragState of
@@ -356,7 +335,7 @@ update msg model =
                     in
                     ( { model
                         | state =
-                            Ok { substate | dragState = Nothing }
+                            RemoteData.Success { substate | dragState = Nothing }
                         , groups = newGroups
                       }
                     , effects
@@ -374,250 +353,17 @@ update msg model =
         TopCliHover state ->
             ( { model | hoveredTopCliIcon = state }, [] )
 
-        FilterMsg query ->
-            let
-                newModel =
-                    case model.searchBar of
-                        Expanded r ->
-                            { model | searchBar = Expanded { r | query = query } }
+        ResizeScreen size ->
+            ( { model | screenSize = ScreenSize.fromWindowSize size }, [] )
 
-                        _ ->
-                            model
-            in
-            ( newModel
-            , [ FocusSearchInput, ModifyUrl (NewTopBar.queryStringFromSearch query) ]
-            )
+        FromTopBar NewTopBar.Msgs.LogOut ->
+            ( { model | state = RemoteData.NotAsked }, [] )
 
-        LogIn ->
-            ( model, [ RedirectToLogin ] )
-
-        LogOut ->
-            ( { model | state = Err NotAsked }, [ SendLogOutRequest ] )
-
-        ToggleUserMenu ->
+        FromTopBar NewTopBar.Msgs.ToggleUserMenu ->
             ( { model | userMenuVisible = not model.userMenuVisible }, [] )
 
-        FocusMsg ->
-            let
-                newModel =
-                    case model.searchBar of
-                        Expanded r ->
-                            { model
-                                | searchBar =
-                                    Expanded
-                                        { r
-                                            | showAutocomplete = True
-                                        }
-                            }
-
-                        _ ->
-                            model
-            in
-            ( newModel, [] )
-
-        BlurMsg ->
-            let
-                newModel =
-                    case model.searchBar of
-                        Expanded r ->
-                            case model.screenSize of
-                                ScreenSize.Mobile ->
-                                    if String.isEmpty r.query then
-                                        { model | searchBar = Collapsed }
-
-                                    else
-                                        { model
-                                            | searchBar =
-                                                Expanded
-                                                    { r
-                                                        | showAutocomplete = False
-                                                        , selectionMade = False
-                                                        , selection = 0
-                                                    }
-                                        }
-
-                                ScreenSize.Desktop ->
-                                    { model
-                                        | searchBar =
-                                            Expanded
-                                                { r
-                                                    | showAutocomplete = False
-                                                    , selectionMade = False
-                                                    , selection = 0
-                                                }
-                                    }
-
-                                ScreenSize.BigDesktop ->
-                                    { model
-                                        | searchBar =
-                                            Expanded
-                                                { r
-                                                    | showAutocomplete = False
-                                                    , selectionMade = False
-                                                    , selection = 0
-                                                }
-                                    }
-
-                        _ ->
-                            model
-            in
-            ( newModel, [] )
-
-        SelectMsg index ->
-            let
-                newModel =
-                    case model.searchBar of
-                        Expanded r ->
-                            { model
-                                | searchBar =
-                                    Expanded
-                                        { r
-                                            | selectionMade = True
-                                            , selection = index + 1
-                                        }
-                            }
-
-                        _ ->
-                            model
-            in
-            ( newModel, [] )
-
-        KeyDowns keycode ->
-            case model.searchBar of
-                Expanded r ->
-                    if not r.showAutocomplete then
-                        ( { model
-                            | searchBar =
-                                Expanded
-                                    { r
-                                        | selectionMade = False
-                                        , selection = 0
-                                    }
-                          }
-                        , []
-                        )
-
-                    else
-                        case keycode of
-                            -- enter key
-                            13 ->
-                                if not r.selectionMade then
-                                    ( model, [] )
-
-                                else
-                                    let
-                                        options =
-                                            Array.fromList
-                                                (NewTopBar.autocompleteOptions
-                                                    { query = r.query
-                                                    , groups = model.groups
-                                                    }
-                                                )
-
-                                        index =
-                                            (r.selection - 1) % Array.length options
-
-                                        selectedItem =
-                                            case Array.get index options of
-                                                Nothing ->
-                                                    r.query
-
-                                                Just item ->
-                                                    item
-                                    in
-                                    ( { model
-                                        | searchBar =
-                                            Expanded
-                                                { r
-                                                    | selectionMade = False
-                                                    , selection = 0
-                                                    , query = selectedItem
-                                                }
-                                      }
-                                    , []
-                                    )
-
-                            -- up arrow
-                            38 ->
-                                ( { model
-                                    | searchBar =
-                                        Expanded
-                                            { r
-                                                | selectionMade = True
-                                                , selection = r.selection - 1
-                                            }
-                                  }
-                                , []
-                                )
-
-                            -- down arrow
-                            40 ->
-                                ( { model
-                                    | searchBar =
-                                        Expanded
-                                            { r
-                                                | selectionMade = True
-                                                , selection = r.selection + 1
-                                            }
-                                  }
-                                , []
-                                )
-
-                            -- escape key
-                            27 ->
-                                ( model, [ FocusSearchInput ] )
-
-                            _ ->
-                                ( { model
-                                    | searchBar =
-                                        Expanded
-                                            { r
-                                                | selectionMade = False
-                                                , selection = 0
-                                            }
-                                  }
-                                , []
-                                )
-
-                _ ->
-                    ( model, [] )
-
-        ShowSearchInput ->
-            let
-                newModel =
-                    { model
-                        | searchBar =
-                            Expanded
-                                { query = ""
-                                , selectionMade = False
-                                , showAutocomplete = False
-                                , selection = 0
-                                }
-                    }
-            in
-            case model.searchBar of
-                Collapsed ->
-                    ( newModel, [ FocusSearchInput ] )
-
-                _ ->
-                    ( model, [] )
-
-        ResizeScreen size ->
-            let
-                newSize =
-                    ScreenSize.fromWindowSize size
-            in
-            ( { model
-                | screenSize = newSize
-                , searchBar =
-                    SearchBar.screenSizeChanged
-                        { oldSize = model.screenSize
-                        , newSize = newSize
-                        }
-                        model.searchBar
-              }
-            , []
-            )
+        FromTopBar m ->
+            ( model, [] )
 
 
 subscriptions : Model -> List (Subscription Msg)
@@ -627,7 +373,7 @@ subscriptions model =
     , OnMouseMove ShowFooter
     , OnMouseClick ShowFooter
     , OnKeyPress KeyPressed
-    , OnKeyDown KeyDowns
+    , OnKeyDown (NewTopBar.Msgs.KeyDown >> FromTopBar)
     , OnWindowResize Msgs.ResizeScreen
     ]
 
@@ -641,7 +387,7 @@ view model =
             , ( "font-weight", "700" )
             ]
         ]
-        [ NewTopBar.view model
+        [ Html.map FromTopBar (NewTopBar.view model.topBar)
         , dashboardView model
         ]
 
@@ -651,13 +397,16 @@ dashboardView model =
     let
         mainContent =
             case model.state of
-                Err NotAsked ->
+                RemoteData.NotAsked ->
                     [ Html.text "" ]
 
-                Err (Turbulence path) ->
+                RemoteData.Loading ->
+                    [ Html.text "" ]
+
+                RemoteData.Failure (Turbulence path) ->
                     [ turbulenceView path ]
 
-                Ok substate ->
+                RemoteData.Success substate ->
                     [ Html.div
                         [ class "dashboard-content" ]
                       <|
@@ -665,7 +414,7 @@ dashboardView model =
                             ++ pipelinesView
                                 { groups = model.groups
                                 , substate = substate
-                                , query = NewTopBar.query model
+                                , query = NewTopBar.query model.topBar
                                 , hoveredPipeline = model.hoveredPipeline
                                 , pipelineRunningKeyframes =
                                     model.pipelineRunningKeyframes
@@ -890,7 +639,7 @@ handleKeyPressed : Char -> Footer.Model r -> ( Footer.Model r, List Effect )
 handleKeyPressed key model =
     case key of
         '/' ->
-            ( model, [ FocusSearchInput ] )
+            ( model, [] )
 
         '?' ->
             ( Footer.toggleHelp model, [] )
