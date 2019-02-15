@@ -47,7 +47,7 @@ describe('#draw', function() {
     var iconWidth = resourceIcon.getBBox().width;
     var expectedWidth = 5 + textWidth + 5 + iconWidth + 5;
     var resourceRect = document.querySelector('.input rect');
-    expect(resourceRect.getAttribute('width')).toBe(expectedWidth.toString());
+    expect(resourceRect.getAttribute('width')).toBe(Math.floor(expectedWidth).toString());
   });
 
   describe('when job has input with trigger: false', function() {
