@@ -11,6 +11,12 @@
     "elm-analyse": "0.15.1",
     "elm-format": "0.8.1",
     "elm-test": "^0.18.12",
+    "jasmine": "^3.3.1",
+    "karma": "^4.0.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-coverage": "^1.1.2",
+    "karma-jasmine": "^2.0.1",
+    "karma-phantomjs-launcher": "^1.0.4",
     "less": "^3.0.2",
     "less-plugin-autoprefix": "^1.5.1",
     "less-plugin-clean-css": "^1.5.1",
@@ -24,6 +30,7 @@
     "build-less": "lessc --clean-css=--advanced web/assets/css/main.less web/public/main.css",
     "build-elm": "cd web/elm && elm package install -y && elm make --warn --output ../public/elm.js --yes src/Main.elm && uglifyjs < ../public/elm.js > ../public/elm.min.js",
     "build-elm-debug": "cd web/elm && elm package install -y && elm make --debug --warn --output ../public/elm.js --yes src/Main.elm && uglifyjs < ../public/elm.js > ../public/elm.min.js",
-    "watch": "chokidar -i elm-stuff 'web/elm/src/**/*.elm' 'web/assets/css/*.less' -c 'yarn run build-debug' --initial"
+    "watch": "chokidar -i elm-stuff 'web/elm/src/**/*.elm' 'web/assets/css/*.less' -c 'yarn run build-debug' --initial",
+    "spec": "karma start"
   }
 }
