@@ -15,6 +15,7 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
+      'web/public/main.css',
       'web/public/d3.v355.min.js',
       'web/public/jquery-2.1.1.min.js',
       'web/public/index.js',

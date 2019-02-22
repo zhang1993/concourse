@@ -1,4 +1,4 @@
-var currentHighlight;
+var currentHighlight = null;
 
 var redraw;
 function draw(svg, jobs, resources, newUrl) {
@@ -38,6 +38,87 @@ function redrawFunction(svg, jobs, resources, newUrl) {
       }
     })
 
+    function layoutNodes(currentHighlight) {
+      function scaleFactor(node, currentHighlight) {
+        return (node.key === currentHighlight) ? 1.09 : 1;
+      }
+
+      function rectWidth(currentHighlight) {
+        return function(node) {
+          return node.width() * scaleFactor(node, currentHighlight);
+        };
+      }
+
+      function rectHeight(currentHighlight) {
+        return function(node) {
+          return node.height() * scaleFactor(node, currentHighlight);
+        }
+      }
+
+      function textAnchor(node) {
+        return node.pinned() ? "end" : "middle";
+      }
+
+      function textX(currentHighlight) {
+        return function(node) {
+          return (node.pinned()
+            ? node.width() - node.padding()
+            : node.width() / 2
+          ) * scaleFactor(node, currentHighlight);
+        };
+      }
+
+      function textY(currentHighlight) {
+        return function(node) {
+          return node.height() / 2 * scaleFactor(node, currentHighlight);
+        };
+      }
+
+      function imageY(currentHighlight) {
+        return function(node) {
+          let pinIconHeight = 9.75;
+          return (node.height() / 2 - pinIconHeight / 2) * scaleFactor(node, currentHighlight);
+        };
+      }
+
+      function imageX(currentHighlight) {
+        return function(node) {
+          return node.padding() * scaleFactor(node, currentHighlight);
+        };
+      }
+
+      function imageWidth(currentHighlight) {
+        let pinIconWidth = 6;
+        return function(node) {
+          return pinIconWidth * scaleFactor(node, currentHighlight);
+        };
+      }
+
+      svgNodes.select("rect")
+        .attr("width", rectWidth(currentHighlight))
+        .attr("height", rectHeight(currentHighlight));
+
+      svgNodes.select("text")
+        .attr("text-anchor", textAnchor)
+        .attr("x", textX(currentHighlight))
+        .attr("y", textY(currentHighlight));
+
+      svgNodes.select("image")
+        .attr("x", imageX(currentHighlight))
+        .attr("y", imageY(currentHighlight))
+        .attr("width", imageWidth(currentHighlight));
+
+      svgNodes.attr("transform", function(node) {
+        var position = node.position();
+        var xPos = position.x -
+          (scaleFactor(node, currentHighlight) - 1) / 2 * node.width();
+        var yPos = position.y -
+          (scaleFactor(node, currentHighlight) - 1) / 2 * node.height();
+        return "translate("+xPos+", "+yPos+")";
+      });
+    }
+
+
     function highlight(thing) {
       if (!thing.key) {
         return
@@ -60,6 +141,8 @@ function redrawFunction(svg, jobs, resources, newUrl) {
           })
         }
       })
+
+      layoutNodes(currentHighlight);
     }
 
     function lowlight(thing) {
@@ -67,10 +150,12 @@ function redrawFunction(svg, jobs, resources, newUrl) {
         return
       }
 
-      currentHighlight = undefined;
+      currentHighlight = null;
 
       svgEdges.classed({ active: false })
       svgNodes.classed({ active: false })
+
+      layoutNodes(currentHighlight);
     }
 
     var svgNode = svgNodes.enter().append("g")
@@ -98,7 +183,6 @@ function redrawFunction(svg, jobs, resources, newUrl) {
       })
 
     var jobStatusBackground = nodeLink.append("rect")
-      .attr("height", function(node) { return node.height() })
 
 
     var animatableBackground = nodeLink.append("foreignObject")
@@ -119,25 +203,19 @@ function redrawFunction(svg, jobs, resources, newUrl) {
     animationTarget.attr("class", "animation")
     animationTarget.style("height", function(node) { return node.height() + "px" })
 
-    var pinIconWidth = 6;
-    var pinIconHeight = 9.75;
     nodeLink.filter(function(node) { return node.pinned() }).append("image")
         .attr("xlink:href", "/public/images/pin-ic-white.svg")
-        .attr("width", pinIconWidth)
-        .attr("y", function(node) { return node.height() / 2 - pinIconHeight / 2 })
-        .attr("x", function(node) { return node.padding() })
 
     nodeLink.append("text")
       .text(function(node) { return node.name })
       .attr("dominant-baseline", "middle")
-      .attr("text-anchor", function(node) { return node.pinned() ? "end" : "middle" })
-      .attr("x", function(node) { return node.pinned() ? node.width() - node.padding() : node.width() / 2 })
-      .attr("y", function(node) { return node.height() / 2 })
 
     jobStatusBackground.attr("width", function(node) { return node.width() })
     animatableBackground.attr("width", function(node) { return node.width() + (2 * node.animationRadius()) })
     animationTarget.style("width", function(node) { return node.width() + "px" })
     animationPadding.style("width", function(node) { return node.width() + "px" })
+
+    layoutNodes(currentHighlight);
 
     graph.layout()
 

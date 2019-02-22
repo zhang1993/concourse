@@ -1,5 +1,5 @@
 resources:
-- name: resource
+- name: resource-with-a-super-ridiculous-long-name
   type: mock
   source:
     mirror_self: true
@@ -7,4 +7,4 @@ resources:
 jobs:
 - name: job
   plan:
-  - get: resource
+  - get: resource-with-a-super-ridiculous-long-name
