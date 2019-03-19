@@ -1,0 +1,23 @@
+tags: [bosh]
+public: true
+max_in_flight: 1
+plan:
+- aggregate:
+  - get: concourse
+    passed: [bin-smoke]
+    trigger: true
+  - get: unit-image
+    passed: [bin-smoke]
+    trigger: true
+  - get: version
+    passed: [bin-smoke]
+    trigger: true
+  - get: linux-rc
+    passed: [bin-smoke]
+    trigger: true
+  - get: concourse-release-repo
+- task: check-props
+  file: concourse/ci/tasks/check-distribution-env.yml
+  image: unit-image
+  input_mapping: {distribution: concourse-release-repo}
+  params: {DISTRIBUTION: bosh}

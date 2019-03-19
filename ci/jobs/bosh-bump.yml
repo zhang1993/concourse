@@ -1,0 +1,27 @@
+tags: [bosh]
+public: true
+serial: true
+plan:
+- aggregate:
+  - get: concourse
+    passed: [bosh-check-props]
+    trigger: true
+  - get: unit-image
+    passed: [bosh-check-props]
+    trigger: true
+  - get: version
+    passed: [bosh-check-props]
+    trigger: true
+  - get: linux-rc
+    passed: [build-rc, bosh-check-props]
+    trigger: true
+  - get: windows-rc
+    passed: [build-rc]
+    trigger: true
+  - get: concourse-release-repo
+- task: bump-concourse-blobs
+  file: concourse/ci/tasks/bump-concourse-blobs.yml
+  image: unit-image
+  params: {GCP_JSON_KEY: ((concourse_artifacts_json_key))}
+- put: concourse-release-repo
+  params: {repository: bumped-concourse-release-repo}

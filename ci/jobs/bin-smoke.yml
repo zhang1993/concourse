@@ -1,0 +1,28 @@
+tags: [develop]
+public: true
+serial: true
+plan:
+- aggregate:
+  - get: concourse
+    passed: [build-rc]
+    trigger: true
+  - get: version
+    passed: [build-rc]
+    trigger: true
+  - get: linux-rc
+    passed: [build-rc]
+    trigger: true
+  - get: unit-image
+    passed: [build-rc]
+    trigger: true
+- task: terraform-smoke
+  file: concourse/ci/tasks/terraform-smoke.yml
+  params:
+    GCP_PROJECT: cf-concourse-production
+    GCP_KEY: ((concourse_smoke_gcp_key))
+    SSH_KEY: ((concourse_smoke_ssh_key))
+    DEPLOYMENT: smoke
+- task: smoke
+  image: unit-image
+  file: concourse/ci/tasks/smoke.yml
+  input_mapping: {endpoint-info: outputs}

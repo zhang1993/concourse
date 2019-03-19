@@ -1,0 +1,10 @@
+tags: [bosh]
+public: true
+serial: true
+plan:
+- get: cbd-master
+  trigger: true
+- put: cbd
+  params:
+    repository: cbd-master
+    merge: true

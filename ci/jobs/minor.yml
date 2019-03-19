@@ -1,0 +1,6 @@
+tags: [publish]
+public: true
+serial_groups: [version]
+plan:
+- put: version
+  params: {bump: minor, pre: rc}

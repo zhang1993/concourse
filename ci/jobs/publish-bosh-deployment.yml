@@ -1,0 +1,28 @@
+tags: [publish]
+serial: true
+plan:
+- aggregate:
+  - get: concourse-boshio
+    trigger: true
+  - get: unit-image
+    passed: [shipit]
+  - get: cbd
+  - get: version
+    passed: [shipit]
+  - get: bpm-release
+    passed: [shipit]
+  - get: postgres-release
+    passed: [shipit]
+# TODO: check that boshio version matches given version
+- task: bump-versions
+  file: cbd/ci/bump-versions.yml
+  input_mapping: {concourse-bosh-deployment: cbd}
+  image: unit-image
+- put: cbd
+  params:
+    repository: bumped-repo
+    merge: true
+- put: cbd-master
+  params:
+    repository: bumped-repo
+    merge: true

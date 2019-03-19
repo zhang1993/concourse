@@ -1,0 +1,27 @@
+tags: [k8s]
+public: true
+serial: true
+plan:
+- aggregate:
+  - get: concourse
+    passed: [k8s-smoke]
+    trigger: true
+  - get: version
+    passed: [k8s-smoke]
+    trigger: true
+  - get: concourse-rc-image
+    passed: [k8s-smoke]
+    trigger: true
+    params: {format: oci}
+  - get: unit-image
+    passed: [k8s-smoke]
+    trigger: true
+  - get: charts
+    trigger: true
+    passed: [k8s-smoke]
+- task: k8s-topgun
+  file: concourse/ci/tasks/k8s-topgun.yml
+  image: unit-image
+  params:
+   KUBE_CONFIG: ((kube_config))
+   CONCOURSE_IMAGE_NAME: concourse/concourse-rc

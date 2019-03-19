@@ -1,0 +1,27 @@
+tags: [k8s]
+public: true
+max_in_flight: 1
+plan:
+- aggregate:
+  - get: concourse
+    passed: [build-rc-image]
+    trigger: true
+  - get: concourse-rc-image
+    passed: [build-rc-image]
+    trigger: true
+  - get: version
+    passed: [build-rc-image]
+    trigger: true
+  - get: unit-image
+    passed: [build-rc-image]
+    trigger: true
+  - get: linux-rc
+    passed: [build-rc-image]
+    trigger: true
+  - get: charts
+    trigger: true
+- task: check-params
+  file: concourse/ci/tasks/check-distribution-env.yml
+  image: unit-image
+  input_mapping: {distribution: charts}
+  params: {DISTRIBUTION: helm}

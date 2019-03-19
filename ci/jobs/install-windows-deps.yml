@@ -1,0 +1,16 @@
+tags: [workers]
+public: true
+serial: true
+plan:
+- aggregate:
+  - get: concourse
+    params: {submodules: none}
+  - get: golang-windows
+- task: install-go
+  file: concourse/ci/tasks/install-go-windows.yml
+- task: install-git
+  file: concourse/ci/tasks/choco-install.yml
+  params: {PACKAGE: git}
+- task: install-mingw
+  file: concourse/ci/tasks/choco-install.yml
+  params: {PACKAGE: mingw}

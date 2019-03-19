@@ -1,0 +1,43 @@
+tags: [bosh]
+public: true
+serial: true
+plan:
+- aggregate:
+  # these don't trigger, to ensure that the job gets triggered by
+  # concourse-release, which is unfortunately decoupled from the resource
+  # that we 'put' to.
+  - get: concourse
+    passed: [bosh-bump]
+  - get: unit-image
+    passed: [bosh-bump]
+  - get: version
+    passed: [bosh-bump]
+  - get: concourse-release
+    trigger: true
+  - get: postgres-release
+    trigger: true
+  - get: bpm-release
+    trigger: true
+  - get: gcp-xenial-stemcell
+    trigger: true
+- put: smoke-deployment
+  params:
+    manifest: concourse/ci/deployments/bosh-smoke.yml
+    releases:
+    - concourse-release/*.tgz
+    - postgres-release/*.tgz
+    - bpm-release/*.tgz
+    stemcells:
+    - gcp-xenial-stemcell/*.tgz
+- task: discover-bosh-endpoint-info
+  file: concourse/ci/tasks/discover-bosh-endpoint-info.yml
+  image: unit-image
+  params:
+    BOSH_ENVIRONMENT: ((bosh_target))
+    BOSH_CLIENT: ((bosh_client.id))
+    BOSH_CLIENT_SECRET: ((bosh_client.secret))
+    BOSH_DEPLOYMENT: concourse-smoke
+    BOSH_INSTANCE_GROUP: concourse
+- task: smoke
+  image: unit-image
+  file: concourse/ci/tasks/smoke.yml

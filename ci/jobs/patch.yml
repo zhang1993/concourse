@@ -1,0 +1,9 @@
+tags: [publish]
+public: true
+serial_groups: [version]
+plan:
+- get: version
+  passed: [shipit]
+  trigger: true
+- put: version
+  params: {bump: patch, pre: rc}

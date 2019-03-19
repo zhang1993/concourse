@@ -1,0 +1,26 @@
+tags: [develop]
+public: true
+serial: true
+plan:
+- aggregate:
+  - get: concourse
+    passed: [build-rc]
+    trigger: true
+  - get: version
+    passed: [build-rc]
+    trigger: true
+  - get: linux-rc
+    trigger: true
+    passed: [build-rc]
+  - get: unit-image
+    passed: [build-rc]
+  - get: builder
+- task: build
+  image: builder
+  privileged: true
+  file: concourse/ci/tasks/build-rc-image.yml
+- put: concourse-rc-image
+  params:
+    image: image/image.tar
+    additional_tags: version/version
+  get_params: {format: oci}

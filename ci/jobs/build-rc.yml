@@ -1,0 +1,55 @@
+tags: [develop]
+public: true
+serial: true
+plan:
+- aggregate:
+  - get: concourse
+    passed: [rc]
+    trigger: true
+  - get: unit-image
+    passed: [rc]
+    trigger: true
+  - get: dev-image
+    passed: [rc]
+    trigger: true
+  - get: version
+    passed: [rc]
+    trigger: true
+  - get: final-version
+    resource: version
+    passed: [rc]
+    params: {bump: final}
+- aggregate:
+  - task: fly-linux
+    file: concourse/ci/tasks/fly-build-linux.yml
+  - task: fly-windows
+    file: concourse/ci/tasks/fly-build-windows.yml
+  - task: fly-darwin
+    file: concourse/ci/tasks/fly-build-darwin.yml
+- task: hoist-linux-dependencies
+  image: dev-image
+  file: concourse/ci/tasks/hoist-linux-dependencies.yml
+- task: yarn-build
+  image: unit-image
+  file: concourse/ci/tasks/yarn-build.yml
+- aggregate:
+  - task: concourse-linux
+    image: unit-image
+    file: concourse/ci/tasks/concourse-build-linux.yml
+    input_mapping: {concourse: built-concourse}
+  - task: concourse-windows
+    file: concourse/ci/tasks/concourse-build-windows.yml
+    input_mapping: {concourse: built-concourse}
+  - task: concourse-darwin
+    file: concourse/ci/tasks/concourse-build-darwin.yml
+    input_mapping: {concourse: built-concourse}
+- aggregate:
+  - put: linux-rc
+    params: {file: concourse-linux/concourse-*.tgz}
+    inputs: [concourse-linux]
+  - put: windows-rc
+    params: {file: concourse-windows/concourse-*.zip}
+    inputs: [concourse-windows]
+  - put: darwin-rc
+    params: {file: concourse-darwin/concourse-*.tgz}
+    inputs: [concourse-darwin]

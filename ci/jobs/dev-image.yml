@@ -1,0 +1,60 @@
+tags: [develop]
+public: true
+serial: true
+plan:
+- aggregate:
+  - get: concourse
+    trigger: true
+  - get: unit-image
+    trigger: true
+  - get: gdn
+    trigger: true
+  - get: dumb-init
+    trigger: true
+  - get: bosh-io-release-resource
+    trigger: true
+  - get: bosh-io-stemcell-resource
+    trigger: true
+  - get: cf-resource
+    trigger: true
+  - get: docker-image-resource
+    trigger: true
+  - get: git-resource
+    trigger: true
+  - get: github-release-resource
+    trigger: true
+  - get: hg-resource
+    trigger: true
+  - get: pool-resource
+    trigger: true
+  - get: registry-image-resource
+    trigger: true
+  - get: s3-resource
+    trigger: true
+  - get: semver-resource
+    trigger: true
+  - get: time-resource
+    trigger: true
+  - get: tracker-resource
+    trigger: true
+  - get: mock-resource
+    trigger: true
+  - get: builder
+- task: yarn-build
+  image: unit-image
+  file: concourse/ci/tasks/yarn-build.yml
+- aggregate:
+  - task: fly-linux
+    file: concourse/ci/tasks/fly-build-linux.yml
+  - task: fly-windows
+    file: concourse/ci/tasks/fly-build-windows.yml
+  - task: fly-darwin
+    file: concourse/ci/tasks/fly-build-darwin.yml
+- task: build
+  image: builder
+  privileged: true
+  input_mapping: {concourse: built-concourse}
+  file: concourse/ci/tasks/build-dev-image.yml
+- put: dev-image
+  params: {image: image/image.tar}
+  get_params: {format: oci}

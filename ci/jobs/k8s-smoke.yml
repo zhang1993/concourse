@@ -1,0 +1,50 @@
+tags: [k8s]
+public: true
+serial: true
+plan:
+- aggregate:
+  - get: concourse
+    passed: [k8s-check-helm-params]
+    trigger: true
+  - get: concourse-rc-image
+    passed: [k8s-check-helm-params]
+    params: {format: oci}
+    trigger: true
+  - get: version
+    passed: [k8s-check-helm-params]
+    trigger: true
+  - get: charts
+    passed: [k8s-check-helm-params]
+    trigger: true
+  - get: unit-image
+    passed: [k8s-check-helm-params]
+- try:
+    task: try-delete
+    image: unit-image
+    file: concourse/ci/tasks/k8s-delete.yml
+    params:
+     KUBE_CONFIG: ((kube_config))
+     RELEASE_NAME: concourse-smoke
+     CONCOURSE_IMAGE: concourse/concourse-rc
+- task: deploy
+  image: unit-image
+  input_mapping: {image-info: concourse-rc-image}
+  file: concourse/ci/tasks/k8s-deploy.yml
+  params:
+    KUBE_CONFIG: ((kube_config))
+    RELEASE_NAME: concourse-smoke
+    CONCOURSE_IMAGE: concourse/concourse-rc
+- task: k8s-smoke
+  image: unit-image
+  file: concourse/ci/tasks/k8s-smoke.yml
+  params:
+    KUBE_CONFIG: ((kube_config))
+    RELEASE_NAME: concourse-smoke
+    MAX_TICKS: 180
+- task: delete
+  image: unit-image
+  file: concourse/ci/tasks/k8s-delete.yml
+  params:
+   KUBE_CONFIG: ((kube_config))
+   RELEASE_NAME: concourse-smoke
+   CONCOURSE_IMAGE: concourse/concourse-rc

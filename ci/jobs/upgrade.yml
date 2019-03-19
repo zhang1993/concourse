@@ -1,0 +1,21 @@
+tags: [develop]
+public: true
+serial: true
+plan:
+- aggregate:
+  - get: concourse
+    passed: [dev-image]
+    trigger: true
+  - get: dev-image
+    passed: [dev-image]
+    params: {format: oci}
+  - get: concourse-image
+    params: {format: oci}
+  - get: postgres-image
+    params: {format: oci}
+  - get: unit-image
+    passed: [dev-image]
+- task: upgrade-test
+  privileged: true
+  image: unit-image
+  file: concourse/ci/tasks/upgrade-test.yml

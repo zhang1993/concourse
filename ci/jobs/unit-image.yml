@@ -1,0 +1,23 @@
+tags: [images]
+public: true
+serial: true
+plan:
+- aggregate:
+  - get: concourse
+    resource: unit-dockerfile
+    trigger: true
+  - get: builder
+- task: build
+  image: builder
+  privileged: true
+  config:
+    platform: linux
+    params:
+      REPOSITORY: concourse/unit
+      CONTEXT: concourse/ci/dockerfiles/unit
+    inputs: [{name: concourse}]
+    outputs: [{name: image}]
+    caches: [{path: cache}]
+    run: {path: build}
+- put: unit-image
+  params: {image: image/image.tar}

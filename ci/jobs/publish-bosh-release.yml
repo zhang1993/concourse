@@ -1,0 +1,13 @@
+tags: [publish]
+serial: true
+plan:
+- aggregate:
+  - get: version
+    passed: [shipit]
+    trigger: true
+  - get: concourse-release
+    passed: [shipit]
+- put: concourse-release-final
+  params:
+    tarball: concourse-release/*.tgz
+    version: version/version

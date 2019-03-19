@@ -1,0 +1,16 @@
+tags: [develop]
+public: true
+serial_groups: [version]
+plan:
+- aggregate:
+  - get: concourse
+    passed: [testflight, watsjs, upgrade, downgrade]
+    trigger: true
+  - get: dev-image
+    trigger: true
+    passed: [testflight, watsjs, upgrade, downgrade]
+  - get: unit-image
+    passed: [testflight, watsjs, upgrade, downgrade]
+    trigger: true
+- put: version
+  params: {pre: rc}

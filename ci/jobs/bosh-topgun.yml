@@ -1,0 +1,47 @@
+tags: [bosh]
+public: true
+serial: true
+interruptible: true
+plan:
+- aggregate:
+  # these don't trigger, to ensure that the job gets triggered by
+  # concourse-release, which is unfortunately decoupled from the resource
+  # that we 'put' to.
+  - get: concourse
+    passed: [bosh-bump]
+  - get: unit-image
+    passed: [bosh-bump]
+  - get: version
+    passed: [bosh-bump]
+  - get: concourse-release
+    trigger: true
+  - get: postgres-release
+    trigger: true
+  - get: postgres-bbr-compatible-release
+    trigger: true
+  - get: bpm-release
+    trigger: true
+  - get: backup-and-restore-sdk-release
+    trigger: true
+  - get: gcp-xenial-stemcell
+    trigger: true
+  - get: vault-release
+    trigger: true
+  - get: credhub-release
+    trigger: true
+  - get: bbr
+    trigger: true
+- task: bosh-topgun
+  file: concourse/ci/tasks/topgun.yml
+  image: unit-image
+  input_mapping:
+    stemcell: gcp-xenial-stemcell
+  params:
+    BOSH_ENVIRONMENT: ((bosh_target))
+    BOSH_CA_CERT: ((tmp_bosh_client.ca_cert))
+    BOSH_CLIENT: ((bosh_client.id))
+    BOSH_CLIENT_SECRET: ((bosh_client.secret))
+    BOSH_SSH_KEY: ((topgun_bosh_key))
+    AWS_REGION: ((topgun_aws_ssm.region))
+    AWS_ACCESS_KEY_ID: ((topgun_aws_ssm.access_key_id))
+    AWS_SECRET_ACCESS_KEY: ((topgun_aws_ssm.secret_access_key))

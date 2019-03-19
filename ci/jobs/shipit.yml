@@ -1,0 +1,40 @@
+tags: [publish]
+public: true
+serial_groups: [version]
+plan:
+- get: concourse
+  passed:
+  - build-rc
+  - k8s-topgun
+  - bosh-smoke
+  - bosh-topgun
+- get: unit-image
+  passed:
+  - build-rc
+  - k8s-topgun
+  - bosh-smoke
+  - bosh-topgun
+- get: final-version
+  resource: version
+  params: {bump: final}
+  passed:
+  - build-rc
+  - k8s-topgun
+  - bosh-smoke
+  - bosh-topgun
+- get: linux-rc
+  passed: [build-rc]
+- get: windows-rc
+  passed: [build-rc]
+- get: darwin-rc
+  passed: [build-rc]
+- get: concourse-rc-image
+  passed: [k8s-topgun]
+- get: concourse-release
+  passed: [bosh-smoke, bosh-topgun]
+- get: bpm-release
+  passed: [bosh-smoke, bosh-topgun]
+- get: postgres-release
+  passed: [bosh-smoke, bosh-topgun]
+- put: version
+  params: {file: final-version/version}
