@@ -4,24 +4,57 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"io/ioutil"
+	"os"
 	"os/exec"
+	"sync/atomic"
+	"time"
 
+	"github.com/andrewstuart/limio"
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/go-concourse/concourse"
 	"github.com/concourse/go-archive/tgzfs"
 	"github.com/vbauerster/mpb/v4"
 )
 
-func Upload(bar *mpb.Bar, team concourse.Team, path string, includeIgnored bool) (atc.WorkerArtifact, error) {
+func Upload(compressBar, uploadBar *mpb.Bar, team concourse.Team, path string, includeIgnored bool) (atc.WorkerArtifact, error) {
 	files := getFiles(path, includeIgnored)
 
-	archiveStream, archiveWriter := io.Pipe()
+	compressBar.SetTotal(int64(len(files)), false)
 
-	go func() {
-		archiveWriter.CloseWithError(tgzfs.Compress(archiveWriter, path, files...))
+	tmp, err := ioutil.TempFile("", "fly-execute-input.*.tgz")
+	if err != nil {
+		return atc.WorkerArtifact{}, err
+	}
+
+	defer func() {
+		_ = tmp.Close()
+		_ = os.Remove(tmp.Name())
 	}()
 
-	return team.CreateArtifact(bar.ProxyReader(archiveStream))
+	wc := &writerCounter{
+		Writer: tmp,
+	}
+
+	err = tgzfs.Compress(wc, path, files...)
+	if err != nil {
+		return atc.WorkerArtifact{}, err
+	}
+
+	uploadBar.SetTotal(wc.Count(), false)
+
+	compressBar.IncrBy(len(files))
+
+	_, err = tmp.Seek(0, 0)
+	if err != nil {
+		return atc.WorkerArtifact{}, err
+	}
+
+	lim := limio.NewReader(tmp)
+
+	lim.SimpleLimit(1024*1024*10, time.Second)
+
+	return team.CreateArtifact(uploadBar.ProxyReader(lim))
 }
 
 func getFiles(dir string, includeIgnored bool) []string {
@@ -124,4 +157,20 @@ func difference(a, b []string) []string {
 		}
 	}
 	return ab
+}
+
+type writerCounter struct {
+	io.Writer
+
+	count int64
+}
+
+func (counter *writerCounter) Write(buf []byte) (int, error) {
+	n, err := counter.Writer.Write(buf)
+	atomic.AddInt64(&counter.count, int64(n))
+	return n, err
+}
+
+func (counter *writerCounter) Count() int64 {
+	return atomic.LoadInt64(&counter.count)
 }

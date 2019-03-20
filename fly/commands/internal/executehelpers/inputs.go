@@ -9,7 +9,6 @@ import (
 
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/fly/commands/internal/flaghelpers"
-	"github.com/concourse/concourse/fly/ui"
 	"github.com/concourse/concourse/go-concourse/concourse"
 	"github.com/vbauerster/mpb/v4"
 	"github.com/vbauerster/mpb/v4/decor"
@@ -145,37 +144,43 @@ func GenerateLocalInputs(
 
 	uploadResults := new(sync.Map)
 
-	progress := mpb.New(mpb.WithWidth(1))
+	progress := mpb.New(mpb.WithWidth(50))
 
+	uploads := new(sync.WaitGroup)
 	for i, mapping := range inputMappings {
-		name := "uploading " + mapping.Name
-
-		bar := progress.AddSpinner(
+		compressName := "compressing " + mapping.Name
+		compressBar := progress.AddBar(
 			0,
-			mpb.SpinnerOnLeft,
-			mpb.PrependDecorators(decor.Name(name, decor.WC{W: len(name), C: decor.DSyncWidthR})),
-			mpb.AppendDecorators(
-				decor.OnComplete(
-					decor.AverageSpeed(decor.UnitKiB, "(%.1f)"),
-					" "+ui.Embolden("done"),
-				),
-			),
-			mpb.BarClearOnComplete(),
+			mpb.PrependDecorators(decor.Name(compressName, decor.WC{W: len(compressName), C: decor.DSyncWidthR})),
+			mpb.AppendDecorators(decor.CountersNoUnit("%d/%d")),
 		)
 
+		uploadName := "uploading " + mapping.Name
+		uploadBar := progress.AddBar(
+			0,
+			mpb.PrependDecorators(decor.Name(uploadName, decor.WC{W: len(uploadName), C: decor.DSyncWidthR})),
+			mpb.AppendDecorators(decor.CountersKibiByte("%.1f/%.1f")),
+			mpb.BarParkTo(compressBar),
+		)
+
+		uploads.Add(1)
 		go func(idx int, path string) {
-			artifact, err := Upload(bar, team, path, includeIgnored)
+			defer uploads.Done()
+
+			artifact, err := Upload(compressBar, uploadBar, team, path, includeIgnored)
 			if err == nil {
-				bar.SetTotal(bar.Current(), true)
 				uploadResults.Store(idx, artifact)
 			} else {
-				bar.Abort(false)
 				uploadResults.Store(idx, err)
+
+				compressBar.Abort(false)
+				uploadBar.Abort(false)
 			}
 		}(i, mapping.Path)
 	}
 
 	progress.Wait()
+	uploads.Wait()
 
 	var err error
 	uploadResults.Range(func(k, v interface{}) bool {

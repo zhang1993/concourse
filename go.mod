@@ -24,6 +24,7 @@ require (
 	github.com/SermoDigital/jose v0.9.1 // indirect
 	github.com/The-Cloud-Source/goryman v0.0.0-20150410173800-c22b6e4a7ac1
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190107113132-5452bdb42a73 // indirect
+	github.com/andrewstuart/limio v0.0.0-20180925070603-17c081b6f2f5
 	github.com/araddon/gou v0.0.0-20190110011759-c797efecbb61 // indirect
 	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
