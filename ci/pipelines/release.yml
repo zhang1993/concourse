@@ -244,7 +244,9 @@ jobs:
     privileged: true
     image: unit-image
     file: concourse/ci/tasks/upgrade-test.yml
-    params: {CONCOURSE_DEV_TAG: release-((release_minor))}
+    params:
+      CONCOURSE_DEV_TAG: release-((release_minor))
+      CONCOURSE_LATEST_TAG: ((release_minor))
 
 - name: downgrade
   public: true
@@ -267,7 +269,9 @@ jobs:
     privileged: true
     image: unit-image
     file: concourse/ci/tasks/downgrade-test.yml
-    params: {CONCOURSE_DEV_TAG: release-((release_minor))}
+    params:
+      CONCOURSE_DEV_TAG: release-((release_minor))
+      CONCOURSE_LATEST_TAG: ((release_minor))
 
 - name: k8s-check-helm-params
   public: true
