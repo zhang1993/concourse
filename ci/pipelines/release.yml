@@ -874,17 +874,6 @@ jobs:
   - put: version
     params: {bump: patch, pre: rc}
 
-- name: merge-cbd
-  public: true
-  serial: true
-  plan:
-  - get: cbd-master
-    trigger: true
-  - put: cbd
-    params:
-      repository: cbd-master
-      merge: true
-
 resources:
 - name: concourse
   type: git
