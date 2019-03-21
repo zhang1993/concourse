@@ -40,17 +40,6 @@ resource_types:
   type: registry-image
   source: {repository: concourse/bosh-io-stemcell-resource}
 
-done:
-- charts should point to master
-- dev-image
-- bin-smoke
-- bosh-bump
-- bosh-smoke
-- bosh-topgun
-- k8s-smoke # parameterize release name
-- k8s-topgun
-- merge-cbd
-
 groups:
 - name: develop
   jobs:
@@ -78,7 +67,6 @@ groups:
   - bosh-topgun
   - bosh-wings-deploy
   - bosh-check-props
-  - merge-cbd
 
 - name: publish
   jobs:
