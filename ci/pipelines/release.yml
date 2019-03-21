@@ -841,9 +841,7 @@ jobs:
       params: {format: oci}
   - task: docker-semver-tags
     file: concourse/ci/tasks/docker-semver-tags.yml
-    # TODO: we should also tag as 'latest' if this is the current minor release
-    # line
-    params: {MAJOR: "false"}
+    params: {LATEST: ((release_is_latest))}
   - put: concourse-image
     params:
       image: concourse-rc-image/image.tar
