@@ -175,7 +175,6 @@ jobs:
       trigger: true
     - get: unit-image
       passed: [unit, dev-image]
-      trigger: true
     - get: dev-image
       passed: [dev-image]
       params: {format: oci}
@@ -198,7 +197,6 @@ jobs:
       trigger: true
     - get: unit-image
       passed: [unit, dev-image]
-      trigger: true
     - get: dev-image
       passed: [dev-image]
       params: {format: oci}
@@ -217,8 +215,10 @@ jobs:
   plan:
   - aggregate:
     - get: concourse
-      passed: [dev-image]
+      passed: [unit, dev-image]
       trigger: true
+    - get: unit-image
+      passed: [unit, dev-image]
     - get: dev-image
       passed: [dev-image]
       params: {format: oci}
@@ -226,8 +226,6 @@ jobs:
       params: {format: oci}
     - get: postgres-image
       params: {format: oci}
-    - get: unit-image
-      passed: [dev-image]
   - task: upgrade-test
     privileged: true
     image: unit-image
@@ -242,8 +240,10 @@ jobs:
   plan:
   - aggregate:
     - get: concourse
-      passed: [dev-image]
+      passed: [unit, dev-image]
       trigger: true
+    - get: unit-image
+      passed: [unit, dev-image]
     - get: dev-image
       passed: [dev-image]
       params: {format: oci}
@@ -251,8 +251,6 @@ jobs:
       params: {format: oci}
     - get: postgres-image
       params: {format: oci}
-    - get: unit-image
-      passed: [dev-image]
   - task: downgrade-test
     privileged: true
     image: unit-image
