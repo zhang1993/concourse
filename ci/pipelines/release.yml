@@ -315,30 +315,30 @@ jobs:
       file: concourse/ci/tasks/k8s-delete.yml
       params:
        KUBE_CONFIG: ((kube_config))
-       RELEASE_NAME: concourse-smoke-((release_minor))
-       CONCOURSE_IMAGE: concourse/concourse-rc
+       RELEASE_NAME: concourse-smoke-patch # TODO can't use release_minor
+       CONCOURSE_IMAGE: concourse/concourse-rc:release-((release_minor))
   - task: deploy
     image: unit-image
     input_mapping: {image-info: concourse-rc-image}
     file: concourse/ci/tasks/k8s-deploy.yml
     params:
       KUBE_CONFIG: ((kube_config))
-      RELEASE_NAME: concourse-smoke-((release_minor))
-      CONCOURSE_IMAGE: concourse/concourse-rc
+      RELEASE_NAME: concourse-smoke-patch # TODO can't use release_minor
+      CONCOURSE_IMAGE: concourse/concourse-rc:release-((release_minor))
   - task: k8s-smoke
     image: unit-image
     file: concourse/ci/tasks/k8s-smoke.yml
     params:
       KUBE_CONFIG: ((kube_config))
-      RELEASE_NAME: concourse-smoke-((release_minor))
+      RELEASE_NAME: concourse-smoke-patch # TODO can't use release_minor
       MAX_TICKS: 180
   - task: delete
     image: unit-image
     file: concourse/ci/tasks/k8s-delete.yml
     params:
      KUBE_CONFIG: ((kube_config))
-     RELEASE_NAME: concourse-smoke-((release_minor))
-     CONCOURSE_IMAGE: concourse/concourse-rc
+     RELEASE_NAME: concourse-smoke-patch # TODO can't use release_minor
+     CONCOURSE_IMAGE: concourse/concourse-rc:release-((release_minor))
 
 - name: k8s-topgun
   public: true
@@ -367,6 +367,7 @@ jobs:
     params:
      KUBE_CONFIG: ((kube_config))
      CONCOURSE_IMAGE_NAME: concourse/concourse-rc
+     CONCOURSE_IMAGE_TAG: release-((release_minor))
 
 - name: rc
   public: true
