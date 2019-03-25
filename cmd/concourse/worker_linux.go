@@ -112,7 +112,9 @@ func (cmd *WorkerCommand) gdnRunner(logger lager.Logger) (ifrit.Runner, error) {
 
 		// disable graph and grootfs setup; all images passed to Concourse
 		// containers are raw://
-		"--no-image-plugin",
+		// "--no-image-plugin",
+		"--image-plugin", "/usr/local/bin/plugin",
+		"--privileged-image-plugin", "/usr/local/bin/plugin",
 	}
 
 	gdnServerFlags = append(gdnServerFlags, detectGardenFlags(logger)...)
@@ -145,6 +147,8 @@ func (cmd *WorkerCommand) gdnRunner(logger lager.Logger) (ifrit.Runner, error) {
 
 	gdnArgs := append(gdnFlags, append([]string{"server"}, gdnServerFlags...)...)
 	gdnCmd := exec.Command(cmd.Garden.GDN, gdnArgs...)
+	fmt.Println("i am args", gdnArgs)
+	fmt.Println("i suck", gdnCmd)
 	gdnCmd.Stdout = os.Stdout
 	gdnCmd.Stderr = os.Stderr
 	gdnCmd.SysProcAttr = &syscall.SysProcAttr{
