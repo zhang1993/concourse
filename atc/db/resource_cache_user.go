@@ -20,6 +20,20 @@ func (user forBuild) SQLMap() map[string]interface{} {
 	}
 }
 
+type forArtifact struct {
+	ArtifactID int
+}
+
+func ForArtifact(id int) ResourceCacheUser {
+	return forArtifact{id}
+}
+
+func (user forArtifact) SQLMap() map[string]interface{} {
+	return map[string]interface{}{
+		"artifact_id": user.ArtifactID,
+	}
+}
+
 type forContainer struct {
 	ContainerID int
 }

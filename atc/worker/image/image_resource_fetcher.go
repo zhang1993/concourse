@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"code.cloudfoundry.org/lager"
+
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db"
@@ -132,17 +133,30 @@ func (i *imageResourceFetcher) Fetch(
 		params = *i.imageResource.Params
 	}
 
+	af := db.NewArtifactRepository(i.dbResourceCacheFactory.Conn())
+	art, err := af.CreateWorkerArtifact()
+	if err != nil  {
+		logger.Error("something bad", err)
+		return nil, nil, nil, err
+	}
 	resourceCache, err := i.dbResourceCacheFactory.FindOrCreateResourceCache(
 		logger,
-		db.ForContainer(container.ID()),
+		db.ForArtifact(art.ID()),
 		i.imageResource.Type,
 		version,
 		source,
 		params,
 		i.customTypes,
 	)
+
 	if err != nil {
 		logger.Error("failed-to-create-resource-cache", err)
+		return nil, nil, nil, err
+	}
+
+	err = art.AssociateWorkerResourceCache(i.worker.Name(), resourceCache)
+	if err != nil {
+		logger.Error("something bad", err)
 		return nil, nil, nil, err
 	}
 

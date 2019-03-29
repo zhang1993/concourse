@@ -8,6 +8,7 @@ import (
 
 type WorkerArtifactLifecycle interface {
 	RemoveExpiredArtifacts() error
+	RemoveUnassociatedArtifacts() error
 }
 
 type artifactLifecycle struct {
@@ -21,9 +22,17 @@ func NewArtifactLifecycle(conn Conn) *artifactLifecycle {
 }
 
 func (lifecycle *artifactLifecycle) RemoveExpiredArtifacts() error {
-
 	_, err := psql.Delete("worker_artifacts").
 		Where(sq.Expr("created_at < NOW() - interval '12 hours'")).
+		RunWith(lifecycle.conn).
+		Exec()
+
+	return err
+}
+
+func (lifecycle *artifactLifecycle) RemoveUnassociatedArtifacts() error {
+	_, err := psql.Delete("worker_artifacts").
+		Where(sq.Expr("worker_resource_cache_id is null")).
 		RunWith(lifecycle.conn).
 		Exec()
 

@@ -24,6 +24,7 @@ type ResourceCacheFactory interface {
 		resourceTypes creds.VersionedResourceTypes,
 	) (UsedResourceCache, error)
 
+	Conn()  Conn
 	// changing resource cache to interface to allow updates on object is not feasible.
 	// Since we need to pass it recursively in ResourceConfig.
 	// Also, metadata will be available to us before we create resource cache so this
@@ -42,6 +43,10 @@ func NewResourceCacheFactory(conn Conn, lockFactory lock.LockFactory) ResourceCa
 		conn:        conn,
 		lockFactory: lockFactory,
 	}
+}
+
+func (f *resourceCacheFactory) Conn() Conn {
+	return f.conn
 }
 
 func (f *resourceCacheFactory) FindOrCreateResourceCache(

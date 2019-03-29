@@ -14,6 +14,7 @@ RUN grep '^replace' go.mod || go mod download
 COPY . .
 RUN go build -gcflags=all="-N -l" -o /usr/local/concourse/bin/concourse \
       ./cmd/concourse
+RUN go build -gcflags=all="-N -l" -o /usr/local/bin/plugin ./baggageclaim/cmd/plugin/main.go
 VOLUME /src
 
 # generate keys (with 1024 bits just so they generate faster)
