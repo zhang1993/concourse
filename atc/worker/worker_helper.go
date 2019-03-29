@@ -3,9 +3,11 @@ package worker
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
+
 	"github.com/concourse/concourse/atc/db"
 )
 
@@ -58,6 +60,48 @@ func (w workerHelper) findOrInitializeContainer(
 	logger.Debug("created-creating-container-in-db")
 
 	return creatingContainer, nil, foundHandle, nil
+}
+func (w workerHelper) createSelfDestructingGardenContainer(
+	containerSpec ContainerSpec,
+	fetchedImage FetchedImage,
+	handleToCreate string,
+	bindMounts []garden.BindMount,
+) (garden.Container, error) {
+
+	gardenProperties := garden.Properties{}
+
+	if containerSpec.User != "" {
+		gardenProperties[userPropertyName] = containerSpec.User
+	} else {
+		gardenProperties[userPropertyName] = fetchedImage.Metadata.User
+	}
+
+	env := append(fetchedImage.Metadata.Env, containerSpec.Env...)
+
+	if w.dbWorker.HTTPProxyURL() != "" {
+		env = append(env, fmt.Sprintf("http_proxy=%s", w.dbWorker.HTTPProxyURL()))
+	}
+
+	if w.dbWorker.HTTPSProxyURL() != "" {
+		env = append(env, fmt.Sprintf("https_proxy=%s", w.dbWorker.HTTPSProxyURL()))
+	}
+
+	if w.dbWorker.NoProxy() != "" {
+		env = append(env, fmt.Sprintf("no_proxy=%s", w.dbWorker.NoProxy()))
+	}
+
+	return w.gardenClient.Create(garden.ContainerSpec{
+		Handle: handleToCreate,
+		Image: 	garden.ImageRef{
+			URI: "bc://" + fetchedImage.URL,
+		},
+		GraceTime:  10 * time.Minute,
+		Privileged: fetchedImage.Privileged,
+		BindMounts: bindMounts,
+		Limits:     containerSpec.Limits.ToGardenLimits(),
+		Env:        env,
+		Properties: gardenProperties,
+	})
 }
 
 func (w workerHelper) createGardenContainer(

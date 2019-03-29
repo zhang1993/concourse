@@ -331,11 +331,10 @@ func (scanner *resourceScanner) check(
 		return err
 	}
 
-	container, err := chosenWorker.FindOrCreateContainer(
+	container, err := chosenWorker.CreateEphemeralContainer(
 		context.Background(),
 		logger,
 		worker.NoopImageFetchingDelegate{},
-		owner,
 		containerMetadata,
 		containerSpec,
 		resourceTypes,

@@ -435,9 +435,9 @@ func (repository *volumeRepository) GetOrphanedVolumes() ([]CreatedVolume, error
 		LeftJoin("worker_resource_caches wrc ON wrc.id = v.worker_resource_cache_id").
 		Where(
 			sq.Eq{
-				"v.worker_resource_cache_id":     nil,
+				//"v.worker_resource_cache_id":     nil,
 				"v.worker_base_resource_type_id": nil,
-				"v.container_id":                 nil,
+				//"v.container_id":                 nil, // TODO: get rid of this as well.
 				"v.worker_task_cache_id":         nil,
 				"v.worker_resource_certs_id":     nil,
 				"v.worker_artifact_id":           nil,
