@@ -210,24 +210,10 @@ func (i *imageFromBaseResourceType) FetchForContainer(
 				return worker.FetchedImage{}, err
 			}
 
-			cowVolume, err := i.volumeClient.FindOrCreateCOWVolumeForContainer(
-				logger,
-				worker.VolumeSpec{
-					Strategy:   importVolume.COWStrategy(),
-					Privileged: t.Privileged,
-				},
-				container,
-				importVolume,
-				i.teamID,
-				"/",
-			)
-			if err != nil {
-				return worker.FetchedImage{}, err
-			}
 
 			rootFSURL := url.URL{
 				Scheme: RawRootFSScheme,
-				Path:   cowVolume.Path(),
+				Path:   importVolume.Path(),
 			}
 
 			return worker.FetchedImage{

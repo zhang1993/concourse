@@ -114,7 +114,9 @@ func (cmd *WorkerCommand) gdnRunner(logger lager.Logger) (ifrit.Runner, error) {
 		// containers are raw://
 		// "--no-image-plugin",
 		"--image-plugin", "/usr/local/bin/plugin",
+		//"--image-plugin-extra-arg", "localhost:7788",
 		"--privileged-image-plugin", "/usr/local/bin/plugin",
+		//"--privileged-image-plugin-extra-arg", "localhost:7788",
 	}
 
 	gdnServerFlags = append(gdnServerFlags, detectGardenFlags(logger)...)
