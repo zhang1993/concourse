@@ -2,6 +2,8 @@ package image
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"net/url"
 	"path"
@@ -14,12 +16,20 @@ import (
 )
 
 const RawRootFSScheme = "raw"
+const EphemeralFSScheme = "bc"
 
 type imageProvidedByPreviousStepOnSameWorker struct {
 	artifactVolume worker.Volume
 	imageSpec      worker.ImageSpec
 	teamID         int
 	volumeClient   worker.VolumeClient
+}
+
+func (i *imageProvidedByPreviousStepOnSameWorker) FetchForEphemeralContainer(
+	ctx context.Context,
+	logger lager.Logger,
+) (worker.FetchedImage, error) {
+	return worker.FetchedImage{}, errors.New("not yet supported")
 }
 
 func (i *imageProvidedByPreviousStepOnSameWorker) FetchForContainer(
@@ -70,6 +80,13 @@ type imageProvidedByPreviousStepOnDifferentWorker struct {
 	imageSpec    worker.ImageSpec
 	teamID       int
 	volumeClient worker.VolumeClient
+}
+
+func (i *imageProvidedByPreviousStepOnDifferentWorker) FetchForEphemeralContainer(
+	ctx context.Context,
+	logger lager.Logger,
+) (worker.FetchedImage, error) {
+	return worker.FetchedImage{}, errors.New("not yet supported")
 }
 
 func (i *imageProvidedByPreviousStepOnDifferentWorker) FetchForContainer(
@@ -133,6 +150,41 @@ type imageFromResource struct {
 	imageResourceFetcher ImageResourceFetcher
 }
 
+func (i *imageFromResource) FetchForEphemeralContainer(
+	ctx context.Context,
+	logger lager.Logger,
+) (worker.FetchedImage, error) {
+	imageParentVolume, imageMetadataReader, version, err := i.imageResourceFetcher.Fetch(
+		ctx,
+		logger.Session("image"),
+		nil,
+		i.privileged,
+	)
+	if err != nil {
+		logger.Error("failed-to-fetch-image", err)
+		return worker.FetchedImage{}, err
+	}
+
+	metadata, err := loadMetadata(imageMetadataReader)
+	if err != nil {
+		return worker.FetchedImage{}, err
+	}
+
+	rootFSURL := url.URL{
+		Scheme: EphemeralFSScheme,
+		Path:   imageParentVolume.Path(),
+	}
+
+	return worker.FetchedImage{
+		Metadata:   metadata,
+		Version:    version,
+		URL:        rootFSURL.String(),
+		Privileged: i.privileged,
+	}, nil
+
+	return worker.FetchedImage{}, errors.New("not yet supported")
+}
+
 func (i *imageFromResource) FetchForContainer(
 	ctx context.Context,
 	logger lager.Logger,
@@ -149,6 +201,7 @@ func (i *imageFromResource) FetchForContainer(
 		return worker.FetchedImage{}, err
 	}
 
+	fmt.Println("hello im the parent", imageParentVolume.Handle(), container.Handle())
 	imageVolume, err := i.volumeClient.FindOrCreateCOWVolumeForContainer(
 		logger.Session("create-cow-volume"),
 		worker.VolumeSpec{
@@ -210,9 +263,60 @@ func (i *imageFromBaseResourceType) FetchForContainer(
 				return worker.FetchedImage{}, err
 			}
 
+			cowVolume, err := i.volumeClient.FindOrCreateCOWVolumeForContainer(
+				logger,
+				worker.VolumeSpec{
+					Strategy:   importVolume.COWStrategy(),
+					Privileged: t.Privileged,
+				},
+				container,
+				importVolume,
+				i.teamID,
+				"/",
+			)
+			if err != nil {
+				return worker.FetchedImage{}, err
+			}
 
 			rootFSURL := url.URL{
 				Scheme: RawRootFSScheme,
+				Path:   cowVolume.Path(),
+			}
+
+			return worker.FetchedImage{
+				Metadata:   worker.ImageMetadata{},
+				Version:    atc.Version{i.resourceTypeName: t.Version},
+				URL:        rootFSURL.String(),
+				Privileged: t.Privileged,
+			}, nil
+		}
+	}
+
+	return worker.FetchedImage{}, ErrUnsupportedResourceType
+}
+
+func (i *imageFromBaseResourceType) FetchForEphemeralContainer(
+	ctx context.Context,
+	logger lager.Logger,
+) (worker.FetchedImage, error) {
+	for _, t := range i.worker.ResourceTypes() {
+		if t.Type == i.resourceTypeName {
+			importVolume, err := i.volumeClient.FindOrCreateVolumeForBaseResourceType(
+				logger,
+				worker.VolumeSpec{
+					Strategy:   baggageclaim.ImportStrategy{Path: t.Image},
+					Privileged: t.Privileged,
+				},
+				i.teamID,
+				i.resourceTypeName,
+			)
+			if err != nil {
+				return worker.FetchedImage{}, err
+			}
+
+
+			rootFSURL := url.URL{
+				Scheme: EphemeralFSScheme,
 				Path:   importVolume.Path(),
 			}
 
@@ -230,6 +334,13 @@ func (i *imageFromBaseResourceType) FetchForContainer(
 
 type imageFromRootfsURI struct {
 	url string
+}
+
+func (i *imageFromRootfsURI) FetchForEphemeralContainer(
+	ctx context.Context,
+	logger lager.Logger,
+) (worker.FetchedImage, error) {
+	return worker.FetchedImage{}, errors.New("not yet supported")
 }
 
 func (i *imageFromRootfsURI) FetchForContainer(

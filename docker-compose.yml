@@ -30,7 +30,6 @@ services:
       CONCOURSE_MAIN_TEAM_LOCAL_USER: test
 
   worker:
-    build: .
     image: local:spike
     command: worker
     privileged: true

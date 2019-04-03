@@ -154,6 +154,7 @@ type CreatedVolume interface {
 	InitializeResourceCache(UsedResourceCache) error
 	InitializeArtifact(name string, buildID int) (WorkerArtifact, error)
 	InitializeTaskCache(int, string, string) error
+	AssociateWorkerArtifact(workerArtifactID int) error
 
 	ContainerHandle() string
 	ParentHandle() string
@@ -389,6 +390,36 @@ func (volume *createdVolume) InitializeResourceCache(resourceCache UsedResourceC
 	volume.resourceCacheID = resourceCache.ID()
 	volume.typ = VolumeTypeResource
 
+	return nil
+}
+
+func (volume *createdVolume) AssociateWorkerArtifact(workerArtifactID int) error{
+	tx, err := volume.conn.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer Rollback(tx)
+	rows, err := psql.Update("volumes").
+		Set("worker_artifact_id", workerArtifactID).
+		Where(sq.Eq{"id": volume.id}).
+		RunWith(tx).
+		Exec()
+	if err != nil {
+		return err
+	}
+	affected, err := rows.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected == 0 {
+		return ErrVolumeMissing
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

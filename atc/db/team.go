@@ -123,7 +123,7 @@ func (t *team) FindVolumeForWorkerArtifact(artifactID int) (CreatedVolume, bool,
 
 	defer Rollback(tx)
 
-	artifact, found, err := getWorkerArtifact(tx, t.conn, artifactID)
+	artifact, found, err := getWorkerArtifact(t.conn, artifactID)
 	if err != nil {
 		return nil, false, err
 	}

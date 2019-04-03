@@ -33,6 +33,7 @@ type WorkerArtifact interface {
 	BuildID() int
 	CreatedAt() time.Time
 	Volume(teamID int) (CreatedVolume, bool, error)
+
 	AssociateWorkerResourceCache(
 		workerName string,
 		resourceCache UsedResourceCache,
@@ -47,6 +48,7 @@ func (af *artifactRepository) CreateWorkerArtifact() (WorkerArtifact, error) {
 	atcArt := atc.WorkerArtifact{
 		Name: guid.String(),
 	}
+
 
 	dbArt, err := saveWorkerArtifactWOTX(af.conn, atcArt)
 	if err != nil {
@@ -107,9 +109,8 @@ func (a *artifact) AssociateWorkerResourceCache(workerName string, resourceCache
 		return err
 	}
 
-	rows, err := psql.Update("as").
+	rows, err := psql.Update("worker_artifacts").
 		Set("worker_resource_cache_id", workerResourceCache.ID).
-		Set("team_id", nil).
 		Where(sq.Eq{"id": a.id}).
 		RunWith(tx).
 		Exec()
@@ -176,12 +177,12 @@ func saveWorkerArtifactWOTX(conn Conn, atcArtifact atc.WorkerArtifact) (WorkerAr
 		return nil, err
 	}
 
-	dbArt, found, err := getWorkerArtifact(tx, conn, atcArtifact.ID)
+	dbArt, found, err := getWorkerArtifact(conn, artifactID)
 	if err != nil {
 		return nil, err
 	}
 	if !found  {
-		return nil, fmt.Errorf("did not find art")
+		return nil, fmt.Errorf("did not find artifact")
 	}
 	return dbArt, nil
 }
@@ -209,7 +210,7 @@ func saveWorkerArtifact(tx Tx, conn Conn, atcArtifact atc.WorkerArtifact) (Worke
 		return nil, err
 	}
 
-	artifact, found, err := getWorkerArtifact(tx, conn, artifactID)
+	artifact, found, err := getWorkerArtifact(conn, artifactID)
 
 	if err != nil {
 		return nil, err
@@ -222,7 +223,7 @@ func saveWorkerArtifact(tx Tx, conn Conn, atcArtifact atc.WorkerArtifact) (Worke
 	return artifact, nil
 }
 
-func getWorkerArtifact(tx Tx, conn Conn, id int) (WorkerArtifact, bool, error) {
+func getWorkerArtifact(conn Conn, id int) (WorkerArtifact, bool, error) {
 	var (
 		createdAtTime pq.NullTime
 		buildID       sql.NullInt64
@@ -235,7 +236,7 @@ func getWorkerArtifact(tx Tx, conn Conn, id int) (WorkerArtifact, bool, error) {
 		Where(sq.Eq{
 			"id": id,
 		}).
-		RunWith(tx).
+		RunWith(conn).
 		QueryRow().
 		Scan(&artifact.id, &createdAtTime, &artifact.name, &buildID)
 	if err != nil {

@@ -14,6 +14,7 @@ RUN grep '^replace' go.mod || go mod download
 COPY . .
 RUN go build -gcflags=all="-N -l" -o /usr/local/concourse/bin/concourse \
       ./cmd/concourse
+
 WORKDIR /src/baggageclaim/cmd/plugin
 RUN go build -o /usr/local/bin/plugin
 WORKDIR /src

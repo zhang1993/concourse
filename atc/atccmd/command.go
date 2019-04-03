@@ -135,7 +135,7 @@ type RunCommand struct {
 	LogDBQueries bool `long:"log-db-queries" description:"Log database queries."`
 
 	GC struct {
-		Interval time.Duration `long:"interval" default:"30s" description:"Interval on which to perform garbage collection."`
+		Interval time.Duration `long:"interval" default:"600s" description:"Interval on which to perform garbage collection."`
 
 		OneOffBuildGracePeriod time.Duration `long:"one-off-grace-period" default:"5m" description:"Period after which one-off build containers will be garbage-collected."`
 		MissingGracePeriod     time.Duration `long:"missing-grace-period" default:"5m" description:"Period after which to reap containers and volumes that were created but went missing from the worker."`

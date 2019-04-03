@@ -93,7 +93,7 @@ func (w workerHelper) createSelfDestructingGardenContainer(
 	return w.gardenClient.Create(garden.ContainerSpec{
 		Handle: handleToCreate,
 		Image: 	garden.ImageRef{
-			URI: "bc://" + fetchedImage.URL,
+			URI: fetchedImage.URL,
 		},
 		GraceTime:  10 * time.Minute,
 		Privileged: fetchedImage.Privileged,

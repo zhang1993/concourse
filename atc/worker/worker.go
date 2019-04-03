@@ -201,6 +201,12 @@ func (worker * gardenWorker) CreateEphemeralContainer(
 		resourceTypes,
 		nil,
 	)
+	if err != nil {
+		logger.Error("something bad failed-to-fetch-image-for-eph-container", err)
+		return nil, err
+	}
+
+
 
 	// VolumeMounts may include cache mounts in the future
 	bindMounts, err := worker.getBindMounts([]VolumeMount{}, containerSpec.BindMounts)
@@ -220,12 +226,15 @@ func (worker * gardenWorker) CreateEphemeralContainer(
 		return nil, err
 	}
 
-	return worker.helper.constructGardenWorkerContainer(
+	return newGardenWorkerContainer(
 		logger,
-		nil,
 		gardenContainer,
+		nil,
+		nil,
+		worker.gardenClient,
+		worker.volumeClient,
+		worker.dbWorker.Name(),
 	)
-
 }
 
 func (worker *gardenWorker) FindOrCreateContainer(
@@ -379,7 +388,7 @@ func (worker *gardenWorker) fetchImageForEphemeralContainer(
 	}
 
 	logger.Debug("fetching-image")
-	return image.FetchForContainer(ctx, logger, nil)
+	return image.FetchForEphemeralContainer(ctx, logger)
 }
 
 func (worker *gardenWorker) fetchImageForContainer(

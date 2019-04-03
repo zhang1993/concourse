@@ -2,13 +2,12 @@ package image
 
 import (
 	"archive/tar"
+	"code.cloudfoundry.org/lager"
 	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
 	"io"
-
-	"code.cloudfoundry.org/lager"
 
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
@@ -153,7 +152,7 @@ func (i *imageResourceFetcher) Fetch(
 		logger.Error("failed-to-create-resource-cache", err)
 		return nil, nil, nil, err
 	}
-
+	fmt.Println("associating this shit", resourceCache.ID())
 	err = art.AssociateWorkerResourceCache(i.worker.Name(), resourceCache)
 	if err != nil {
 		logger.Error("something bad", err)
@@ -200,6 +199,8 @@ func (i *imageResourceFetcher) Fetch(
 		resourceInstance,
 		i.imageFetchingDelegate,
 	)
+
+
 	if err != nil {
 		logger.Error("failed-to-fetch-image", err)
 		return nil, nil, nil, err
@@ -209,6 +210,13 @@ func (i *imageResourceFetcher) Fetch(
 	if volume == nil {
 		return nil, nil, nil, ErrImageGetDidNotProduceVolume
 	}
+
+	err = volume.AssociateArtifact(art.ID())
+	if err != nil {
+		logger.Error("failed-to-associate-artifact", err)
+		return nil, nil, nil, err
+	}
+
 
 	reader, err := versionedSource.StreamOut(ImageMetadataFile)
 	if err != nil {
@@ -317,11 +325,10 @@ func (i *imageResourceFetcher) getLatestVersion(
 		return nil, err
 	}
 
-	imageContainer, err := i.worker.FindOrCreateContainer(
+	imageContainer, err := i.worker.CreateEphemeralContainer(
 		ctx,
 		logger,
 		i.imageFetchingDelegate,
-		db.NewImageCheckContainerOwner(container, i.teamID),
 		db.ContainerMetadata{
 			Type: db.ContainerTypeCheck,
 		},
