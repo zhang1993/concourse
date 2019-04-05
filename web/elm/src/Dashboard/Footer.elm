@@ -166,7 +166,7 @@ legend model =
                     , PipelineStatusAborted PipelineStatus.Running
                     , PipelineStatusSucceeded PipelineStatus.Running
                     ]
-                ++ legendSeparator model.screenSize
+                ++ [ legendSeparator model.screenSize ]
                 ++ [ toggleView model.highDensity ]
 
 
@@ -215,17 +215,20 @@ toggleView highDensity =
         ]
 
 
-legendSeparator : ScreenSize.ScreenSize -> List (Html Message)
+legendSeparator : ScreenSize.ScreenSize -> Html Message
 legendSeparator screenSize =
     case screenSize of
-        ScreenSize.Mobile ->
-            []
+        ScreenSize.Phone ->
+            Html.text ""
+
+        ScreenSize.Tablet ->
+            Html.text ""
 
         ScreenSize.Desktop ->
-            [ Html.div Styles.legendSeparator [ Html.text "|" ] ]
+            Html.div Styles.legendSeparator [ Html.text "|" ]
 
         ScreenSize.BigDesktop ->
-            [ Html.div Styles.legendSeparator [ Html.text "|" ] ]
+            Html.div Styles.legendSeparator [ Html.text "|" ]
 
 
 cliIcon : Maybe Hoverable -> Cli.Cli -> Html Message

@@ -69,7 +69,8 @@ showSearchInput ( model, effects ) =
                 model.dropdown == Hidden
 
             isMobile =
-                model.screenSize == ScreenSize.Mobile
+                (model.screenSize == ScreenSize.Phone)
+                    || (model.screenSize == ScreenSize.Tablet)
         in
         if isDropDownHidden && isMobile && model.query == "" then
             ( { model | dropdown = Shown Nothing }
@@ -80,31 +81,13 @@ showSearchInput ( model, effects ) =
             ( model, effects )
 
 
-screenResize : Float -> Model -> Model
-screenResize width model =
-    let
-        newSize =
-            ScreenSize.fromWindowSize width
-
-        newModel =
-            { model | screenSize = newSize }
-    in
-    case newSize of
-        ScreenSize.Desktop ->
-            { newModel | dropdown = Hidden }
-
-        ScreenSize.BigDesktop ->
-            { newModel | dropdown = Hidden }
-
-        ScreenSize.Mobile ->
-            newModel
-
-
 handleDelivery : Delivery -> ET Model
 handleDelivery delivery ( model, effects ) =
     case delivery of
         WindowResized width _ ->
-            ( screenResize width model, effects )
+            ( { model | screenSize = ScreenSize.fromWindowSize width }
+            , effects
+            )
 
         KeyDown keyEvent ->
             let
@@ -229,7 +212,8 @@ view ({ screenSize, query, dropdown, groups } as params) =
             dropdown == Hidden
 
         isMobile =
-            screenSize == ScreenSize.Mobile
+            (screenSize == ScreenSize.Phone)
+                || (screenSize == ScreenSize.Tablet)
 
         noPipelines =
             groups

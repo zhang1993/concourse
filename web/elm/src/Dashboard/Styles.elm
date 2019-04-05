@@ -319,11 +319,18 @@ infoBar { hideLegend, screenSize } =
             "space-between"
     ]
         ++ (case screenSize of
-                ScreenSize.Mobile ->
-                    [ style "flex-direction" "column" ]
+                ScreenSize.Phone ->
+                    -- TODO test this case
+                    --[ style "flex-direction" "column" ]
+                    []
+
+                ScreenSize.Tablet ->
+                    --[ style "flex-direction" "column" ]
+                    []
 
                 ScreenSize.Desktop ->
-                    [ style "flex-direction" "column" ]
+                    --[ style "flex-direction" "column" ]
+                    []
 
                 ScreenSize.BigDesktop ->
                     []
@@ -504,7 +511,11 @@ searchContainer screenSize =
     , style "align-items" "stretch"
     ]
         ++ (case screenSize of
-                Mobile ->
+                Phone ->
+                    -- TODO test this
+                    [ style "flex-grow" "1" ]
+
+                Tablet ->
                     [ style "flex-grow" "1" ]
 
                 _ ->
@@ -517,7 +528,11 @@ searchInput screenSize =
     let
         widthStyles =
             case screenSize of
-                Mobile ->
+                Phone ->
+                    -- TODO test this case
+                    []
+
+                Tablet ->
                     []
 
                 Desktop ->
@@ -595,7 +610,11 @@ dropdownContainer screenSize =
     , style "width" "100%"
     ]
         ++ (case screenSize of
-                Mobile ->
+                Phone ->
+                    -- TODO test this
+                    []
+
+                Tablet ->
                     []
 
                 _ ->

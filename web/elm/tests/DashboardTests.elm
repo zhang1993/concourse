@@ -6,14 +6,13 @@ module DashboardTests exposing
     , defineHoverBehaviour
     , givenDataAndUser
     , givenDataUnauthenticated
-    , iconSelector
     , isColorWithStripes
     , middleGrey
     , white
     )
 
 import Application.Application as Application
-import Common
+import Common exposing (iconSelector)
 import Concourse
 import Concourse.Cli as Cli
 import Dashboard.Dashboard as Dashboard
@@ -2454,20 +2453,30 @@ all =
                             |> Query.children []
                             |> Query.index -2
                             |> Query.has [ style "display" "flex", style "align-items" "center" ]
-                , test "the legend separator is gone when the window width is below 812px" <|
+                , test "the legend separator is gone on tablet-width viewport" <|
                     \_ ->
                         initFromApplication
-                            |> givenDataUnauthenticatedFromApplication (apiData [ ( "team", [ "pipeline" ] ) ])
+                            |> givenDataUnauthenticatedFromApplication
+                                (apiData [ ( "team", [ "pipeline" ] ) ])
                             |> Application.update
                                 (ApplicationMsgs.DeliveryReceived <|
                                     WindowResized 800 300
                                 )
                             |> queryView
                             |> Query.find [ id "legend" ]
-                            |> Expect.all
-                                [ Query.hasNot [ text "|" ]
-                                , Query.children [] >> Query.count (Expect.equal 8)
-                                ]
+                            |> Query.hasNot [ text "|" ]
+                , test "the legend separator is gone on phone-width viewport" <|
+                    \_ ->
+                        initFromApplication
+                            |> givenDataUnauthenticatedFromApplication
+                                (apiData [ ( "team", [ "pipeline" ] ) ])
+                            |> Application.update
+                                (ApplicationMsgs.DeliveryReceived <|
+                                    WindowResized 360 640
+                                )
+                            |> queryView
+                            |> Query.find [ id "legend" ]
+                            |> Query.hasNot [ text "|" ]
                 , test "legend items wrap when window width is below 812px" <|
                     \_ ->
                         initFromApplication
@@ -3050,16 +3059,6 @@ defineHoverBehaviour { name, setup, query, unhoveredSelector, mouseEnterMsg, mou
                     |> query
                     |> Query.has unhoveredSelector.selector
         ]
-
-
-iconSelector : { size : String, image : String } -> List Selector
-iconSelector { size, image } =
-    [ style "background-image" <| "url(/public/images/" ++ image ++ ")"
-    , style "background-position" "50% 50%"
-    , style "background-repeat" "no-repeat"
-    , style "width" size
-    , style "height" size
-    ]
 
 
 whenOnDashboard : { highDensity : Bool } -> ( Application.Model, List Effects.Effect )
