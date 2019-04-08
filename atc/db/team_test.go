@@ -705,7 +705,7 @@ var _ = Describe("Team", func() {
 
 		Context("when the artifact exists", func() {
 			BeforeEach(func() {
-				_, err := dbConn.Exec("INSERT INTO worker_artifacts (id, name) VALUES ($1, '')", 18)
+				_, err := dbConn.Exec("INSERT INTO worker_artifacts (id, name, worker_name) VALUES ($1, '', $2)", 18, defaultWorker.Name())
 				Expect(err).NotTo(HaveOccurred())
 			})
 

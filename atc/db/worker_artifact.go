@@ -6,8 +6,9 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/concourse/concourse/atc"
 	"github.com/lib/pq"
+
+	"github.com/concourse/concourse/atc"
 )
 
 //go:generate counterfeiter . WorkerArtifact
@@ -23,10 +24,11 @@ type WorkerArtifact interface {
 type artifact struct {
 	conn Conn
 
-	id        int
-	name      string
-	buildID   int
-	createdAt time.Time
+	id         int
+	name       string
+	buildID    int
+	createdAt  time.Time
+	workerName string
 }
 
 func (a *artifact) ID() int              { return a.id }
@@ -57,7 +59,8 @@ func saveWorkerArtifact(tx Tx, conn Conn, atcArtifact atc.WorkerArtifact) (Worke
 	var artifactID int
 
 	values := map[string]interface{}{
-		"name": atcArtifact.Name,
+		"name":        atcArtifact.Name,
+		"worker_name": atcArtifact.WorkerName,
 	}
 
 	if atcArtifact.BuildID != 0 {
@@ -92,18 +95,19 @@ func getWorkerArtifact(tx Tx, conn Conn, id int) (WorkerArtifact, bool, error) {
 	var (
 		createdAtTime pq.NullTime
 		buildID       sql.NullInt64
+		workerName    string
 	)
 
 	artifact := &artifact{conn: conn}
 
-	err := psql.Select("id", "created_at", "name", "build_id").
+	err := psql.Select("id", "created_at", "name", "build_id", "worker_name").
 		From("worker_artifacts").
 		Where(sq.Eq{
 			"id": id,
 		}).
 		RunWith(tx).
 		QueryRow().
-		Scan(&artifact.id, &createdAtTime, &artifact.name, &buildID)
+		Scan(&artifact.id, &createdAtTime, &artifact.name, &buildID, &workerName)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, false, nil
@@ -114,6 +118,7 @@ func getWorkerArtifact(tx Tx, conn Conn, id int) (WorkerArtifact, bool, error) {
 
 	artifact.createdAt = createdAtTime.Time
 	artifact.buildID = int(buildID.Int64)
+	artifact.workerName = workerName
 
 	return artifact, true, nil
 }
