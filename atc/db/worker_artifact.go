@@ -24,11 +24,12 @@ type WorkerArtifact interface {
 type artifact struct {
 	conn Conn
 
-	id         int
-	name       string
-	buildID    int
-	createdAt  time.Time
-	workerName string
+	id          int
+	name        string
+	buildID     int
+	createdAt   time.Time
+	workerName  string
+	initialized bool
 }
 
 func (a *artifact) ID() int              { return a.id }
@@ -65,6 +66,7 @@ func saveWorkerArtifact(tx Tx, conn Conn, atcArtifact atc.WorkerArtifact) (Worke
 
 	if atcArtifact.BuildID != 0 {
 		values["build_id"] = atcArtifact.BuildID
+		values["initialized"] = true
 	}
 
 	err := psql.Insert("worker_artifacts").

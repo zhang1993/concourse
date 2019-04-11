@@ -19,6 +19,9 @@ BEGIN;
     ADD COLUMN worker_name text NOT NULL,
     ADD CONSTRAINT worker_name_fkey FOREIGN KEY(worker_name) REFERENCES workers(name);
 
+  ALTER TABLE worker_artifacts
+    ADD COLUMN initialized boolean default false;
+
   ALTER TABLE resource_cache_uses
     ADD COLUMN artifact_id integer,
     ADD CONSTRAINT worker_artifact_id_fkey FOREIGN KEY(artifact_id) REFERENCES worker_artifacts(id);
