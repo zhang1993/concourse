@@ -181,7 +181,8 @@ var _ = Describe("Artifacts API", func() {
 									"id": 0,
 									"name": "",
 									"build_id": 0,
-									"created_at": 42
+									"created_at": 42,
+									"worker_name": ""
 								}`))
 							})
 						})

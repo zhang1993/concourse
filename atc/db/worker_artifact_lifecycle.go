@@ -26,7 +26,7 @@ func NewArtifactLifecycle(conn Conn) *artifactLifecycle {
 
 func (lifecycle *artifactLifecycle) RemoveExpiredArtifacts(logger lager.Logger) error {
 
-	result, err := psql.Delete("worker_artifacts").
+	_, err := psql.Delete("worker_artifacts").
 		Where(sq.Expr("created_at < NOW() - interval '12 hours'")).
 		RunWith(lifecycle.conn).
 		Exec()
@@ -35,12 +35,10 @@ func (lifecycle *artifactLifecycle) RemoveExpiredArtifacts(logger lager.Logger) 
 		return err
 	}
 
-	logger.Debug("removed-expired-artifacts", lager.Data{"count": result.RowsAffected()})
-
 	return nil
 }
 
-func (lifecycle *artifactLifecycle) GetArtifactsWithBuild() ([]int, error) {
+func (lifecycle *artifactLifecycle) getArtifactsOwnedByBuilds() ([]int, error) {
 	query, args, err := psql.Select("a.id", "a.initialized", "b.status").
 		From("worker_artifacts a").
 		LeftJoin("builds b ON b.id = a.build_id").
@@ -88,7 +86,7 @@ func (lifecycle *artifactLifecycle) GetArtifactsWithBuild() ([]int, error) {
 
 // TODO: Change this to keep around artifacts required for hijackable builds
 func (lifecycle *artifactLifecycle) RemoveUnassociatedArtifacts(logger lager.Logger) error {
-	artifactsWithTerminatedBuilds, err := lifecycle.GetArtifactsWithBuild()
+	artifactsWithTerminatedBuilds, err := lifecycle.getArtifactsOwnedByBuilds()
 	if err != nil {
 		return err
 	}

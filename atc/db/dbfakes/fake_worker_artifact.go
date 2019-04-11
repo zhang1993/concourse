@@ -9,6 +9,17 @@ import (
 )
 
 type FakeWorkerArtifact struct {
+	AttachToBuildStub        func(db.Build) error
+	attachToBuildMutex       sync.RWMutex
+	attachToBuildArgsForCall []struct {
+		arg1 db.Build
+	}
+	attachToBuildReturns struct {
+		result1 error
+	}
+	attachToBuildReturnsOnCall map[int]struct {
+		result1 error
+	}
 	BuildIDStub        func() int
 	buildIDMutex       sync.RWMutex
 	buildIDArgsForCall []struct {
@@ -66,6 +77,66 @@ type FakeWorkerArtifact struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeWorkerArtifact) AttachToBuild(arg1 db.Build) error {
+	fake.attachToBuildMutex.Lock()
+	ret, specificReturn := fake.attachToBuildReturnsOnCall[len(fake.attachToBuildArgsForCall)]
+	fake.attachToBuildArgsForCall = append(fake.attachToBuildArgsForCall, struct {
+		arg1 db.Build
+	}{arg1})
+	fake.recordInvocation("AttachToBuild", []interface{}{arg1})
+	fake.attachToBuildMutex.Unlock()
+	if fake.AttachToBuildStub != nil {
+		return fake.AttachToBuildStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.attachToBuildReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeWorkerArtifact) AttachToBuildCallCount() int {
+	fake.attachToBuildMutex.RLock()
+	defer fake.attachToBuildMutex.RUnlock()
+	return len(fake.attachToBuildArgsForCall)
+}
+
+func (fake *FakeWorkerArtifact) AttachToBuildCalls(stub func(db.Build) error) {
+	fake.attachToBuildMutex.Lock()
+	defer fake.attachToBuildMutex.Unlock()
+	fake.AttachToBuildStub = stub
+}
+
+func (fake *FakeWorkerArtifact) AttachToBuildArgsForCall(i int) db.Build {
+	fake.attachToBuildMutex.RLock()
+	defer fake.attachToBuildMutex.RUnlock()
+	argsForCall := fake.attachToBuildArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeWorkerArtifact) AttachToBuildReturns(result1 error) {
+	fake.attachToBuildMutex.Lock()
+	defer fake.attachToBuildMutex.Unlock()
+	fake.AttachToBuildStub = nil
+	fake.attachToBuildReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeWorkerArtifact) AttachToBuildReturnsOnCall(i int, result1 error) {
+	fake.attachToBuildMutex.Lock()
+	defer fake.attachToBuildMutex.Unlock()
+	fake.AttachToBuildStub = nil
+	if fake.attachToBuildReturnsOnCall == nil {
+		fake.attachToBuildReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.attachToBuildReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeWorkerArtifact) BuildID() int {
@@ -345,6 +416,8 @@ func (fake *FakeWorkerArtifact) VolumeReturnsOnCall(i int, result1 db.CreatedVol
 func (fake *FakeWorkerArtifact) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.attachToBuildMutex.RLock()
+	defer fake.attachToBuildMutex.RUnlock()
 	fake.buildIDMutex.RLock()
 	defer fake.buildIDMutex.RUnlock()
 	fake.createdAtMutex.RLock()

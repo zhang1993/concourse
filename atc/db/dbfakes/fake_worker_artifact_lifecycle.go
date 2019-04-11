@@ -4,13 +4,15 @@ package dbfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/concourse/concourse/atc/db"
 )
 
 type FakeWorkerArtifactLifecycle struct {
-	RemoveExpiredArtifactsStub        func() error
+	RemoveExpiredArtifactsStub        func(lager.Logger) error
 	removeExpiredArtifactsMutex       sync.RWMutex
 	removeExpiredArtifactsArgsForCall []struct {
+		arg1 lager.Logger
 	}
 	removeExpiredArtifactsReturns struct {
 		result1 error
@@ -18,9 +20,10 @@ type FakeWorkerArtifactLifecycle struct {
 	removeExpiredArtifactsReturnsOnCall map[int]struct {
 		result1 error
 	}
-	RemoveUnassociatedArtifactsStub        func() error
+	RemoveUnassociatedArtifactsStub        func(lager.Logger) error
 	removeUnassociatedArtifactsMutex       sync.RWMutex
 	removeUnassociatedArtifactsArgsForCall []struct {
+		arg1 lager.Logger
 	}
 	removeUnassociatedArtifactsReturns struct {
 		result1 error
@@ -32,15 +35,16 @@ type FakeWorkerArtifactLifecycle struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeWorkerArtifactLifecycle) RemoveExpiredArtifacts() error {
+func (fake *FakeWorkerArtifactLifecycle) RemoveExpiredArtifacts(arg1 lager.Logger) error {
 	fake.removeExpiredArtifactsMutex.Lock()
 	ret, specificReturn := fake.removeExpiredArtifactsReturnsOnCall[len(fake.removeExpiredArtifactsArgsForCall)]
 	fake.removeExpiredArtifactsArgsForCall = append(fake.removeExpiredArtifactsArgsForCall, struct {
-	}{})
-	fake.recordInvocation("RemoveExpiredArtifacts", []interface{}{})
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("RemoveExpiredArtifacts", []interface{}{arg1})
 	fake.removeExpiredArtifactsMutex.Unlock()
 	if fake.RemoveExpiredArtifactsStub != nil {
-		return fake.RemoveExpiredArtifactsStub()
+		return fake.RemoveExpiredArtifactsStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
@@ -55,10 +59,17 @@ func (fake *FakeWorkerArtifactLifecycle) RemoveExpiredArtifactsCallCount() int {
 	return len(fake.removeExpiredArtifactsArgsForCall)
 }
 
-func (fake *FakeWorkerArtifactLifecycle) RemoveExpiredArtifactsCalls(stub func() error) {
+func (fake *FakeWorkerArtifactLifecycle) RemoveExpiredArtifactsCalls(stub func(lager.Logger) error) {
 	fake.removeExpiredArtifactsMutex.Lock()
 	defer fake.removeExpiredArtifactsMutex.Unlock()
 	fake.RemoveExpiredArtifactsStub = stub
+}
+
+func (fake *FakeWorkerArtifactLifecycle) RemoveExpiredArtifactsArgsForCall(i int) lager.Logger {
+	fake.removeExpiredArtifactsMutex.RLock()
+	defer fake.removeExpiredArtifactsMutex.RUnlock()
+	argsForCall := fake.removeExpiredArtifactsArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeWorkerArtifactLifecycle) RemoveExpiredArtifactsReturns(result1 error) {
@@ -84,15 +95,16 @@ func (fake *FakeWorkerArtifactLifecycle) RemoveExpiredArtifactsReturnsOnCall(i i
 	}{result1}
 }
 
-func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifacts() error {
+func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifacts(arg1 lager.Logger) error {
 	fake.removeUnassociatedArtifactsMutex.Lock()
 	ret, specificReturn := fake.removeUnassociatedArtifactsReturnsOnCall[len(fake.removeUnassociatedArtifactsArgsForCall)]
 	fake.removeUnassociatedArtifactsArgsForCall = append(fake.removeUnassociatedArtifactsArgsForCall, struct {
-	}{})
-	fake.recordInvocation("RemoveUnassociatedArtifacts", []interface{}{})
+		arg1 lager.Logger
+	}{arg1})
+	fake.recordInvocation("RemoveUnassociatedArtifacts", []interface{}{arg1})
 	fake.removeUnassociatedArtifactsMutex.Unlock()
 	if fake.RemoveUnassociatedArtifactsStub != nil {
-		return fake.RemoveUnassociatedArtifactsStub()
+		return fake.RemoveUnassociatedArtifactsStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
@@ -107,10 +119,17 @@ func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifactsCallCount() 
 	return len(fake.removeUnassociatedArtifactsArgsForCall)
 }
 
-func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifactsCalls(stub func() error) {
+func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifactsCalls(stub func(lager.Logger) error) {
 	fake.removeUnassociatedArtifactsMutex.Lock()
 	defer fake.removeUnassociatedArtifactsMutex.Unlock()
 	fake.RemoveUnassociatedArtifactsStub = stub
+}
+
+func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifactsArgsForCall(i int) lager.Logger {
+	fake.removeUnassociatedArtifactsMutex.RLock()
+	defer fake.removeUnassociatedArtifactsMutex.RUnlock()
+	argsForCall := fake.removeUnassociatedArtifactsArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifactsReturns(result1 error) {
