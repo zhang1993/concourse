@@ -25,11 +25,12 @@ func (a *artifactCollector) Run(ctx context.Context) error {
 
 	err := a.artifactLifecycle.RemoveExpiredArtifacts()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	err = a.artifactLifecycle.RemoveUnassociatedArtifacts()
 	if err != nil {
-		return nil
+		return err
 	}
+	return nil
 }

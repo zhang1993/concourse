@@ -68,6 +68,11 @@ func (step *ArtifactInputStep) Run(ctx context.Context, state RunState) error {
 		"handle":      workerVolume.Handle(),
 	})
 
+	err = buildArtifact.AttachToBuild(step.build)
+	if err != nil {
+		return err // TODO: or something else?
+	}
+
 	source := NewTaskArtifactSource(workerVolume)
 	state.Artifacts().RegisterSource(artifact.Name(step.plan.ArtifactInput.Name), source)
 

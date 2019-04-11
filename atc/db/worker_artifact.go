@@ -19,6 +19,7 @@ type WorkerArtifact interface {
 	BuildID() int
 	CreatedAt() time.Time
 	Volume(teamID int) (CreatedVolume, bool, error)
+	AttachToBuild(build Build) error
 }
 
 type artifact struct {
@@ -53,6 +54,28 @@ func (a *artifact) Volume(teamID int) (CreatedVolume, bool, error) {
 	}
 
 	return created, true, nil
+}
+
+func (a *artifact) AttachToBuild(build Build) error {
+	result, err := psql.Update("artifacts").
+		Set("build_id", build.ID()).
+		Set("initialized", true).
+		Where(sq.Eq{"id": a.id}).
+		RunWith(a.conn).Exec()
+
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return errors.New("artifact not found")
+	}
+	return nil
 }
 
 func saveWorkerArtifact(tx Tx, conn Conn, atcArtifact atc.WorkerArtifact) (WorkerArtifact, error) {
