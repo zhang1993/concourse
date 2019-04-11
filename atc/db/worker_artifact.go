@@ -57,7 +57,7 @@ func (a *artifact) Volume(teamID int) (CreatedVolume, bool, error) {
 }
 
 func (a *artifact) AttachToBuild(build Build) error {
-	result, err := psql.Update("artifacts").
+	result, err := psql.Update("worker_artifacts").
 		Set("build_id", build.ID()).
 		Set("initialized", true).
 		Where(sq.Eq{"id": a.id}).

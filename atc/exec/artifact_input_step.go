@@ -70,6 +70,7 @@ func (step *ArtifactInputStep) Run(ctx context.Context, state RunState) error {
 
 	err = buildArtifact.AttachToBuild(step.build)
 	if err != nil {
+		logger.Error("could-not-attach-to-build", err, lager.Data{"build_id": step.build.ID(), "artifactID": buildArtifact.ID()})
 		return err // TODO: or something else?
 	}
 

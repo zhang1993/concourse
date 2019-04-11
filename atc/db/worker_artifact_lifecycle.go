@@ -3,14 +3,15 @@ package db
 import (
 	"database/sql"
 
+	"code.cloudfoundry.org/lager"
 	sq "github.com/Masterminds/squirrel"
 )
 
 //go:generate counterfeiter . WorkerArtifactLifecycle
 
 type WorkerArtifactLifecycle interface {
-	RemoveExpiredArtifacts() error
-	RemoveUnassociatedArtifacts() error
+	RemoveExpiredArtifacts(logger lager.Logger) error
+	RemoveUnassociatedArtifacts(logger lager.Logger) error
 }
 
 type artifactLifecycle struct {
@@ -23,14 +24,20 @@ func NewArtifactLifecycle(conn Conn) *artifactLifecycle {
 	}
 }
 
-func (lifecycle *artifactLifecycle) RemoveExpiredArtifacts() error {
+func (lifecycle *artifactLifecycle) RemoveExpiredArtifacts(logger lager.Logger) error {
 
-	_, err := psql.Delete("worker_artifacts").
+	result, err := psql.Delete("worker_artifacts").
 		Where(sq.Expr("created_at < NOW() - interval '12 hours'")).
 		RunWith(lifecycle.conn).
 		Exec()
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	logger.Debug("removed-expired-artifacts", lager.Data{"count": result.RowsAffected()})
+
+	return nil
 }
 
 func (lifecycle *artifactLifecycle) GetArtifactsWithBuild() ([]int, error) {
@@ -80,7 +87,7 @@ func (lifecycle *artifactLifecycle) GetArtifactsWithBuild() ([]int, error) {
 }
 
 // TODO: Change this to keep around artifacts required for hijackable builds
-func (lifecycle *artifactLifecycle) RemoveUnassociatedArtifacts() error {
+func (lifecycle *artifactLifecycle) RemoveUnassociatedArtifacts(logger lager.Logger) error {
 	artifactsWithTerminatedBuilds, err := lifecycle.GetArtifactsWithBuild()
 	if err != nil {
 		return err
@@ -93,6 +100,7 @@ func (lifecycle *artifactLifecycle) RemoveUnassociatedArtifacts() error {
 
 	_, err = psql.Update("worker_artifacts").Set("build_id", sql.NullInt64{}).Where(orClause).RunWith(lifecycle.conn).Exec()
 	if err != nil {
+		logger.Debug("could not update artifacts for terminated builds")
 		return err
 	}
 
@@ -125,6 +133,7 @@ func (lifecycle *artifactLifecycle) RemoveUnassociatedArtifacts() error {
 	if err != nil {
 		return err
 	}
+
 	defer Close(rows)
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"code.cloudfoundry.org/lager/lagerctx"
+
 	"github.com/concourse/concourse/atc/db"
 )
 
@@ -23,12 +24,12 @@ func (a *artifactCollector) Run(ctx context.Context) error {
 	logger.Debug("start")
 	defer logger.Debug("done")
 
-	err := a.artifactLifecycle.RemoveExpiredArtifacts()
+	err := a.artifactLifecycle.RemoveExpiredArtifacts(logger)
 	if err != nil {
 		return err
 	}
 
-	err = a.artifactLifecycle.RemoveUnassociatedArtifacts()
+	err = a.artifactLifecycle.RemoveUnassociatedArtifacts(logger)
 	if err != nil {
 		return err
 	}
