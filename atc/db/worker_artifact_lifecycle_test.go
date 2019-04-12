@@ -22,50 +22,60 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 	})
 
 	Describe("RemoveExpiredArtifacts", func() {
+		var initialized bool
+
 		JustBeforeEach(func() {
-			err := workerArtifactLifecycle.RemoveExpiredArtifacts(testLogger)
+			_, err := dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, initialized) VALUES('old-artifact', NOW() - '13 hours'::interval, $1, $2)", defaultWorker.Name(), initialized)
+			Expect(err).ToNot(HaveOccurred())
+
+			_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, initialized) VALUES('young-artifact', NOW(), $1, $2)", defaultWorker.Name(), initialized)
+			Expect(err).ToNot(HaveOccurred())
+
+			err = workerArtifactLifecycle.RemoveExpiredArtifacts(testLogger)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		Context("removes artifacts created more than 12 hours ago", func() {
-
+		Context("uninitialized artifacts", func() {
 			BeforeEach(func() {
-				_, err := dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name) VALUES('artifact-with-association', NOW() - '13 hours'::interval, $1)", defaultWorker.Name())
-				Expect(err).ToNot(HaveOccurred())
+				initialized = false
 			})
 
-			It("removes the record", func() {
-				var count int
-				err := dbConn.QueryRow("SELECT count(*) from worker_artifacts").Scan(&count)
+			It("removes artifacts created more than 12 hours ago", func() {
+				var artifactNames []string
+				rows, err := dbConn.Query("SELECT name from worker_artifacts")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(count).To(Equal(0))
+
+				for rows.Next() {
+					var name string
+					err = rows.Scan(&name)
+					Expect(err).ToNot(HaveOccurred())
+					artifactNames = append(artifactNames, name)
+				}
+
+				Expect(len(artifactNames)).To(Equal(1))
+				Expect(artifactNames).Should(ConsistOf("young-artifact"))
 			})
 		})
 
-		Context("keeps artifacts for 12 hours", func() {
-
+		Context("artifacts are initialized", func() {
 			BeforeEach(func() {
-				_, err := dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name) VALUES('artifact-with-association', NOW() - '13 hours'::interval, $1)", defaultWorker.Name())
-				Expect(err).ToNot(HaveOccurred())
-
-				_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name) VALUES('unassociated-artifact', NOW(), $1)", defaultWorker.Name())
-				Expect(err).ToNot(HaveOccurred())
+				initialized = true
 			})
 
-			It("does not remove the record", func() {
+			It("does not delete any record", func() {
 				var count int
 				err := dbConn.QueryRow("SELECT count(*) from worker_artifacts").Scan(&count)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(count).To(Equal(1))
+				Expect(count).To(Equal(2))
 			})
-		})
 
+		})
 	})
 
 	Describe("RemoveUnassociatedWorkerArtifacts", func() {
 		var expectedArtifactNames []string
 		JustBeforeEach(func() {
-			err := workerArtifactLifecycle.RemoveUnassociatedArtifacts(testLogger)
+			err := workerArtifactLifecycle.RemoveOrphanedArtifacts(testLogger)
 			Expect(err).ToNot(HaveOccurred())
 		})
 

@@ -31,7 +31,7 @@ var _ = Describe("ArtifactCollector", func() {
 			err := collector.Run(context.TODO())
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeArtifactLifecycle.RemoveUnassociatedArtifactsCallCount()).To(Equal(1))
+			Expect(fakeArtifactLifecycle.RemoveOrphanedArtifactsCallCount()).To(Equal(1))
 		})
 	})
 })

@@ -20,15 +20,15 @@ type FakeWorkerArtifactLifecycle struct {
 	removeExpiredArtifactsReturnsOnCall map[int]struct {
 		result1 error
 	}
-	RemoveUnassociatedArtifactsStub        func(lager.Logger) error
-	removeUnassociatedArtifactsMutex       sync.RWMutex
-	removeUnassociatedArtifactsArgsForCall []struct {
+	RemoveOrphanedArtifactsStub        func(lager.Logger) error
+	removeOrphanedArtifactsMutex       sync.RWMutex
+	removeOrphanedArtifactsArgsForCall []struct {
 		arg1 lager.Logger
 	}
-	removeUnassociatedArtifactsReturns struct {
+	removeOrphanedArtifactsReturns struct {
 		result1 error
 	}
-	removeUnassociatedArtifactsReturnsOnCall map[int]struct {
+	removeOrphanedArtifactsReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
@@ -95,62 +95,62 @@ func (fake *FakeWorkerArtifactLifecycle) RemoveExpiredArtifactsReturnsOnCall(i i
 	}{result1}
 }
 
-func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifacts(arg1 lager.Logger) error {
-	fake.removeUnassociatedArtifactsMutex.Lock()
-	ret, specificReturn := fake.removeUnassociatedArtifactsReturnsOnCall[len(fake.removeUnassociatedArtifactsArgsForCall)]
-	fake.removeUnassociatedArtifactsArgsForCall = append(fake.removeUnassociatedArtifactsArgsForCall, struct {
+func (fake *FakeWorkerArtifactLifecycle) RemoveOrphanedArtifacts(arg1 lager.Logger) error {
+	fake.removeOrphanedArtifactsMutex.Lock()
+	ret, specificReturn := fake.removeOrphanedArtifactsReturnsOnCall[len(fake.removeOrphanedArtifactsArgsForCall)]
+	fake.removeOrphanedArtifactsArgsForCall = append(fake.removeOrphanedArtifactsArgsForCall, struct {
 		arg1 lager.Logger
 	}{arg1})
-	fake.recordInvocation("RemoveUnassociatedArtifacts", []interface{}{arg1})
-	fake.removeUnassociatedArtifactsMutex.Unlock()
-	if fake.RemoveUnassociatedArtifactsStub != nil {
-		return fake.RemoveUnassociatedArtifactsStub(arg1)
+	fake.recordInvocation("RemoveOrphanedArtifacts", []interface{}{arg1})
+	fake.removeOrphanedArtifactsMutex.Unlock()
+	if fake.RemoveOrphanedArtifactsStub != nil {
+		return fake.RemoveOrphanedArtifactsStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.removeUnassociatedArtifactsReturns
+	fakeReturns := fake.removeOrphanedArtifactsReturns
 	return fakeReturns.result1
 }
 
-func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifactsCallCount() int {
-	fake.removeUnassociatedArtifactsMutex.RLock()
-	defer fake.removeUnassociatedArtifactsMutex.RUnlock()
-	return len(fake.removeUnassociatedArtifactsArgsForCall)
+func (fake *FakeWorkerArtifactLifecycle) RemoveOrphanedArtifactsCallCount() int {
+	fake.removeOrphanedArtifactsMutex.RLock()
+	defer fake.removeOrphanedArtifactsMutex.RUnlock()
+	return len(fake.removeOrphanedArtifactsArgsForCall)
 }
 
-func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifactsCalls(stub func(lager.Logger) error) {
-	fake.removeUnassociatedArtifactsMutex.Lock()
-	defer fake.removeUnassociatedArtifactsMutex.Unlock()
-	fake.RemoveUnassociatedArtifactsStub = stub
+func (fake *FakeWorkerArtifactLifecycle) RemoveOrphanedArtifactsCalls(stub func(lager.Logger) error) {
+	fake.removeOrphanedArtifactsMutex.Lock()
+	defer fake.removeOrphanedArtifactsMutex.Unlock()
+	fake.RemoveOrphanedArtifactsStub = stub
 }
 
-func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifactsArgsForCall(i int) lager.Logger {
-	fake.removeUnassociatedArtifactsMutex.RLock()
-	defer fake.removeUnassociatedArtifactsMutex.RUnlock()
-	argsForCall := fake.removeUnassociatedArtifactsArgsForCall[i]
+func (fake *FakeWorkerArtifactLifecycle) RemoveOrphanedArtifactsArgsForCall(i int) lager.Logger {
+	fake.removeOrphanedArtifactsMutex.RLock()
+	defer fake.removeOrphanedArtifactsMutex.RUnlock()
+	argsForCall := fake.removeOrphanedArtifactsArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifactsReturns(result1 error) {
-	fake.removeUnassociatedArtifactsMutex.Lock()
-	defer fake.removeUnassociatedArtifactsMutex.Unlock()
-	fake.RemoveUnassociatedArtifactsStub = nil
-	fake.removeUnassociatedArtifactsReturns = struct {
+func (fake *FakeWorkerArtifactLifecycle) RemoveOrphanedArtifactsReturns(result1 error) {
+	fake.removeOrphanedArtifactsMutex.Lock()
+	defer fake.removeOrphanedArtifactsMutex.Unlock()
+	fake.RemoveOrphanedArtifactsStub = nil
+	fake.removeOrphanedArtifactsReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeWorkerArtifactLifecycle) RemoveUnassociatedArtifactsReturnsOnCall(i int, result1 error) {
-	fake.removeUnassociatedArtifactsMutex.Lock()
-	defer fake.removeUnassociatedArtifactsMutex.Unlock()
-	fake.RemoveUnassociatedArtifactsStub = nil
-	if fake.removeUnassociatedArtifactsReturnsOnCall == nil {
-		fake.removeUnassociatedArtifactsReturnsOnCall = make(map[int]struct {
+func (fake *FakeWorkerArtifactLifecycle) RemoveOrphanedArtifactsReturnsOnCall(i int, result1 error) {
+	fake.removeOrphanedArtifactsMutex.Lock()
+	defer fake.removeOrphanedArtifactsMutex.Unlock()
+	fake.RemoveOrphanedArtifactsStub = nil
+	if fake.removeOrphanedArtifactsReturnsOnCall == nil {
+		fake.removeOrphanedArtifactsReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.removeUnassociatedArtifactsReturnsOnCall[i] = struct {
+	fake.removeOrphanedArtifactsReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -160,8 +160,8 @@ func (fake *FakeWorkerArtifactLifecycle) Invocations() map[string][][]interface{
 	defer fake.invocationsMutex.RUnlock()
 	fake.removeExpiredArtifactsMutex.RLock()
 	defer fake.removeExpiredArtifactsMutex.RUnlock()
-	fake.removeUnassociatedArtifactsMutex.RLock()
-	defer fake.removeUnassociatedArtifactsMutex.RUnlock()
+	fake.removeOrphanedArtifactsMutex.RLock()
+	defer fake.removeOrphanedArtifactsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

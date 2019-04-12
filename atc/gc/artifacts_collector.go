@@ -29,7 +29,7 @@ func (a *artifactCollector) Run(ctx context.Context) error {
 		return err
 	}
 
-	err = a.artifactLifecycle.RemoveUnassociatedArtifacts(logger)
+	err = a.artifactLifecycle.RemoveOrphanedArtifacts(logger)
 	if err != nil {
 		return err
 	}
