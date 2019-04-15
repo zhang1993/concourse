@@ -6,7 +6,7 @@ import (
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/nu7hatch/gouuid"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 //go:generate counterfeiter . VolumeRepository
@@ -35,7 +35,7 @@ type VolumeRepository interface {
 
 	GetDestroyingVolumes(workerName string) ([]string, error)
 
-	CreateVolume(int, string, VolumeType) (CreatingVolume, error)
+	CreateVolume(int, int, string, VolumeType) (CreatingVolume, error)
 	FindCreatedVolume(handle string) (CreatedVolume, bool, error)
 
 	RemoveDestroyingVolumes(workerName string, handles []string) (int, error)
@@ -255,12 +255,13 @@ func (repository *volumeRepository) CreateBaseResourceTypeVolume(uwbrt *UsedWork
 	return volume, nil
 }
 
-func (repository *volumeRepository) CreateVolume(teamID int, workerName string, volumeType VolumeType) (CreatingVolume, error) {
+func (repository *volumeRepository) CreateVolume(teamID int, artifactID int, workerName string, volumeType VolumeType) (CreatingVolume, error) {
 	volume, err := repository.createVolume(
 		0,
 		workerName,
 		map[string]interface{}{
-			"team_id": teamID,
+			"team_id":            teamID,
+			"worker_artifact_id": artifactID,
 		},
 		volumeType,
 	)

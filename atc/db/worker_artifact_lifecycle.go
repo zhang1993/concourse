@@ -2,16 +2,24 @@ package db
 
 import (
 	"database/sql"
+	"time"
 
 	"code.cloudfoundry.org/lager"
 	sq "github.com/Masterminds/squirrel"
 )
 
+//go:generate counterfeiter . ArtifactCreator
+
+type ArtifactCreator interface {
+	CreateArtifact(name string, workerName string) (WorkerArtifact, error)
+}
+
 //go:generate counterfeiter . WorkerArtifactLifecycle
 
 type WorkerArtifactLifecycle interface {
-	RemoveExpiredArtifacts(logger lager.Logger) error
-	RemoveOrphanedArtifacts(logger lager.Logger) error
+	ArtifactCreator
+	RemoveExpiredArtifacts(lager.Logger) error
+	RemoveOrphanedArtifacts(lager.Logger) error
 }
 
 type artifactLifecycle struct {
@@ -22,6 +30,29 @@ func NewArtifactLifecycle(conn Conn) *artifactLifecycle {
 	return &artifactLifecycle{
 		conn: conn,
 	}
+}
+
+func (lifecycle *artifactLifecycle) CreateArtifact(name string, workerName string) (WorkerArtifact, error) {
+	var artifactID int
+	var createdAt time.Time
+	err := psql.Insert("worker_artifacts").
+		Columns("name", "worker_name").
+		Values(name, workerName).
+		Suffix("RETURNING id, created_at").
+		RunWith(lifecycle.conn).
+		QueryRow().
+		Scan(&artifactID, &createdAt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &artifact{
+		conn:      lifecycle.conn,
+		id:        artifactID,
+		createdAt: createdAt,
+		name:      name,
+	}, nil
 }
 
 func (lifecycle *artifactLifecycle) RemoveExpiredArtifacts(logger lager.Logger) error {

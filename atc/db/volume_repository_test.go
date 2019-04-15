@@ -5,12 +5,13 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/cloudfoundry/bosh-cli/director/template"
-	"github.com/concourse/concourse/atc"
-	"github.com/concourse/concourse/atc/creds"
-	"github.com/concourse/concourse/atc/db"
 	"github.com/lib/pq"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/concourse/concourse/atc"
+	"github.com/concourse/concourse/atc/creds"
+	"github.com/concourse/concourse/atc/db"
 )
 
 var _ = Describe("VolumeFactory", func() {
@@ -211,8 +212,12 @@ var _ = Describe("VolumeFactory", func() {
 			err = resourceCacheVolumeCreated.InitializeResourceCache(usedResourceCache)
 			Expect(err).NotTo(HaveOccurred())
 
-			artifactVolume, err := volumeRepository.CreateVolume(defaultTeam.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
+			artifact, err := workerArtifactLifecycle.CreateArtifact("some-name", defaultWorker.Name())
 			Expect(err).NotTo(HaveOccurred())
+
+			artifactVolume, err := volumeRepository.CreateVolume(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
+			Expect(err).NotTo(HaveOccurred())
+
 			expectedCreatedHandles = append(expectedCreatedHandles, artifactVolume.Handle())
 
 			_, err = artifactVolume.Created()
@@ -271,6 +276,9 @@ var _ = Describe("VolumeFactory", func() {
 			destroyed, err := destroyingContainer.Destroy()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(destroyed).To(BeTrue())
+
+			_, err = dbConn.Exec("DELETE FROM worker_artifacts WHERE id=$1", artifact.ID())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns orphaned volumes", func() {
@@ -416,16 +424,20 @@ var _ = Describe("VolumeFactory", func() {
 	})
 
 	Describe("CreateVolume", func() {
-		It("creates a CreatingVolume of the given type with a teamID", func() {
-			volume, err := volumeRepository.CreateVolume(defaultTeam.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
+		It("creates a CreatingVolume of the given type with a teamID and artifactID", func() {
+			artifact, err := workerArtifactLifecycle.CreateArtifact("dummy-artifact", defaultWorker.Name())
+			Expect(err).NotTo(HaveOccurred())
+			volume, err := volumeRepository.CreateVolume(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
 			Expect(err).NotTo(HaveOccurred())
 			var teamID int
+			var artID int
 			var workerName string
-			err = psql.Select("team_id, worker_name").From("volumes").
-				Where(sq.Eq{"handle": volume.Handle()}).RunWith(dbConn).QueryRow().Scan(&teamID, &workerName)
+			err = psql.Select("team_id, worker_artifact_id, worker_name").From("volumes").
+				Where(sq.Eq{"handle": volume.Handle()}).RunWith(dbConn).QueryRow().Scan(&teamID, &artID, &workerName)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(teamID).To(Equal(defaultTeam.ID()))
 			Expect(workerName).To(Equal(defaultWorker.Name()))
+			Expect(artID).To(Equal(artifact.ID()))
 		})
 	})
 

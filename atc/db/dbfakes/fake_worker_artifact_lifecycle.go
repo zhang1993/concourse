@@ -9,6 +9,20 @@ import (
 )
 
 type FakeWorkerArtifactLifecycle struct {
+	CreateArtifactStub        func(string, string) (db.WorkerArtifact, error)
+	createArtifactMutex       sync.RWMutex
+	createArtifactArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	createArtifactReturns struct {
+		result1 db.WorkerArtifact
+		result2 error
+	}
+	createArtifactReturnsOnCall map[int]struct {
+		result1 db.WorkerArtifact
+		result2 error
+	}
 	RemoveExpiredArtifactsStub        func(lager.Logger) error
 	removeExpiredArtifactsMutex       sync.RWMutex
 	removeExpiredArtifactsArgsForCall []struct {
@@ -33,6 +47,70 @@ type FakeWorkerArtifactLifecycle struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeWorkerArtifactLifecycle) CreateArtifact(arg1 string, arg2 string) (db.WorkerArtifact, error) {
+	fake.createArtifactMutex.Lock()
+	ret, specificReturn := fake.createArtifactReturnsOnCall[len(fake.createArtifactArgsForCall)]
+	fake.createArtifactArgsForCall = append(fake.createArtifactArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	fake.recordInvocation("CreateArtifact", []interface{}{arg1, arg2})
+	fake.createArtifactMutex.Unlock()
+	if fake.CreateArtifactStub != nil {
+		return fake.CreateArtifactStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.createArtifactReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeWorkerArtifactLifecycle) CreateArtifactCallCount() int {
+	fake.createArtifactMutex.RLock()
+	defer fake.createArtifactMutex.RUnlock()
+	return len(fake.createArtifactArgsForCall)
+}
+
+func (fake *FakeWorkerArtifactLifecycle) CreateArtifactCalls(stub func(string, string) (db.WorkerArtifact, error)) {
+	fake.createArtifactMutex.Lock()
+	defer fake.createArtifactMutex.Unlock()
+	fake.CreateArtifactStub = stub
+}
+
+func (fake *FakeWorkerArtifactLifecycle) CreateArtifactArgsForCall(i int) (string, string) {
+	fake.createArtifactMutex.RLock()
+	defer fake.createArtifactMutex.RUnlock()
+	argsForCall := fake.createArtifactArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeWorkerArtifactLifecycle) CreateArtifactReturns(result1 db.WorkerArtifact, result2 error) {
+	fake.createArtifactMutex.Lock()
+	defer fake.createArtifactMutex.Unlock()
+	fake.CreateArtifactStub = nil
+	fake.createArtifactReturns = struct {
+		result1 db.WorkerArtifact
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeWorkerArtifactLifecycle) CreateArtifactReturnsOnCall(i int, result1 db.WorkerArtifact, result2 error) {
+	fake.createArtifactMutex.Lock()
+	defer fake.createArtifactMutex.Unlock()
+	fake.CreateArtifactStub = nil
+	if fake.createArtifactReturnsOnCall == nil {
+		fake.createArtifactReturnsOnCall = make(map[int]struct {
+			result1 db.WorkerArtifact
+			result2 error
+		})
+	}
+	fake.createArtifactReturnsOnCall[i] = struct {
+		result1 db.WorkerArtifact
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeWorkerArtifactLifecycle) RemoveExpiredArtifacts(arg1 lager.Logger) error {
@@ -158,6 +236,8 @@ func (fake *FakeWorkerArtifactLifecycle) RemoveOrphanedArtifactsReturnsOnCall(i 
 func (fake *FakeWorkerArtifactLifecycle) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.createArtifactMutex.RLock()
+	defer fake.createArtifactMutex.RUnlock()
 	fake.removeExpiredArtifactsMutex.RLock()
 	defer fake.removeExpiredArtifactsMutex.RUnlock()
 	fake.removeOrphanedArtifactsMutex.RLock()

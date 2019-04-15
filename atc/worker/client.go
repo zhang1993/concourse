@@ -10,7 +10,7 @@ import (
 type Client interface {
 	FindContainer(logger lager.Logger, teamID int, handle string) (Container, bool, error)
 	FindVolume(logger lager.Logger, teamID int, handle string) (Volume, bool, error)
-	CreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, volumeType db.VolumeType) (Volume, error)
+	CreateArtifact(logger lager.Logger, teamID int, name string) (db.WorkerArtifact, Volume, error)
 }
 
 func NewClient(pool Pool, provider WorkerProvider) *client {
@@ -59,11 +59,12 @@ func (client *client) FindVolume(logger lager.Logger, teamID int, handle string)
 	return worker.LookupVolume(logger, handle)
 }
 
-func (client *client) CreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, volumeType db.VolumeType) (Volume, error) {
+func (client *client) CreateArtifact(logger lager.Logger, teamID int, name string) (db.WorkerArtifact, Volume, error) {
 	worker, err := client.pool.FindOrChooseWorker(logger, WorkerSpec{TeamID: teamID})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return worker.CreateVolume(logger, spec, teamID, volumeType)
+	return worker.CreateArtifact(logger, teamID, name)
+
 }

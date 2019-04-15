@@ -11,12 +11,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/tedsuo/ifrit"
+
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/db/lock"
 	"github.com/concourse/concourse/atc/metric"
 	"github.com/concourse/concourse/atc/postgresrunner"
-	"github.com/tedsuo/ifrit"
 )
 
 func TestDB(t *testing.T) {
@@ -32,6 +33,7 @@ var (
 	buildFactory                        db.BuildFactory
 	volumeRepository                    db.VolumeRepository
 	containerRepository                 db.ContainerRepository
+	workerArtifactLifecycle             db.WorkerArtifactLifecycle
 	teamFactory                         db.TeamFactory
 	workerFactory                       db.WorkerFactory
 	workerLifecycle                     db.WorkerLifecycle
@@ -94,6 +96,7 @@ var _ = BeforeEach(func() {
 
 	buildFactory = db.NewBuildFactory(dbConn, lockFactory, 5*time.Minute)
 	volumeRepository = db.NewVolumeRepository(dbConn)
+	workerArtifactLifecycle = db.NewArtifactLifecycle(dbConn)
 	containerRepository = db.NewContainerRepository(dbConn)
 	teamFactory = db.NewTeamFactory(dbConn, lockFactory)
 	workerFactory = db.NewWorkerFactory(dbConn)

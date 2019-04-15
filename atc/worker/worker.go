@@ -3,19 +3,22 @@ package worker
 import (
 	"context"
 	"fmt"
-	"github.com/concourse/baggageclaim"
-	"github.com/concourse/concourse/atc/metric"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/concourse/baggageclaim"
+
+	"github.com/concourse/concourse/atc/metric"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
+	"github.com/cppforlife/go-semi-semantic/version"
+
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db"
-	"github.com/cppforlife/go-semi-semantic/version"
 )
 
 const userPropertyName = "user"
@@ -53,18 +56,19 @@ type Worker interface {
 
 	CertsVolume(lager.Logger) (volume Volume, found bool, err error)
 	LookupVolume(lager.Logger, string) (Volume, bool, error)
-	CreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, volumeType db.VolumeType) (Volume, error)
+	CreateArtifact(logger lager.Logger, teamID int, artifactName string) (db.WorkerArtifact, Volume, error)
 
 	GardenClient() garden.Client
 }
 
 type gardenWorker struct {
-	gardenClient      garden.Client
-	volumeClient      VolumeClient
-	imageFactory      ImageFactory
-	dbWorker          db.Worker
-	buildContainers   int
-	helper workerHelper
+	gardenClient    garden.Client
+	volumeClient    VolumeClient
+	artifactCreator db.ArtifactCreator
+	imageFactory    ImageFactory
+	dbWorker        db.Worker
+	buildContainers int
+	helper          workerHelper
 }
 
 // NewGardenWorker constructs a Worker using the gardenWorker runtime implementation and allows container and volume
@@ -72,6 +76,7 @@ type gardenWorker struct {
 // A Garden Worker is comprised of: db.Worker, garden Client, container provider, and a volume client
 func NewGardenWorker(
 	gardenClient garden.Client,
+	artifactCreator db.ArtifactCreator,
 	volumeRepository db.VolumeRepository,
 	volumeClient VolumeClient,
 	imageFactory ImageFactory,
@@ -91,12 +96,13 @@ func NewGardenWorker(
 	}
 
 	return &gardenWorker{
-		gardenClient:      gardenClient,
-		volumeClient:      volumeClient,
-		imageFactory:      imageFactory,
-		dbWorker:          dbWorker,
-		buildContainers:   numBuildContainers,
-		helper:	workerHelper,
+		gardenClient:    gardenClient,
+		volumeClient:    volumeClient,
+		artifactCreator: artifactCreator,
+		imageFactory:    imageFactory,
+		dbWorker:        dbWorker,
+		buildContainers: numBuildContainers,
+		helper:          workerHelper,
 	}
 }
 
@@ -158,12 +164,28 @@ func (worker *gardenWorker) CertsVolume(logger lager.Logger) (Volume, bool, erro
 	return worker.volumeClient.FindOrCreateVolumeForResourceCerts(logger.Session("find-or-create"))
 }
 
-func (worker *gardenWorker) CreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, volumeType db.VolumeType) (Volume, error) {
-	return worker.volumeClient.CreateVolume(logger.Session("find-or-create"), spec, teamID, worker.dbWorker.Name(), volumeType)
-}
-
 func (worker *gardenWorker) LookupVolume(logger lager.Logger, handle string) (Volume, bool, error) {
 	return worker.volumeClient.LookupVolume(logger, handle)
+}
+
+func (worker *gardenWorker) CreateArtifact(logger lager.Logger, teamID int, artifactName string) (db.WorkerArtifact, Volume, error) {
+	artifact, err := worker.artifactCreator.CreateArtifact(artifactName, worker.Name())
+	if err != nil {
+		logger.Error("failed-to-create-artifact", err)
+		return nil, nil, err
+	}
+
+	volumeSpec := VolumeSpec{
+		Strategy: baggageclaim.EmptyStrategy{},
+	}
+	volume, err := worker.volumeClient.CreateVolume(logger, volumeSpec, teamID, artifact.ID(), worker.Name(), db.VolumeTypeArtifact)
+	if err != nil {
+		logger.Error("failed-to-create-volume-for-artifact", err)
+		return nil, nil, err
+	}
+
+	// TODO: set artifact to initialized here?
+	return artifact, volume, nil
 }
 
 func (worker *gardenWorker) FindOrCreateContainer(
@@ -180,7 +202,7 @@ func (worker *gardenWorker) FindOrCreateContainer(
 		gardenContainer   garden.Container
 		createdContainer  db.CreatedContainer
 		creatingContainer db.CreatingContainer
-		containerHandle string
+		containerHandle   string
 		err               error
 	)
 

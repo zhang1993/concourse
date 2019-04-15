@@ -2,33 +2,35 @@ package worker_test
 
 import (
 	"bytes"
-	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/lager"
-	"fmt"
-	"github.com/concourse/baggageclaim"
-	"github.com/concourse/baggageclaim/baggageclaimfakes"
-	"io/ioutil"
-	"time"
 	"context"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"time"
+
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/lager"
+	"github.com/concourse/baggageclaim"
+	"github.com/concourse/baggageclaim/baggageclaimfakes"
 
 	"code.cloudfoundry.org/garden/gardenfakes"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry/bosh-cli/director/template"
+	"github.com/cppforlife/go-semi-semantic/version"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/db/dbfakes"
 	. "github.com/concourse/concourse/atc/worker"
 	"github.com/concourse/concourse/atc/worker/workerfakes"
-	"github.com/cppforlife/go-semi-semantic/version"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Worker", func() {
 	var (
-		logger *lagertest.TestLogger
+		logger                    *lagertest.TestLogger
 		fakeVolumeClient          *workerfakes.FakeVolumeClient
 		activeContainers          int
 		resourceTypes             []atc.WorkerResourceType
@@ -52,6 +54,7 @@ var _ = Describe("Worker", func() {
 		fakeGardenContainer       *gardenfakes.FakeContainer
 		fakeImageFetchingDelegate *workerfakes.FakeImageFetchingDelegate
 		fakeBaggageclaimClient    *baggageclaimfakes.FakeClient
+		fakeArtifactCreator       *dbfakes.FakeArtifactCreator
 
 		fakeLocalInput    *workerfakes.FakeInputSource
 		fakeRemoteInput   *workerfakes.FakeInputSource
@@ -109,7 +112,6 @@ var _ = Describe("Worker", func() {
 
 		fakeDBVolumeRepository = new(dbfakes.FakeVolumeRepository)
 
-
 		fakeDBTeamFactory = new(dbfakes.FakeTeamFactory)
 		fakeDBTeam = new(dbfakes.FakeTeam)
 		fakeDBTeamFactory.GetByIDReturns(fakeDBTeam)
@@ -117,6 +119,7 @@ var _ = Describe("Worker", func() {
 		fakeImageFetchingDelegate = new(workerfakes.FakeImageFetchingDelegate)
 
 		fakeBaggageclaimClient = new(baggageclaimfakes.FakeClient)
+		fakeArtifactCreator = new(dbfakes.FakeArtifactCreator)
 
 		fakeLocalInput = new(workerfakes.FakeInputSource)
 		fakeLocalInput.DestinationPathReturns("/some/work-dir/local-input")
@@ -274,6 +277,7 @@ var _ = Describe("Worker", func() {
 
 		gardenWorker = NewGardenWorker(
 			fakeGardenClient,
+			fakeArtifactCreator,
 			fakeDBVolumeRepository,
 			fakeVolumeClient,
 			fakeImageFactory,
@@ -557,30 +561,6 @@ var _ = Describe("Worker", func() {
 
 				Expect(foundContainer).To(BeNil())
 			})
-		})
-	})
-
-	Describe("CreateVolume", func() {
-		var (
-			fakeVolume *workerfakes.FakeVolume
-			volume     Volume
-			err        error
-		)
-
-		BeforeEach(func() {
-			fakeVolume = new(workerfakes.FakeVolume)
-			fakeVolumeClient.CreateVolumeReturns(fakeVolume, nil)
-		})
-
-		JustBeforeEach(func() {
-			volume, err = gardenWorker.CreateVolume(logger, VolumeSpec{}, 42, db.VolumeTypeArtifact)
-		})
-
-		It("calls the volume client", func() {
-			Expect(fakeVolumeClient.CreateVolumeCallCount()).To(Equal(1))
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(volume).To(Equal(fakeVolume))
 		})
 	})
 
@@ -1539,5 +1519,40 @@ var _ = Describe("Worker", func() {
 				})
 			})
 		})
+	})
+
+	Describe("CreateArtifact", func() {
+		var (
+			fakeVolume   *workerfakes.FakeVolume
+			fakeArtifact *dbfakes.FakeWorkerArtifact
+			artifact     db.WorkerArtifact
+			volume       Volume
+			err          error
+		)
+
+		BeforeEach(func() {
+			fakeVolume = new(workerfakes.FakeVolume)
+			fakeArtifact = new(dbfakes.FakeWorkerArtifact)
+			fakeVolumeClient.CreateVolumeReturns(fakeVolume, nil)
+			fakeArtifactCreator.CreateArtifactReturns(fakeArtifact, nil)
+		})
+
+		JustBeforeEach(func() {
+			artifact, volume, err = gardenWorker.CreateArtifact(logger, 42, "unused-name")
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("creates a worker artifact", func() {
+			Expect(fakeArtifactCreator.CreateArtifactCallCount()).To(Equal(1))
+			Expect(artifact).ToNot(BeNil())
+			Expect(artifact).To(Equal(fakeArtifact))
+		})
+
+		It("calls the volume client", func() {
+			Expect(fakeVolumeClient.CreateVolumeCallCount()).To(Equal(1))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(volume).To(Equal(fakeVolume))
+		})
+
 	})
 })

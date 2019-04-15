@@ -21,6 +21,19 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 		workerArtifactLifecycle = db.NewArtifactLifecycle(dbConn)
 	})
 
+	Describe("CreateArtifact", func() {
+		It("adds a new artifact record to the db", func() {
+			artifact, err := workerArtifactLifecycle.CreateArtifact("some-artifact-name", defaultWorker.Name())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(artifact.Name()).To(Equal("some-artifact-name"))
+
+			result, err := dbConn.Exec("SELECT * from worker_artifacts")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.RowsAffected()).To(BeEquivalentTo(1))
+		})
+
+	})
+
 	Describe("RemoveExpiredArtifacts", func() {
 		var initialized bool
 

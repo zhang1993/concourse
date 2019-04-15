@@ -197,9 +197,12 @@ require (
 	github.com/vito/houdini v1.1.1
 	github.com/vito/twentythousandtonnesofcrudeoil v0.0.0-20180305154709-3b21ad808fcb
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
-	golang.org/x/crypto v0.0.0-20190313024323-a1f597ede03a
+	golang.org/x/crypto v0.0.0-20190411191339-88737f569e3a
+	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3 // indirect
 	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890
 	golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6
+	golang.org/x/sys v0.0.0-20190411185658-b44545bcd369 // indirect
+	golang.org/x/tools v0.0.0-20190411180116-681f9ce8ac52 // indirect
 	google.golang.org/api v0.1.0 // indirect
 	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20181221175505-bd9b4fb69e2f // indirect

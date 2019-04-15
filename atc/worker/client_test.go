@@ -4,8 +4,7 @@ import (
 	"errors"
 
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/concourse/baggageclaim"
-	"github.com/concourse/concourse/atc/db"
+
 	"github.com/concourse/concourse/atc/worker"
 	"github.com/concourse/concourse/atc/worker/workerfakes"
 
@@ -147,24 +146,17 @@ var _ = Describe("Client", func() {
 		})
 	})
 
-	Describe("CreateVolume", func() {
+	Describe("CreateArtifact", func() {
 		var (
 			fakeWorker *workerfakes.FakeWorker
-			volumeSpec worker.VolumeSpec
-			volumeType db.VolumeType
 			err        error
 		)
 
 		BeforeEach(func() {
-			volumeSpec = worker.VolumeSpec{
-				Strategy: baggageclaim.EmptyStrategy{},
-			}
-
-			volumeType = db.VolumeTypeArtifact
 		})
 
 		JustBeforeEach(func() {
-			_, err = client.CreateVolume(logger, volumeSpec, 1, volumeType)
+			_, _, err = client.CreateArtifact(logger, 1, "some-artifact")
 		})
 
 		Context("when no workers can be found", func() {
@@ -185,12 +177,11 @@ var _ = Describe("Client", func() {
 
 			It("creates the volume on the worker", func() {
 				Expect(err).ToNot(HaveOccurred())
-				Expect(fakeWorker.CreateVolumeCallCount()).To(Equal(1))
-				l, spec, id, t := fakeWorker.CreateVolumeArgsForCall(0)
+				Expect(fakeWorker.CreateArtifactCallCount()).To(Equal(1))
+				l, teamID, name := fakeWorker.CreateArtifactArgsForCall(0)
 				Expect(l).To(Equal(logger))
-				Expect(spec).To(Equal(volumeSpec))
-				Expect(id).To(Equal(1))
-				Expect(t).To(Equal(volumeType))
+				Expect(teamID).To(Equal(1))
+				Expect(name).To(Equal("some-artifact"))
 			})
 		})
 	})

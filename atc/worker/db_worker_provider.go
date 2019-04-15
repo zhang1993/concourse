@@ -7,10 +7,11 @@ import (
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
 	bclient "github.com/concourse/baggageclaim/client"
-	"github.com/concourse/concourse/atc/db/lock"
-	"github.com/concourse/concourse/atc/worker/transport"
 	"github.com/concourse/retryhttp"
 	"github.com/cppforlife/go-semi-semantic/version"
+
+	"github.com/concourse/concourse/atc/db/lock"
+	"github.com/concourse/concourse/atc/worker/transport"
 
 	"github.com/concourse/concourse/atc/db"
 )
@@ -24,6 +25,7 @@ type dbWorkerProvider struct {
 	dbWorkerBaseResourceTypeFactory   db.WorkerBaseResourceTypeFactory
 	dbWorkerTaskCacheFactory          db.WorkerTaskCacheFactory
 	dbVolumeRepository                db.VolumeRepository
+	dbWorkerArtifactLifecycle         db.WorkerArtifactLifecycle
 	dbTeamFactory                     db.TeamFactory
 	dbWorkerFactory                   db.WorkerFactory
 	workerVersion                     version.Version
@@ -39,6 +41,7 @@ func NewDBWorkerProvider(
 	dbWorkerBaseResourceTypeFactory db.WorkerBaseResourceTypeFactory,
 	dbWorkerTaskCacheFactory db.WorkerTaskCacheFactory,
 	dbVolumeRepository db.VolumeRepository,
+	dbWorkerArtifactLifecycle db.WorkerArtifactLifecycle,
 	dbTeamFactory db.TeamFactory,
 	workerFactory db.WorkerFactory,
 	workerVersion version.Version,
@@ -53,6 +56,7 @@ func NewDBWorkerProvider(
 		dbWorkerBaseResourceTypeFactory:   dbWorkerBaseResourceTypeFactory,
 		dbWorkerTaskCacheFactory:          dbWorkerTaskCacheFactory,
 		dbVolumeRepository:                dbVolumeRepository,
+		dbWorkerArtifactLifecycle:         dbWorkerArtifactLifecycle,
 		dbTeamFactory:                     dbTeamFactory,
 		dbWorkerFactory:                   workerFactory,
 		workerVersion:                     workerVersion,
@@ -199,6 +203,7 @@ func (provider *dbWorkerProvider) NewGardenWorker(logger lager.Logger, tikTok cl
 
 	return NewGardenWorker(
 		gClient,
+		provider.dbWorkerArtifactLifecycle,
 		provider.dbVolumeRepository,
 		volumeClient,
 		provider.imageFactory,

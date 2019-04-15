@@ -43,6 +43,7 @@ type VolumeClient interface {
 		lager.Logger,
 		VolumeSpec,
 		int,
+		int,
 		string,
 		db.VolumeType,
 	) (Volume, error)
@@ -174,6 +175,7 @@ func (c *volumeClient) CreateVolume(
 	logger lager.Logger,
 	volumeSpec VolumeSpec,
 	teamID int,
+	artifactID int,
 	workerName string,
 	volumeType db.VolumeType,
 ) (Volume, error) {
@@ -184,7 +186,7 @@ func (c *volumeClient) CreateVolume(
 			return nil, nil, nil
 		},
 		func() (db.CreatingVolume, error) {
-			return c.dbVolumeRepository.CreateVolume(teamID, workerName, volumeType)
+			return c.dbVolumeRepository.CreateVolume(teamID, artifactID, workerName, volumeType)
 		},
 	)
 }

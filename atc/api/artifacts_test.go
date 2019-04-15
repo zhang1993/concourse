@@ -8,13 +8,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/concourse/baggageclaim"
-	"github.com/concourse/concourse/atc/api/accessor/accessorfakes"
-	"github.com/concourse/concourse/atc/db"
-	"github.com/concourse/concourse/atc/db/dbfakes"
-	"github.com/concourse/concourse/atc/worker/workerfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/concourse/concourse/atc/api/accessor/accessorfakes"
+	"github.com/concourse/concourse/atc/db/dbfakes"
+	"github.com/concourse/concourse/atc/worker/workerfakes"
 )
 
 var _ = Describe("Artifacts API", func() {
@@ -75,9 +74,9 @@ var _ = Describe("Artifacts API", func() {
 				fakeaccess.IsAuthorizedReturns(true)
 			})
 
-			Context("when creating a volume fails", func() {
+			Context("when creating an artifact fails", func() {
 				BeforeEach(func() {
-					fakeWorkerClient.CreateVolumeReturns(nil, errors.New("nope"))
+					fakeWorkerClient.CreateArtifactReturns(nil, nil, errors.New("nope"))
 				})
 
 				It("returns 500 InternalServerError", func() {
@@ -85,54 +84,29 @@ var _ = Describe("Artifacts API", func() {
 				})
 			})
 
-			Context("when creating a volume succeeds", func() {
-				var fakeVolume *workerfakes.FakeVolume
+			Context("when creating an artifact succeeds", func() {
+				var (
+					fakeVolume   *workerfakes.FakeVolume
+					fakeArtifact *dbfakes.FakeWorkerArtifact
+				)
 
 				BeforeEach(func() {
+					fakeArtifact = new(dbfakes.FakeWorkerArtifact)
 					fakeVolume = new(workerfakes.FakeVolume)
-					fakeVolume.InitializeArtifactReturns(nil, errors.New("nope"))
 
-					fakeWorkerClient.CreateVolumeReturns(fakeVolume, nil)
+					fakeWorkerClient.CreateArtifactReturns(fakeArtifact, fakeVolume, nil)
+					fakeArtifact.CreatedAtReturns(time.Unix(42, 0))
 				})
 
-				It("creates the volume using the worker client", func() {
-					Expect(fakeWorkerClient.CreateVolumeCallCount()).To(Equal(1))
+				It("creates the artifact using the worker client", func() {
+					Expect(fakeWorkerClient.CreateArtifactCallCount()).To(Equal(1))
 
-					_, volumeSpec, teamID, volumeType := fakeWorkerClient.CreateVolumeArgsForCall(0)
-					Expect(volumeSpec.Strategy).To(Equal(baggageclaim.EmptyStrategy{}))
+					_, teamID, artifactName := fakeWorkerClient.CreateArtifactArgsForCall(0)
 					Expect(teamID).To(Equal(734))
-					Expect(volumeType).To(Equal(db.VolumeTypeArtifact))
+					Expect(artifactName).To(Equal(""))
 				})
 
-				Context("when associating a volume with an artifact fails", func() {
-					BeforeEach(func() {
-						fakeVolume.InitializeArtifactReturns(nil, errors.New("nope"))
-					})
-
-					It("returns 500 InternalServerError", func() {
-						Expect(response.StatusCode).To(Equal(http.StatusInternalServerError))
-					})
-				})
-
-				Context("when associating a volume with an artifact succeeds", func() {
-					var fakeWorkerArtifact *dbfakes.FakeWorkerArtifact
-
-					BeforeEach(func() {
-						fakeWorkerArtifact = new(dbfakes.FakeWorkerArtifact)
-						fakeWorkerArtifact.IDReturns(0)
-						fakeWorkerArtifact.CreatedAtReturns(time.Unix(42, 0))
-
-						fakeVolume.InitializeArtifactReturns(fakeWorkerArtifact, nil)
-					})
-
-					It("invokes the initialization of an artifact on a volume", func() {
-						Expect(fakeVolume.InitializeArtifactCallCount()).To(Equal(1))
-
-						name, buildID := fakeVolume.InitializeArtifactArgsForCall(0)
-						Expect(name).To(Equal(""))
-						Expect(buildID).To(Equal(0))
-					})
-
+				Context("when creating a volume and an artifact succeeds", func() {
 					Context("when streaming in data to a volume fails", func() {
 						BeforeEach(func() {
 							fakeVolume.StreamInReturns(errors.New("nope"))
