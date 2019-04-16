@@ -50,6 +50,16 @@ type FakeWorkerArtifact struct {
 	iDReturnsOnCall map[int]struct {
 		result1 int
 	}
+	InitializedStub        func() bool
+	initializedMutex       sync.RWMutex
+	initializedArgsForCall []struct {
+	}
+	initializedReturns struct {
+		result1 bool
+	}
+	initializedReturnsOnCall map[int]struct {
+		result1 bool
+	}
 	NameStub        func() string
 	nameMutex       sync.RWMutex
 	nameArgsForCall []struct {
@@ -295,6 +305,58 @@ func (fake *FakeWorkerArtifact) IDReturnsOnCall(i int, result1 int) {
 	}{result1}
 }
 
+func (fake *FakeWorkerArtifact) Initialized() bool {
+	fake.initializedMutex.Lock()
+	ret, specificReturn := fake.initializedReturnsOnCall[len(fake.initializedArgsForCall)]
+	fake.initializedArgsForCall = append(fake.initializedArgsForCall, struct {
+	}{})
+	fake.recordInvocation("Initialized", []interface{}{})
+	fake.initializedMutex.Unlock()
+	if fake.InitializedStub != nil {
+		return fake.InitializedStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.initializedReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeWorkerArtifact) InitializedCallCount() int {
+	fake.initializedMutex.RLock()
+	defer fake.initializedMutex.RUnlock()
+	return len(fake.initializedArgsForCall)
+}
+
+func (fake *FakeWorkerArtifact) InitializedCalls(stub func() bool) {
+	fake.initializedMutex.Lock()
+	defer fake.initializedMutex.Unlock()
+	fake.InitializedStub = stub
+}
+
+func (fake *FakeWorkerArtifact) InitializedReturns(result1 bool) {
+	fake.initializedMutex.Lock()
+	defer fake.initializedMutex.Unlock()
+	fake.InitializedStub = nil
+	fake.initializedReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeWorkerArtifact) InitializedReturnsOnCall(i int, result1 bool) {
+	fake.initializedMutex.Lock()
+	defer fake.initializedMutex.Unlock()
+	fake.InitializedStub = nil
+	if fake.initializedReturnsOnCall == nil {
+		fake.initializedReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.initializedReturnsOnCall[i] = struct {
+		result1 bool
+	}{result1}
+}
+
 func (fake *FakeWorkerArtifact) Name() string {
 	fake.nameMutex.Lock()
 	ret, specificReturn := fake.nameReturnsOnCall[len(fake.nameArgsForCall)]
@@ -424,6 +486,8 @@ func (fake *FakeWorkerArtifact) Invocations() map[string][][]interface{} {
 	defer fake.createdAtMutex.RUnlock()
 	fake.iDMutex.RLock()
 	defer fake.iDMutex.RUnlock()
+	fake.initializedMutex.RLock()
+	defer fake.initializedMutex.RUnlock()
 	fake.nameMutex.RLock()
 	defer fake.nameMutex.RUnlock()
 	fake.volumeMutex.RLock()

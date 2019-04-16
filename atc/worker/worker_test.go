@@ -54,7 +54,6 @@ var _ = Describe("Worker", func() {
 		fakeGardenContainer       *gardenfakes.FakeContainer
 		fakeImageFetchingDelegate *workerfakes.FakeImageFetchingDelegate
 		fakeBaggageclaimClient    *baggageclaimfakes.FakeClient
-		fakeArtifactCreator       *dbfakes.FakeArtifactCreator
 
 		fakeLocalInput    *workerfakes.FakeInputSource
 		fakeRemoteInput   *workerfakes.FakeInputSource
@@ -119,7 +118,6 @@ var _ = Describe("Worker", func() {
 		fakeImageFetchingDelegate = new(workerfakes.FakeImageFetchingDelegate)
 
 		fakeBaggageclaimClient = new(baggageclaimfakes.FakeClient)
-		fakeArtifactCreator = new(dbfakes.FakeArtifactCreator)
 
 		fakeLocalInput = new(workerfakes.FakeInputSource)
 		fakeLocalInput.DestinationPathReturns("/some/work-dir/local-input")
@@ -277,7 +275,6 @@ var _ = Describe("Worker", func() {
 
 		gardenWorker = NewGardenWorker(
 			fakeGardenClient,
-			fakeArtifactCreator,
 			fakeDBVolumeRepository,
 			fakeVolumeClient,
 			fakeImageFactory,
@@ -1521,36 +1518,42 @@ var _ = Describe("Worker", func() {
 		})
 	})
 
-	Describe("CreateArtifact", func() {
+	Describe("CreateVolumeForArtifact", func() {
 		var (
 			fakeVolume   *workerfakes.FakeVolume
 			fakeArtifact *dbfakes.FakeWorkerArtifact
-			artifact     db.WorkerArtifact
+			teamID       int
 			volume       Volume
 			err          error
 		)
 
 		BeforeEach(func() {
+			teamID = 42
 			fakeVolume = new(workerfakes.FakeVolume)
 			fakeArtifact = new(dbfakes.FakeWorkerArtifact)
+			fakeArtifact.IDReturns(123)
 			fakeVolumeClient.CreateVolumeReturns(fakeVolume, nil)
-			fakeArtifactCreator.CreateArtifactReturns(fakeArtifact, nil)
 		})
 
 		JustBeforeEach(func() {
-			artifact, volume, err = gardenWorker.CreateArtifact(logger, 42, "unused-name")
+			volume, err = gardenWorker.CreateVolumeForArtifact(logger, teamID, fakeArtifact.ID())
 			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("creates a worker artifact", func() {
-			Expect(fakeArtifactCreator.CreateArtifactCallCount()).To(Equal(1))
-			Expect(artifact).ToNot(BeNil())
-			Expect(artifact).To(Equal(fakeArtifact))
 		})
 
 		It("calls the volume client", func() {
+			expectedVolumeSpec := VolumeSpec{
+				Strategy: baggageclaim.EmptyStrategy{},
+			}
 			Expect(fakeVolumeClient.CreateVolumeCallCount()).To(Equal(1))
 			Expect(err).ToNot(HaveOccurred())
+
+			_, spec, tID, aID, name, typ := fakeVolumeClient.CreateVolumeArgsForCall(0)
+			Expect(spec).To(Equal(expectedVolumeSpec))
+			Expect(tID).To(Equal(teamID))
+			Expect(name).To(Equal(gardenWorker.Name()))
+			Expect(aID).To(Equal(123))
+			Expect(typ).To(Equal(db.VolumeTypeArtifact))
+
 			Expect(volume).To(Equal(fakeVolume))
 		})
 

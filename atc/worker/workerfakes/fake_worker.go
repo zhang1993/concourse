@@ -61,22 +61,20 @@ type FakeWorker struct {
 		result2 bool
 		result3 error
 	}
-	CreateArtifactStub        func(lager.Logger, int, string) (db.WorkerArtifact, worker.Volume, error)
-	createArtifactMutex       sync.RWMutex
-	createArtifactArgsForCall []struct {
+	CreateVolumeForArtifactStub        func(lager.Logger, int, int) (worker.Volume, error)
+	createVolumeForArtifactMutex       sync.RWMutex
+	createVolumeForArtifactArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 int
-		arg3 string
+		arg3 int
 	}
-	createArtifactReturns struct {
-		result1 db.WorkerArtifact
-		result2 worker.Volume
-		result3 error
+	createVolumeForArtifactReturns struct {
+		result1 worker.Volume
+		result2 error
 	}
-	createArtifactReturnsOnCall map[int]struct {
-		result1 db.WorkerArtifact
-		result2 worker.Volume
-		result3 error
+	createVolumeForArtifactReturnsOnCall map[int]struct {
+		result1 worker.Volume
+		result2 error
 	}
 	DescriptionStub        func() string
 	descriptionMutex       sync.RWMutex
@@ -495,72 +493,69 @@ func (fake *FakeWorker) CertsVolumeReturnsOnCall(i int, result1 worker.Volume, r
 	}{result1, result2, result3}
 }
 
-func (fake *FakeWorker) CreateArtifact(arg1 lager.Logger, arg2 int, arg3 string) (db.WorkerArtifact, worker.Volume, error) {
-	fake.createArtifactMutex.Lock()
-	ret, specificReturn := fake.createArtifactReturnsOnCall[len(fake.createArtifactArgsForCall)]
-	fake.createArtifactArgsForCall = append(fake.createArtifactArgsForCall, struct {
+func (fake *FakeWorker) CreateVolumeForArtifact(arg1 lager.Logger, arg2 int, arg3 int) (worker.Volume, error) {
+	fake.createVolumeForArtifactMutex.Lock()
+	ret, specificReturn := fake.createVolumeForArtifactReturnsOnCall[len(fake.createVolumeForArtifactArgsForCall)]
+	fake.createVolumeForArtifactArgsForCall = append(fake.createVolumeForArtifactArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 int
-		arg3 string
+		arg3 int
 	}{arg1, arg2, arg3})
-	fake.recordInvocation("CreateArtifact", []interface{}{arg1, arg2, arg3})
-	fake.createArtifactMutex.Unlock()
-	if fake.CreateArtifactStub != nil {
-		return fake.CreateArtifactStub(arg1, arg2, arg3)
+	fake.recordInvocation("CreateVolumeForArtifact", []interface{}{arg1, arg2, arg3})
+	fake.createVolumeForArtifactMutex.Unlock()
+	if fake.CreateVolumeForArtifactStub != nil {
+		return fake.CreateVolumeForArtifactStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
+		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.createArtifactReturns
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+	fakeReturns := fake.createVolumeForArtifactReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeWorker) CreateArtifactCallCount() int {
-	fake.createArtifactMutex.RLock()
-	defer fake.createArtifactMutex.RUnlock()
-	return len(fake.createArtifactArgsForCall)
+func (fake *FakeWorker) CreateVolumeForArtifactCallCount() int {
+	fake.createVolumeForArtifactMutex.RLock()
+	defer fake.createVolumeForArtifactMutex.RUnlock()
+	return len(fake.createVolumeForArtifactArgsForCall)
 }
 
-func (fake *FakeWorker) CreateArtifactCalls(stub func(lager.Logger, int, string) (db.WorkerArtifact, worker.Volume, error)) {
-	fake.createArtifactMutex.Lock()
-	defer fake.createArtifactMutex.Unlock()
-	fake.CreateArtifactStub = stub
+func (fake *FakeWorker) CreateVolumeForArtifactCalls(stub func(lager.Logger, int, int) (worker.Volume, error)) {
+	fake.createVolumeForArtifactMutex.Lock()
+	defer fake.createVolumeForArtifactMutex.Unlock()
+	fake.CreateVolumeForArtifactStub = stub
 }
 
-func (fake *FakeWorker) CreateArtifactArgsForCall(i int) (lager.Logger, int, string) {
-	fake.createArtifactMutex.RLock()
-	defer fake.createArtifactMutex.RUnlock()
-	argsForCall := fake.createArtifactArgsForCall[i]
+func (fake *FakeWorker) CreateVolumeForArtifactArgsForCall(i int) (lager.Logger, int, int) {
+	fake.createVolumeForArtifactMutex.RLock()
+	defer fake.createVolumeForArtifactMutex.RUnlock()
+	argsForCall := fake.createVolumeForArtifactArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeWorker) CreateArtifactReturns(result1 db.WorkerArtifact, result2 worker.Volume, result3 error) {
-	fake.createArtifactMutex.Lock()
-	defer fake.createArtifactMutex.Unlock()
-	fake.CreateArtifactStub = nil
-	fake.createArtifactReturns = struct {
-		result1 db.WorkerArtifact
-		result2 worker.Volume
-		result3 error
-	}{result1, result2, result3}
+func (fake *FakeWorker) CreateVolumeForArtifactReturns(result1 worker.Volume, result2 error) {
+	fake.createVolumeForArtifactMutex.Lock()
+	defer fake.createVolumeForArtifactMutex.Unlock()
+	fake.CreateVolumeForArtifactStub = nil
+	fake.createVolumeForArtifactReturns = struct {
+		result1 worker.Volume
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeWorker) CreateArtifactReturnsOnCall(i int, result1 db.WorkerArtifact, result2 worker.Volume, result3 error) {
-	fake.createArtifactMutex.Lock()
-	defer fake.createArtifactMutex.Unlock()
-	fake.CreateArtifactStub = nil
-	if fake.createArtifactReturnsOnCall == nil {
-		fake.createArtifactReturnsOnCall = make(map[int]struct {
-			result1 db.WorkerArtifact
-			result2 worker.Volume
-			result3 error
+func (fake *FakeWorker) CreateVolumeForArtifactReturnsOnCall(i int, result1 worker.Volume, result2 error) {
+	fake.createVolumeForArtifactMutex.Lock()
+	defer fake.createVolumeForArtifactMutex.Unlock()
+	fake.CreateVolumeForArtifactStub = nil
+	if fake.createVolumeForArtifactReturnsOnCall == nil {
+		fake.createVolumeForArtifactReturnsOnCall = make(map[int]struct {
+			result1 worker.Volume
+			result2 error
 		})
 	}
-	fake.createArtifactReturnsOnCall[i] = struct {
-		result1 db.WorkerArtifact
-		result2 worker.Volume
-		result3 error
-	}{result1, result2, result3}
+	fake.createVolumeForArtifactReturnsOnCall[i] = struct {
+		result1 worker.Volume
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeWorker) Description() string {
@@ -1453,8 +1448,8 @@ func (fake *FakeWorker) Invocations() map[string][][]interface{} {
 	defer fake.buildContainersMutex.RUnlock()
 	fake.certsVolumeMutex.RLock()
 	defer fake.certsVolumeMutex.RUnlock()
-	fake.createArtifactMutex.RLock()
-	defer fake.createArtifactMutex.RUnlock()
+	fake.createVolumeForArtifactMutex.RLock()
+	defer fake.createVolumeForArtifactMutex.RUnlock()
 	fake.descriptionMutex.RLock()
 	defer fake.descriptionMutex.RUnlock()
 	fake.ephemeralMutex.RLock()

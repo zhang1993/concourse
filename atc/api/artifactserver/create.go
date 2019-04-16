@@ -18,14 +18,14 @@ func (s *Server) CreateArtifact(team db.Team) http.Handler {
 		// which we can lookup in the checksum field
 		// that way we don't have to create another volume.
 
-		artifact, volume, err := s.workerClient.CreateArtifact(hLog, team.ID(), "")
+		artifact, err := s.workerClient.CreateArtifact(hLog, team.ID(), "")
 		if err != nil {
 			hLog.Error("failed-to-create-artifact", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		err = volume.StreamIn("/", r.Body)
+		err = artifact.Store("/", r.Body)
 		if err != nil {
 			hLog.Error("failed-to-stream-volume-contents", err)
 			w.WriteHeader(http.StatusInternalServerError)

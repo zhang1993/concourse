@@ -11,7 +11,7 @@ import (
 //go:generate counterfeiter . ArtifactCreator
 
 type ArtifactCreator interface {
-	CreateArtifact(name string, workerName string) (WorkerArtifact, error)
+	CreateArtifact(name string) (WorkerArtifact, error)
 }
 
 //go:generate counterfeiter . WorkerArtifactLifecycle
@@ -32,12 +32,12 @@ func NewArtifactLifecycle(conn Conn) *artifactLifecycle {
 	}
 }
 
-func (lifecycle *artifactLifecycle) CreateArtifact(name string, workerName string) (WorkerArtifact, error) {
+func (lifecycle *artifactLifecycle) CreateArtifact(name string) (WorkerArtifact, error) {
 	var artifactID int
 	var createdAt time.Time
 	err := psql.Insert("worker_artifacts").
-		Columns("name", "worker_name").
-		Values(name, workerName).
+		Columns("name").
+		Values(name).
 		Suffix("RETURNING id, created_at").
 		RunWith(lifecycle.conn).
 		QueryRow().
@@ -77,10 +77,7 @@ func (lifecycle *artifactLifecycle) RemoveOrphanedArtifacts(logger lager.Logger)
 		return err
 	}
 
-	query, args, err := psql.Delete("worker_artifacts USING workers").
-		Where(
-			sq.Expr("worker_artifacts.worker_name = workers.name"),
-		).
+	query, args, err := psql.Delete("worker_artifacts").
 		Where(
 			sq.Eq{
 				"initialized":                  true,
@@ -90,11 +87,6 @@ func (lifecycle *artifactLifecycle) RemoveOrphanedArtifacts(logger lager.Logger)
 				"worker_base_resource_type_id": nil,
 				"worker_resource_certs_id":     nil,
 			}).
-		Where(sq.Or{
-			sq.Expr("workers.state = 'running'::worker_state"),
-			sq.Expr("workers.state = 'landing'::worker_state"),
-			sq.Expr("workers.state = 'retiring'::worker_state"),
-		}).
 		RunWith(lifecycle.conn).
 		ToSql()
 

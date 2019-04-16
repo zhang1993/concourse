@@ -16,10 +16,6 @@ BEGIN;
     ADD CONSTRAINT worker_base_resource_type_id_fkey FOREIGN KEY(worker_base_resource_type_id) REFERENCES worker_base_resource_types(id);
 
   ALTER TABLE worker_artifacts
-    ADD COLUMN worker_name text NOT NULL,
-    ADD CONSTRAINT worker_name_fkey FOREIGN KEY(worker_name) REFERENCES workers(name);
-
-  ALTER TABLE worker_artifacts
     ADD COLUMN initialized boolean default false;
 
   ALTER TABLE resource_cache_uses

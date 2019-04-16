@@ -8,11 +8,10 @@ import (
 )
 
 type FakeArtifactCreator struct {
-	CreateArtifactStub        func(string, string) (db.WorkerArtifact, error)
+	CreateArtifactStub        func(string) (db.WorkerArtifact, error)
 	createArtifactMutex       sync.RWMutex
 	createArtifactArgsForCall []struct {
 		arg1 string
-		arg2 string
 	}
 	createArtifactReturns struct {
 		result1 db.WorkerArtifact
@@ -26,17 +25,16 @@ type FakeArtifactCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeArtifactCreator) CreateArtifact(arg1 string, arg2 string) (db.WorkerArtifact, error) {
+func (fake *FakeArtifactCreator) CreateArtifact(arg1 string) (db.WorkerArtifact, error) {
 	fake.createArtifactMutex.Lock()
 	ret, specificReturn := fake.createArtifactReturnsOnCall[len(fake.createArtifactArgsForCall)]
 	fake.createArtifactArgsForCall = append(fake.createArtifactArgsForCall, struct {
 		arg1 string
-		arg2 string
-	}{arg1, arg2})
-	fake.recordInvocation("CreateArtifact", []interface{}{arg1, arg2})
+	}{arg1})
+	fake.recordInvocation("CreateArtifact", []interface{}{arg1})
 	fake.createArtifactMutex.Unlock()
 	if fake.CreateArtifactStub != nil {
-		return fake.CreateArtifactStub(arg1, arg2)
+		return fake.CreateArtifactStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -51,17 +49,17 @@ func (fake *FakeArtifactCreator) CreateArtifactCallCount() int {
 	return len(fake.createArtifactArgsForCall)
 }
 
-func (fake *FakeArtifactCreator) CreateArtifactCalls(stub func(string, string) (db.WorkerArtifact, error)) {
+func (fake *FakeArtifactCreator) CreateArtifactCalls(stub func(string) (db.WorkerArtifact, error)) {
 	fake.createArtifactMutex.Lock()
 	defer fake.createArtifactMutex.Unlock()
 	fake.CreateArtifactStub = stub
 }
 
-func (fake *FakeArtifactCreator) CreateArtifactArgsForCall(i int) (string, string) {
+func (fake *FakeArtifactCreator) CreateArtifactArgsForCall(i int) string {
 	fake.createArtifactMutex.RLock()
 	defer fake.createArtifactMutex.RUnlock()
 	argsForCall := fake.createArtifactArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1
 }
 
 func (fake *FakeArtifactCreator) CreateArtifactReturns(result1 db.WorkerArtifact, result2 error) {

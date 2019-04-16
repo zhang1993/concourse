@@ -2,7 +2,6 @@ package worker
 
 import (
 	"code.cloudfoundry.org/lager"
-	"github.com/concourse/concourse/atc/db"
 )
 
 //go:generate counterfeiter . Client
@@ -10,7 +9,7 @@ import (
 type Client interface {
 	FindContainer(logger lager.Logger, teamID int, handle string) (Container, bool, error)
 	FindVolume(logger lager.Logger, teamID int, handle string) (Volume, bool, error)
-	CreateArtifact(logger lager.Logger, teamID int, name string) (db.WorkerArtifact, Volume, error)
+	CreateArtifact(logger lager.Logger, teamID int, name string) (Artifact, error)
 }
 
 func NewClient(pool Pool, provider WorkerProvider) *client {
@@ -59,12 +58,6 @@ func (client *client) FindVolume(logger lager.Logger, teamID int, handle string)
 	return worker.LookupVolume(logger, handle)
 }
 
-func (client *client) CreateArtifact(logger lager.Logger, teamID int, name string) (db.WorkerArtifact, Volume, error) {
-	worker, err := client.pool.FindOrChooseWorker(logger, WorkerSpec{TeamID: teamID})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return worker.CreateArtifact(logger, teamID, name)
-
+func (client *client) CreateArtifact(logger lager.Logger, teamID int, name string) (Artifact, error) {
+	return client.pool.CreateArtifact(logger.Session("create-artifact"), teamID, name)
 }

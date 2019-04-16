@@ -8,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
+
 	"github.com/concourse/concourse/atc/db"
 )
 
@@ -68,18 +69,24 @@ type Pool interface {
 		lager.Logger,
 		WorkerSpec,
 	) (Worker, error)
+	CreateArtifact(
+		lager.Logger,
+		int,
+		string,
+	) (Artifact, error)
 }
 
 type pool struct {
-	provider WorkerProvider
-
-	rand *rand.Rand
+	provider          WorkerProvider
+	artifactLifecycle db.WorkerArtifactLifecycle
+	rand              *rand.Rand
 }
 
-func NewPool(provider WorkerProvider) Pool {
+func NewPool(provider WorkerProvider, lifecycle db.WorkerArtifactLifecycle) Pool {
 	return &pool{
-		provider: provider,
-		rand:     rand.New(rand.NewSource(time.Now().UnixNano())),
+		provider:          provider,
+		artifactLifecycle: lifecycle,
+		rand:              rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -166,8 +173,30 @@ func (pool *pool) FindOrChooseWorker(
 ) (Worker, error) {
 	workers, err := pool.allSatisfying(logger, workerSpec)
 	if err != nil {
+		logger.Error("could-not-find-or-choose-worker", err)
 		return nil, err
 	}
 
 	return workers[rand.Intn(len(workers))], nil
+}
+
+func (pool *pool) CreateArtifact(
+	logger lager.Logger,
+	teamID int,
+	name string,
+) (Artifact, error) {
+	artifact, err := pool.artifactLifecycle.CreateArtifact(name)
+	if err != nil {
+		logger.Error("failed-to-create-artifact", err)
+		return nil, err
+	}
+
+	worker, err := pool.FindOrChooseWorker(logger, WorkerSpec{TeamID: teamID})
+	if err != nil {
+		return nil, err
+	}
+
+	volume, err := worker.CreateVolumeForArtifact(logger, teamID, artifact.ID())
+
+	return NewArtifact(artifact, volume), nil
 }

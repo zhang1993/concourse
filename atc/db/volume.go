@@ -401,9 +401,9 @@ func (volume *createdVolume) InitializeArtifact(name string, buildID int) (Worke
 	defer Rollback(tx)
 
 	atcWorkerArtifact := atc.WorkerArtifact{
-		Name:       name,
-		BuildID:    buildID,
-		WorkerName: volume.workerName,
+		Name:    name,
+		BuildID: buildID,
+		// WorkerName: volume.workerName,
 	}
 
 	workerArtifact, err := saveWorkerArtifact(tx, volume.conn, atcWorkerArtifact)

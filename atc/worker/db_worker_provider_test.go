@@ -169,7 +169,6 @@ var _ = Describe("DBProvider", func() {
 			fakeDBWorkerBaseResourceTypeFactory,
 			fakeDBWorkerTaskCacheFactory,
 			fakeDBVolumeRepository,
-			nil,
 			fakeDBTeamFactory,
 			fakeDBWorkerFactory,
 			wantWorkerVersion,

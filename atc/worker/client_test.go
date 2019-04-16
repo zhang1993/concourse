@@ -146,43 +146,4 @@ var _ = Describe("Client", func() {
 		})
 	})
 
-	Describe("CreateArtifact", func() {
-		var (
-			fakeWorker *workerfakes.FakeWorker
-			err        error
-		)
-
-		BeforeEach(func() {
-		})
-
-		JustBeforeEach(func() {
-			_, _, err = client.CreateArtifact(logger, 1, "some-artifact")
-		})
-
-		Context("when no workers can be found", func() {
-			BeforeEach(func() {
-				fakePool.FindOrChooseWorkerReturns(nil, errors.New("nope"))
-			})
-
-			It("returns an error", func() {
-				Expect(err).To(HaveOccurred())
-			})
-		})
-
-		Context("when the worker can be found", func() {
-			BeforeEach(func() {
-				fakeWorker = new(workerfakes.FakeWorker)
-				fakePool.FindOrChooseWorkerReturns(fakeWorker, nil)
-			})
-
-			It("creates the volume on the worker", func() {
-				Expect(err).ToNot(HaveOccurred())
-				Expect(fakeWorker.CreateArtifactCallCount()).To(Equal(1))
-				l, teamID, name := fakeWorker.CreateArtifactArgsForCall(0)
-				Expect(l).To(Equal(logger))
-				Expect(teamID).To(Equal(1))
-				Expect(name).To(Equal("some-artifact"))
-			})
-		})
-	})
 })

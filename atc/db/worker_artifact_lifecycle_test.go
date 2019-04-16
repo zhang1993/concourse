@@ -23,7 +23,7 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 
 	Describe("CreateArtifact", func() {
 		It("adds a new artifact record to the db", func() {
-			artifact, err := workerArtifactLifecycle.CreateArtifact("some-artifact-name", defaultWorker.Name())
+			artifact, err := workerArtifactLifecycle.CreateArtifact("some-artifact-name")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(artifact.Name()).To(Equal("some-artifact-name"))
 
@@ -92,7 +92,8 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		Context("when the worker is in 'stalling' state", func() {
+		// TODO: not needed anymore, we don't associate artifacts with workers
+		XContext("when the worker is in 'stalling' state", func() {
 
 			BeforeEach(func() {
 				stallingWorkerPayload := atc.Worker{

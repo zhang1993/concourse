@@ -56,7 +56,7 @@ type Worker interface {
 
 	CertsVolume(lager.Logger) (volume Volume, found bool, err error)
 	LookupVolume(lager.Logger, string) (Volume, bool, error)
-	CreateArtifact(logger lager.Logger, teamID int, artifactName string) (db.WorkerArtifact, Volume, error)
+	CreateVolumeForArtifact(logger lager.Logger, teamID int, artifactID int) (Volume, error)
 
 	GardenClient() garden.Client
 }
@@ -76,7 +76,6 @@ type gardenWorker struct {
 // A Garden Worker is comprised of: db.Worker, garden Client, container provider, and a volume client
 func NewGardenWorker(
 	gardenClient garden.Client,
-	artifactCreator db.ArtifactCreator,
 	volumeRepository db.VolumeRepository,
 	volumeClient VolumeClient,
 	imageFactory ImageFactory,
@@ -98,7 +97,6 @@ func NewGardenWorker(
 	return &gardenWorker{
 		gardenClient:    gardenClient,
 		volumeClient:    volumeClient,
-		artifactCreator: artifactCreator,
 		imageFactory:    imageFactory,
 		dbWorker:        dbWorker,
 		buildContainers: numBuildContainers,
@@ -168,24 +166,23 @@ func (worker *gardenWorker) LookupVolume(logger lager.Logger, handle string) (Vo
 	return worker.volumeClient.LookupVolume(logger, handle)
 }
 
-func (worker *gardenWorker) CreateArtifact(logger lager.Logger, teamID int, artifactName string) (db.WorkerArtifact, Volume, error) {
-	artifact, err := worker.artifactCreator.CreateArtifact(artifactName, worker.Name())
-	if err != nil {
-		logger.Error("failed-to-create-artifact", err)
-		return nil, nil, err
-	}
+func (worker *gardenWorker) CreateVolumeForArtifact(logger lager.Logger, teamID int, artifactID int) (Volume, error) {
+	// artifact, err := worker.artifactCreator.CreateArtifact(artifactName)
+	// if err != nil {
+	// 	logger.Error("failed-to-create-artifact", err)
+	// 	return nil, nil, err
+	// }
 
 	volumeSpec := VolumeSpec{
 		Strategy: baggageclaim.EmptyStrategy{},
 	}
-	volume, err := worker.volumeClient.CreateVolume(logger, volumeSpec, teamID, artifact.ID(), worker.Name(), db.VolumeTypeArtifact)
+	volume, err := worker.volumeClient.CreateVolume(logger, volumeSpec, teamID, artifactID, worker.Name(), db.VolumeTypeArtifact)
 	if err != nil {
 		logger.Error("failed-to-create-volume-for-artifact", err)
-		return nil, nil, err
+		return nil, err
 	}
 
-	// TODO: set artifact to initialized here?
-	return artifact, volume, nil
+	return volume, nil
 }
 
 func (worker *gardenWorker) FindOrCreateContainer(

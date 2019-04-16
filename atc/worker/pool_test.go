@@ -6,27 +6,30 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry/bosh-cli/director/template"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db/dbfakes"
 	. "github.com/concourse/concourse/atc/worker"
 	"github.com/concourse/concourse/atc/worker/workerfakes"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Pool", func() {
 	var (
-		logger       *lagertest.TestLogger
-		fakeProvider *workerfakes.FakeWorkerProvider
-		pool         Pool
+		logger                *lagertest.TestLogger
+		fakeProvider          *workerfakes.FakeWorkerProvider
+		fakeArtifactLifecycle *dbfakes.FakeWorkerArtifactLifecycle
+		pool                  Pool
 	)
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test")
 		fakeProvider = new(workerfakes.FakeWorkerProvider)
+		fakeArtifactLifecycle = new(dbfakes.FakeWorkerArtifactLifecycle)
 
-		pool = NewPool(fakeProvider)
+		pool = NewPool(fakeProvider, fakeArtifactLifecycle)
 	})
 
 	Describe("FindOrChooseWorkerForContainer", func() {
@@ -411,6 +414,47 @@ var _ = Describe("Pool", func() {
 						Expect(chooseErr).To(Equal(strategyError))
 					})
 				})
+			})
+		})
+	})
+
+	FDescribe("CreateArtifact", func() {
+		var (
+			fakeWorker     *workerfakes.FakeWorker
+			fakeDBArtifact *dbfakes.FakeWorkerArtifact
+			err            error
+			artifact       Artifact
+		)
+
+		JustBeforeEach(func() {
+			fakeDBArtifact = new(dbfakes.FakeWorkerArtifact)
+			fakeWorker = new(workerfakes.FakeWorker)
+			fakeWorker.NameReturns("workerA")
+			fakeWorker.SatisfiesReturns(true)
+
+			fakeProvider.RunningWorkersReturns([]Worker{fakeWorker}, nil)
+
+			fakeDBArtifact.IDReturns(1)
+			fakeDBArtifact.NameReturns("some-artifact")
+			fakeArtifactLifecycle.CreateArtifactReturns(fakeDBArtifact, nil)
+
+			artifact, err = pool.CreateArtifact(logger, 1, "some-artifact")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(artifact).ToNot(BeNil())
+		})
+
+		It("creates an uninitialized artifact", func() {
+			Expect(artifact.Initialized()).To(BeFalse())
+		})
+
+		Context("when the worker can be found", func() {
+			It("creates the volume on the worker", func() {
+				Expect(err).ToNot(HaveOccurred())
+				Expect(fakeWorker.CreateVolumeForArtifactCallCount()).To(Equal(1))
+				l, teamID, artifactID := fakeWorker.CreateVolumeForArtifactArgsForCall(0)
+				Expect(l).To(Equal(logger))
+				Expect(teamID).To(Equal(1))
+				Expect(artifactID).To(Equal(1))
 			})
 		})
 	})

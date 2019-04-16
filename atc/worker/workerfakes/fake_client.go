@@ -5,12 +5,11 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/lager"
-	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/worker"
 )
 
 type FakeClient struct {
-	CreateArtifactStub        func(lager.Logger, int, string) (db.WorkerArtifact, worker.Volume, error)
+	CreateArtifactStub        func(lager.Logger, int, string) (worker.Artifact, error)
 	createArtifactMutex       sync.RWMutex
 	createArtifactArgsForCall []struct {
 		arg1 lager.Logger
@@ -18,14 +17,12 @@ type FakeClient struct {
 		arg3 string
 	}
 	createArtifactReturns struct {
-		result1 db.WorkerArtifact
-		result2 worker.Volume
-		result3 error
+		result1 worker.Artifact
+		result2 error
 	}
 	createArtifactReturnsOnCall map[int]struct {
-		result1 db.WorkerArtifact
-		result2 worker.Volume
-		result3 error
+		result1 worker.Artifact
+		result2 error
 	}
 	FindContainerStub        func(lager.Logger, int, string) (worker.Container, bool, error)
 	findContainerMutex       sync.RWMutex
@@ -65,7 +62,7 @@ type FakeClient struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeClient) CreateArtifact(arg1 lager.Logger, arg2 int, arg3 string) (db.WorkerArtifact, worker.Volume, error) {
+func (fake *FakeClient) CreateArtifact(arg1 lager.Logger, arg2 int, arg3 string) (worker.Artifact, error) {
 	fake.createArtifactMutex.Lock()
 	ret, specificReturn := fake.createArtifactReturnsOnCall[len(fake.createArtifactArgsForCall)]
 	fake.createArtifactArgsForCall = append(fake.createArtifactArgsForCall, struct {
@@ -79,10 +76,10 @@ func (fake *FakeClient) CreateArtifact(arg1 lager.Logger, arg2 int, arg3 string)
 		return fake.CreateArtifactStub(arg1, arg2, arg3)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
+		return ret.result1, ret.result2
 	}
 	fakeReturns := fake.createArtifactReturns
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeClient) CreateArtifactCallCount() int {
@@ -91,7 +88,7 @@ func (fake *FakeClient) CreateArtifactCallCount() int {
 	return len(fake.createArtifactArgsForCall)
 }
 
-func (fake *FakeClient) CreateArtifactCalls(stub func(lager.Logger, int, string) (db.WorkerArtifact, worker.Volume, error)) {
+func (fake *FakeClient) CreateArtifactCalls(stub func(lager.Logger, int, string) (worker.Artifact, error)) {
 	fake.createArtifactMutex.Lock()
 	defer fake.createArtifactMutex.Unlock()
 	fake.CreateArtifactStub = stub
@@ -104,33 +101,30 @@ func (fake *FakeClient) CreateArtifactArgsForCall(i int) (lager.Logger, int, str
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeClient) CreateArtifactReturns(result1 db.WorkerArtifact, result2 worker.Volume, result3 error) {
+func (fake *FakeClient) CreateArtifactReturns(result1 worker.Artifact, result2 error) {
 	fake.createArtifactMutex.Lock()
 	defer fake.createArtifactMutex.Unlock()
 	fake.CreateArtifactStub = nil
 	fake.createArtifactReturns = struct {
-		result1 db.WorkerArtifact
-		result2 worker.Volume
-		result3 error
-	}{result1, result2, result3}
+		result1 worker.Artifact
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeClient) CreateArtifactReturnsOnCall(i int, result1 db.WorkerArtifact, result2 worker.Volume, result3 error) {
+func (fake *FakeClient) CreateArtifactReturnsOnCall(i int, result1 worker.Artifact, result2 error) {
 	fake.createArtifactMutex.Lock()
 	defer fake.createArtifactMutex.Unlock()
 	fake.CreateArtifactStub = nil
 	if fake.createArtifactReturnsOnCall == nil {
 		fake.createArtifactReturnsOnCall = make(map[int]struct {
-			result1 db.WorkerArtifact
-			result2 worker.Volume
-			result3 error
+			result1 worker.Artifact
+			result2 error
 		})
 	}
 	fake.createArtifactReturnsOnCall[i] = struct {
-		result1 db.WorkerArtifact
-		result2 worker.Volume
-		result3 error
-	}{result1, result2, result3}
+		result1 worker.Artifact
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeClient) FindContainer(arg1 lager.Logger, arg2 int, arg3 string) (worker.Container, bool, error) {

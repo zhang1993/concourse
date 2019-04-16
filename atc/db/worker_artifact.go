@@ -20,6 +20,7 @@ type WorkerArtifact interface {
 	CreatedAt() time.Time
 	Volume(teamID int) (CreatedVolume, bool, error)
 	AttachToBuild(build Build) error
+	Initialized() bool
 }
 
 type artifact struct {
@@ -29,7 +30,6 @@ type artifact struct {
 	name        string
 	buildID     int
 	createdAt   time.Time
-	workerName  string
 	initialized bool
 }
 
@@ -37,6 +37,7 @@ func (a *artifact) ID() int              { return a.id }
 func (a *artifact) Name() string         { return a.name }
 func (a *artifact) BuildID() int         { return a.buildID }
 func (a *artifact) CreatedAt() time.Time { return a.createdAt }
+func (a *artifact) Initialized() bool    { return a.initialized }
 
 func (a *artifact) Volume(teamID int) (CreatedVolume, bool, error) {
 	where := map[string]interface{}{
@@ -83,8 +84,7 @@ func saveWorkerArtifact(tx Tx, conn Conn, atcArtifact atc.WorkerArtifact) (Worke
 	var artifactID int
 
 	values := map[string]interface{}{
-		"name":        atcArtifact.Name,
-		"worker_name": atcArtifact.WorkerName,
+		"name": atcArtifact.Name,
 	}
 
 	if atcArtifact.BuildID != 0 {
@@ -120,19 +120,18 @@ func getWorkerArtifact(tx Tx, conn Conn, id int) (WorkerArtifact, bool, error) {
 	var (
 		createdAtTime pq.NullTime
 		buildID       sql.NullInt64
-		workerName    string
 	)
 
 	artifact := &artifact{conn: conn}
 
-	err := psql.Select("id", "created_at", "name", "build_id", "worker_name").
+	err := psql.Select("id", "created_at", "name", "build_id").
 		From("worker_artifacts").
 		Where(sq.Eq{
 			"id": id,
 		}).
 		RunWith(tx).
 		QueryRow().
-		Scan(&artifact.id, &createdAtTime, &artifact.name, &buildID, &workerName)
+		Scan(&artifact.id, &createdAtTime, &artifact.name, &buildID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, false, nil
@@ -143,7 +142,6 @@ func getWorkerArtifact(tx Tx, conn Conn, id int) (WorkerArtifact, bool, error) {
 
 	artifact.createdAt = createdAtTime.Time
 	artifact.buildID = int(buildID.Int64)
-	artifact.workerName = workerName
 
 	return artifact, true, nil
 }

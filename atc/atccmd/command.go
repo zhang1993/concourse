@@ -530,14 +530,13 @@ func (cmd *RunCommand) constructAPIMembers(
 		dbWorkerBaseResourceTypeFactory,
 		dbWorkerTaskCacheFactory,
 		dbVolumeRepository,
-		dbArtifactLifecycle,
 		teamFactory,
 		dbWorkerFactory,
 		workerVersion,
 		cmd.BaggageclaimResponseHeaderTimeout,
 	)
 
-	pool := worker.NewPool(workerProvider)
+	pool := worker.NewPool(workerProvider, dbArtifactLifecycle)
 	workerClient := worker.NewClient(pool, workerProvider)
 
 	checkContainerStrategy := worker.NewRandomPlacementStrategy()
