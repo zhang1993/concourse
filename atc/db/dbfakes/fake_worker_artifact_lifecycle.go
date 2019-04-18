@@ -22,6 +22,20 @@ type FakeWorkerArtifactLifecycle struct {
 		result1 db.WorkerArtifact
 		result2 error
 	}
+	FindArtifactForResourceCacheStub        func(lager.Logger, int) (db.WorkerArtifact, error)
+	findArtifactForResourceCacheMutex       sync.RWMutex
+	findArtifactForResourceCacheArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 int
+	}
+	findArtifactForResourceCacheReturns struct {
+		result1 db.WorkerArtifact
+		result2 error
+	}
+	findArtifactForResourceCacheReturnsOnCall map[int]struct {
+		result1 db.WorkerArtifact
+		result2 error
+	}
 	RemoveExpiredArtifactsStub        func(lager.Logger) error
 	removeExpiredArtifactsMutex       sync.RWMutex
 	removeExpiredArtifactsArgsForCall []struct {
@@ -106,6 +120,70 @@ func (fake *FakeWorkerArtifactLifecycle) CreateArtifactReturnsOnCall(i int, resu
 		})
 	}
 	fake.createArtifactReturnsOnCall[i] = struct {
+		result1 db.WorkerArtifact
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeWorkerArtifactLifecycle) FindArtifactForResourceCache(arg1 lager.Logger, arg2 int) (db.WorkerArtifact, error) {
+	fake.findArtifactForResourceCacheMutex.Lock()
+	ret, specificReturn := fake.findArtifactForResourceCacheReturnsOnCall[len(fake.findArtifactForResourceCacheArgsForCall)]
+	fake.findArtifactForResourceCacheArgsForCall = append(fake.findArtifactForResourceCacheArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 int
+	}{arg1, arg2})
+	fake.recordInvocation("FindArtifactForResourceCache", []interface{}{arg1, arg2})
+	fake.findArtifactForResourceCacheMutex.Unlock()
+	if fake.FindArtifactForResourceCacheStub != nil {
+		return fake.FindArtifactForResourceCacheStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.findArtifactForResourceCacheReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeWorkerArtifactLifecycle) FindArtifactForResourceCacheCallCount() int {
+	fake.findArtifactForResourceCacheMutex.RLock()
+	defer fake.findArtifactForResourceCacheMutex.RUnlock()
+	return len(fake.findArtifactForResourceCacheArgsForCall)
+}
+
+func (fake *FakeWorkerArtifactLifecycle) FindArtifactForResourceCacheCalls(stub func(lager.Logger, int) (db.WorkerArtifact, error)) {
+	fake.findArtifactForResourceCacheMutex.Lock()
+	defer fake.findArtifactForResourceCacheMutex.Unlock()
+	fake.FindArtifactForResourceCacheStub = stub
+}
+
+func (fake *FakeWorkerArtifactLifecycle) FindArtifactForResourceCacheArgsForCall(i int) (lager.Logger, int) {
+	fake.findArtifactForResourceCacheMutex.RLock()
+	defer fake.findArtifactForResourceCacheMutex.RUnlock()
+	argsForCall := fake.findArtifactForResourceCacheArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeWorkerArtifactLifecycle) FindArtifactForResourceCacheReturns(result1 db.WorkerArtifact, result2 error) {
+	fake.findArtifactForResourceCacheMutex.Lock()
+	defer fake.findArtifactForResourceCacheMutex.Unlock()
+	fake.FindArtifactForResourceCacheStub = nil
+	fake.findArtifactForResourceCacheReturns = struct {
+		result1 db.WorkerArtifact
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeWorkerArtifactLifecycle) FindArtifactForResourceCacheReturnsOnCall(i int, result1 db.WorkerArtifact, result2 error) {
+	fake.findArtifactForResourceCacheMutex.Lock()
+	defer fake.findArtifactForResourceCacheMutex.Unlock()
+	fake.FindArtifactForResourceCacheStub = nil
+	if fake.findArtifactForResourceCacheReturnsOnCall == nil {
+		fake.findArtifactForResourceCacheReturnsOnCall = make(map[int]struct {
+			result1 db.WorkerArtifact
+			result2 error
+		})
+	}
+	fake.findArtifactForResourceCacheReturnsOnCall[i] = struct {
 		result1 db.WorkerArtifact
 		result2 error
 	}{result1, result2}
@@ -236,6 +314,8 @@ func (fake *FakeWorkerArtifactLifecycle) Invocations() map[string][][]interface{
 	defer fake.invocationsMutex.RUnlock()
 	fake.createArtifactMutex.RLock()
 	defer fake.createArtifactMutex.RUnlock()
+	fake.findArtifactForResourceCacheMutex.RLock()
+	defer fake.findArtifactForResourceCacheMutex.RUnlock()
 	fake.removeExpiredArtifactsMutex.RLock()
 	defer fake.removeExpiredArtifactsMutex.RUnlock()
 	fake.removeOrphanedArtifactsMutex.RLock()

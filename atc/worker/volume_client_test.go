@@ -9,14 +9,15 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/concourse/baggageclaim"
 	"github.com/concourse/baggageclaim/baggageclaimfakes"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/db/dbfakes"
 	"github.com/concourse/concourse/atc/db/lock"
 	"github.com/concourse/concourse/atc/db/lock/lockfakes"
 	"github.com/concourse/concourse/atc/worker"
 	"github.com/concourse/concourse/atc/worker/workerfakes"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("VolumeClient", func() {
@@ -826,6 +827,53 @@ var _ = Describe("VolumeClient", func() {
 
 			It("returns the error", func() {
 				Expect(lookupErr).To(Equal(disaster))
+			})
+		})
+	})
+
+	Describe("FindVolumeForArtifact", func() {
+		Context("when artifact volume does not exist in db", func() {
+			BeforeEach(func() {
+				fakeDBVolumeRepository.FindArtifactVolumeReturns(nil, errors.New("volume not in db"))
+			})
+
+			It("returns an error", func() {
+				volume, err := volumeClient.FindVolumeForArtifact(testLogger, 5432)
+				Expect(err).To(HaveOccurred())
+				Expect(volume).To(BeNil())
+			})
+		})
+
+		Context("when artifact volume exists in db", func() {
+			var dbVolume *dbfakes.FakeCreatedVolume
+			BeforeEach(func() {
+				dbVolume = new(dbfakes.FakeCreatedVolume)
+				fakeDBVolumeRepository.FindArtifactVolumeReturns(dbVolume, nil)
+			})
+			Context("when artifact volume does not exist in baggageclaim", func() {
+
+				It("returns an error", func() {
+					volume, err := volumeClient.FindVolumeForArtifact(testLogger, 5432)
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("could not find baggageclaim volume"))
+					Expect(volume).To(BeNil())
+				})
+			})
+
+			Context("when artifact volume exists in baggageclaim", func() {
+				var bcVolume *baggageclaimfakes.FakeVolume
+
+				BeforeEach(func() {
+					bcVolume = new(baggageclaimfakes.FakeVolume)
+					fakeBaggageclaimClient.LookupVolumeReturns(bcVolume, true, nil)
+				})
+
+				It("returns volume", func() {
+					volume, err := volumeClient.FindVolumeForArtifact(testLogger, 123)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(volume).ToNot(BeNil())
+					Expect(volume).To(Equal(worker.NewVolume(bcVolume, dbVolume, volumeClient)))
+				})
 			})
 		})
 	})

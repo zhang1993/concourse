@@ -36,6 +36,8 @@ type VolumeRepository interface {
 	GetDestroyingVolumes(workerName string) ([]string, error)
 
 	CreateVolume(int, int, string, VolumeType) (CreatingVolume, error)
+	FindArtifactVolume(int) (CreatedVolume, error)
+
 	FindCreatedVolume(handle string) (CreatedVolume, bool, error)
 
 	RemoveDestroyingVolumes(workerName string, handles []string) (int, error)
@@ -44,7 +46,10 @@ type VolumeRepository interface {
 	RemoveMissingVolumes(gracePeriod time.Duration) (removed int, err error)
 }
 
-const noTeam = 0
+const (
+	noTeam    = 0
+	anyWorker = ""
+)
 
 type volumeRepository struct {
 	conn Conn
@@ -272,6 +277,22 @@ func (repository *volumeRepository) CreateVolume(teamID int, artifactID int, wor
 	return volume, nil
 }
 
+func (repository *volumeRepository) FindArtifactVolume(artifactID int) (CreatedVolume, error) {
+	_, createdVolume, err := repository.findVolume(
+		noTeam,
+		anyWorker,
+		map[string]interface{}{
+			"v.worker_artifact_id": artifactID,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return createdVolume, err
+
+}
+
 func (repository *volumeRepository) CreateContainerVolume(teamID int, workerName string, container CreatingContainer, mountPath string) (CreatingVolume, error) {
 	volume, err := repository.createVolume(
 		teamID,
@@ -335,7 +356,7 @@ func (repository *volumeRepository) FindContainerVolume(teamID int, workerName s
 }
 
 func (repository *volumeRepository) FindBaseResourceTypeVolume(uwbrt *UsedWorkerBaseResourceType) (CreatingVolume, CreatedVolume, error) {
-	return repository.findVolume(0, uwbrt.WorkerName, map[string]interface{}{
+	return repository.findVolume(noTeam, uwbrt.WorkerName, map[string]interface{}{
 		"v.worker_base_resource_type_id": uwbrt.ID,
 	})
 }
@@ -364,7 +385,7 @@ func (repository *volumeRepository) CreateTaskCacheVolume(teamID int, uwtc *Used
 }
 
 func (repository *volumeRepository) FindResourceCertsVolume(workerName string, uwrc *UsedWorkerResourceCerts) (CreatingVolume, CreatedVolume, error) {
-	return repository.findVolume(0, workerName, map[string]interface{}{
+	return repository.findVolume(noTeam, workerName, map[string]interface{}{
 		"v.worker_resource_certs_id": uwrc.ID,
 	})
 }
@@ -398,7 +419,7 @@ func (repository *volumeRepository) FindResourceCacheVolume(workerName string, r
 		return nil, false, nil
 	}
 
-	_, createdVolume, err := repository.findVolume(0, workerName, map[string]interface{}{
+	_, createdVolume, err := repository.findVolume(noTeam, workerName, map[string]interface{}{
 		"v.worker_resource_cache_id": workerResourceCache.ID,
 	})
 	if err != nil {

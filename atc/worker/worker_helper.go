@@ -143,7 +143,7 @@ func getDestinationPathsFromInputs(inputs []InputSource) []string {
 }
 
 func getDestinationPathsFromOutputs(outputs OutputPaths) []string {
-	idx              := 0
+	idx := 0
 	destinationPaths := make([]string, len(outputs))
 
 	for _, destinationPath := range outputs {

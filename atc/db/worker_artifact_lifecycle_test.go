@@ -38,10 +38,10 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 		var initialized bool
 
 		JustBeforeEach(func() {
-			_, err := dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, initialized) VALUES('old-artifact', NOW() - '13 hours'::interval, $1, $2)", defaultWorker.Name(), initialized)
+			_, err := dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, initialized) VALUES('old-artifact', NOW() - '13 hours'::interval, $1)", initialized)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, initialized) VALUES('young-artifact', NOW(), $1, $2)", defaultWorker.Name(), initialized)
+			_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, initialized) VALUES('young-artifact', NOW(), $1)", initialized)
 			Expect(err).ToNot(HaveOccurred())
 
 			err = workerArtifactLifecycle.RemoveExpiredArtifacts(testLogger)
@@ -86,53 +86,9 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 	})
 
 	Describe("RemoveUnassociatedWorkerArtifacts", func() {
-		var expectedArtifactNames []string
 		JustBeforeEach(func() {
 			err := workerArtifactLifecycle.RemoveOrphanedArtifacts(testLogger)
 			Expect(err).ToNot(HaveOccurred())
-		})
-
-		// TODO: not needed anymore, we don't associate artifacts with workers
-		XContext("when the worker is in 'stalling' state", func() {
-
-			BeforeEach(func() {
-				stallingWorkerPayload := atc.Worker{
-					ResourceTypes:   []atc.WorkerResourceType{defaultWorkerResourceType},
-					Name:            "stalling-worker",
-					GardenAddr:      "2.1.2.1:7777",
-					BaggageclaimURL: "3.4.3.4:7878",
-				}
-
-				stallingWorker, err := workerFactory.SaveWorker(stallingWorkerPayload, -5*time.Minute)
-				Expect(err).ToNot(HaveOccurred())
-
-				_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name) VALUES('artifact-with-association', NOW() - '1 hour'::interval, $1)", stallingWorker.Name())
-				Expect(err).ToNot(HaveOccurred())
-
-				_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name) VALUES('unassociated-artifact', NOW() - '1 hour'::interval, $1)", defaultWorker.Name())
-				Expect(err).ToNot(HaveOccurred())
-
-				_, err = workerLifecycle.StallUnresponsiveWorkers()
-				Expect(err).ToNot(HaveOccurred())
-
-				expectedArtifactNames = []string{"artifact-with-association", "unassociated-artifact"}
-			})
-
-			It("only removes initialized artifacts on non-stalled workers", func() {
-				rows, err := dbConn.Query("SELECT name from worker_artifacts")
-				Expect(err).ToNot(HaveOccurred())
-
-				var artifactNames []string
-				var artifactName string
-
-				for rows.Next() {
-					err = rows.Scan(&artifactName)
-					Expect(err).ToNot(HaveOccurred())
-					artifactNames = append(artifactNames, artifactName)
-				}
-				Expect(artifactNames).Should(ConsistOf(expectedArtifactNames))
-			})
-
 		})
 
 		Context("artifacts are initialized", func() {
@@ -150,11 +106,11 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 					}.FindOrCreate(tx)
 					Expect(err).ToNot(HaveOccurred())
 
-					_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, worker_resource_certs_id, initialized) VALUES('artifact-with-association', NOW() - '1 hour'::interval, $1, $2, $3)",
-						defaultWorker.Name(), workerResourceCerts.ID, initialized)
+					_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_resource_certs_id, initialized) VALUES('artifact-with-association', NOW() - '1 hour'::interval, $1, $2)",
+						workerResourceCerts.ID, initialized)
 					Expect(err).ToNot(HaveOccurred())
 
-					_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, initialized) VALUES('unassociated-artifact', NOW() - '1 hour'::interval, $1, $2)", defaultWorker.Name(), initialized)
+					_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, initialized) VALUES('unassociated-artifact', NOW() - '1 hour'::interval, $1)", initialized)
 					Expect(err).ToNot(HaveOccurred())
 
 					err = tx.Commit()
@@ -186,10 +142,10 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 					)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(found).To(BeTrue())
-					_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, worker_base_resource_type_id, initialized) VALUES('artifact-with-association', NOW() - '1 hour'::interval, $1, $2, $3)", defaultWorker.Name(), baseResourceType.ID, initialized)
+					_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_base_resource_type_id, initialized) VALUES('artifact-with-association', NOW() - '1 hour'::interval, $1, $2)", baseResourceType.ID, initialized)
 					Expect(err).ToNot(HaveOccurred())
 
-					_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, initialized) VALUES('unassociated-artifact', NOW() - '1 hour'::interval, $1, $2)", defaultWorker.Name(), initialized)
+					_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, initialized) VALUES('unassociated-artifact', NOW() - '1 hour'::interval, $1)", initialized)
 					Expect(err).ToNot(HaveOccurred())
 
 				})
@@ -220,11 +176,10 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 					)
 					Expect(err).ToNot(HaveOccurred())
 
-					_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, worker_task_cache_id, initialized) VALUES('artifact-with-association', NOW() - '1 hour'::interval, $1, $2, $3)",
-						defaultWorker.Name(), usedTaskCache.ID, initialized)
+					_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_task_cache_id, initialized) VALUES('artifact-with-association', NOW() - '1 hour'::interval, $1, $2)", usedTaskCache.ID, initialized)
 					Expect(err).ToNot(HaveOccurred())
 
-					_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, initialized) VALUES('unassociated-artifact', NOW() - '1 hour'::interval, $1, $2)", defaultWorker.Name(), initialized)
+					_, err = dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, initialized) VALUES('unassociated-artifact', NOW() - '1 hour'::interval, $1)", initialized)
 					Expect(err).ToNot(HaveOccurred())
 
 				})
@@ -273,10 +228,10 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 					usedCache, err := workerResourceCache.FindOrCreate(tx)
 					Expect(err).ToNot(HaveOccurred())
 
-					_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, worker_resource_cache_id, initialized) VALUES('artifact-with-association', NOW() - '1 hour'::interval, $1, $2, $3)", defaultWorker.Name(), usedCache.ID, initialized)
+					_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_resource_cache_id, initialized) VALUES('artifact-with-association', NOW() - '1 hour'::interval, $1, $2)", usedCache.ID, initialized)
 					Expect(err).ToNot(HaveOccurred())
 
-					_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, initialized) VALUES('unassociated-artifact', NOW() - '1 hour'::interval, $1, $2)", defaultWorker.Name(), initialized)
+					_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, initialized) VALUES('unassociated-artifact', NOW() - '1 hour'::interval, $1)", initialized)
 					Expect(err).ToNot(HaveOccurred())
 
 					err = tx.Commit()
@@ -335,22 +290,22 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 						_, err = tx.Exec("UPDATE builds SET status='started' where id=$1", startedBuild.ID())
 						Expect(err).ToNot(HaveOccurred())
 
-						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, build_id, initialized) VALUES('artifact-with-errored-build', NOW() - '1 hour'::interval, $1, $2, $3)", defaultWorker.Name(), erroredBuild.ID(), true)
+						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, build_id, initialized) VALUES('artifact-with-errored-build', NOW() - '1 hour'::interval, $1, $2)", erroredBuild.ID(), true)
 						Expect(err).ToNot(HaveOccurred())
 
-						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, build_id, initialized) VALUES('artifact-with-succeeded-build', NOW() - '1 hour'::interval, $1, $2, $3)", defaultWorker.Name(), succeededBuild.ID(), true)
+						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, build_id, initialized) VALUES('artifact-with-succeeded-build', NOW() - '1 hour'::interval, $1, $2)", succeededBuild.ID(), true)
 						Expect(err).ToNot(HaveOccurred())
 
-						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, build_id, initialized) VALUES('artifact-with-started-build', NOW() - '1 hour'::interval, $1, $2, $3)", defaultWorker.Name(), startedBuild.ID(), true)
+						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, build_id, initialized) VALUES('artifact-with-started-build', NOW() - '1 hour'::interval, $1, $2)", startedBuild.ID(), true)
 						Expect(err).ToNot(HaveOccurred())
 
-						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, build_id, initialized) VALUES('artifact-with-aborted-build', NOW() - '1 hour'::interval, $1, $2, $3)", defaultWorker.Name(), abortedBuild.ID(), true)
+						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, build_id, initialized) VALUES('artifact-with-aborted-build', NOW() - '1 hour'::interval, $1, $2)", abortedBuild.ID(), true)
 						Expect(err).ToNot(HaveOccurred())
 
-						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, build_id, initialized) VALUES('artifact-with-failed-build', NOW() - '1 hour'::interval, $1, $2, $3)", defaultWorker.Name(), failedBuild.ID(), true)
+						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, build_id, initialized) VALUES('artifact-with-failed-build', NOW() - '1 hour'::interval, $1, $2)", failedBuild.ID(), true)
 						Expect(err).ToNot(HaveOccurred())
 
-						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, build_id, initialized) VALUES('artifact-with-pending-build', NOW() - '1 hour'::interval, $1, $2, $3)", defaultWorker.Name(), pendingBuild.ID(), true)
+						_, err = tx.Exec("INSERT INTO worker_artifacts(name, created_at, build_id, initialized) VALUES('artifact-with-pending-build', NOW() - '1 hour'::interval, $1, $2)", pendingBuild.ID(), true)
 						Expect(err).ToNot(HaveOccurred())
 
 						err = tx.Commit()
@@ -380,7 +335,7 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 
 		Context("artifact is not initialized", func() {
 			BeforeEach(func() {
-				_, err := dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, worker_name, initialized) VALUES('artifact', NOW() - '1 hour'::interval, $1, $2)", defaultWorker.Name(), false)
+				_, err := dbConn.Exec("INSERT INTO worker_artifacts(name, created_at, initialized) VALUES('artifact', NOW() - '1 hour'::interval, $1)", false)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -398,6 +353,58 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 				}
 				Expect(artifactNames).Should(ConsistOf("artifact"))
 			})
+		})
+	})
+
+	Describe("FindArtifactForResourceCache", func() {
+		var (
+			cache                   db.UsedResourceCache
+			usedWorkerResourceCache *db.UsedWorkerResourceCache
+			artifact                db.WorkerArtifact
+			foundArtifact           db.WorkerArtifact
+			err                     error
+		)
+
+		BeforeEach(func() {
+			build, err := defaultJob.CreateBuild()
+			Expect(err).ToNot(HaveOccurred())
+			cache, err = resourceCacheFactory.FindOrCreateResourceCache(
+				testLogger,
+				db.ForBuild(build.ID()),
+				"some-base-resource-type",
+				atc.Version{"some": "version"},
+				atc.Source{
+					"some": "source",
+				},
+				atc.Params{"some": fmt.Sprintf("param-%d", time.Now().UnixNano())},
+				creds.NewVersionedResourceTypes(
+					template.StaticVariables{"source-param": "some-secret-sauce"},
+					atc.VersionedResourceTypes{},
+				),
+			)
+			Expect(err).ToNot(HaveOccurred())
+			workerResourceCache := &db.WorkerResourceCache{
+				defaultWorker.Name(),
+				cache,
+			}
+			tx, err := dbConn.Begin()
+			usedWorkerResourceCache, err = workerResourceCache.FindOrCreate(tx)
+			Expect(err).ToNot(HaveOccurred())
+			err = tx.Commit()
+			Expect(err).ToNot(HaveOccurred())
+
+			artifact, err = workerArtifactLifecycle.CreateArtifact("some-artifact")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(artifact).ToNot(BeNil())
+			err = artifact.AttachToResourceCache(*usedWorkerResourceCache)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("returns the artifact associated with the resource cache", func() {
+			foundArtifact, err = workerArtifactLifecycle.FindArtifactForResourceCache(testLogger, cache.ID())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(foundArtifact).ToNot(BeNil())
+			Expect(foundArtifact.ID()).To(Equal(artifact.ID()))
 		})
 	})
 })

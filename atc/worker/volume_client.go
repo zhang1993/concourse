@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
 	"github.com/concourse/baggageclaim"
+
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/db/lock"
 	"github.com/concourse/concourse/atc/metric"
@@ -69,7 +70,10 @@ type VolumeClient interface {
 	FindOrCreateVolumeForResourceCerts(
 		logger lager.Logger,
 	) (volume Volume, found bool, err error)
-
+	FindVolumeForArtifact(
+		logger lager.Logger,
+		artifactID int,
+	) (Volume, error)
 	LookupVolume(lager.Logger, string) (Volume, bool, error)
 }
 
@@ -189,6 +193,36 @@ func (c *volumeClient) CreateVolume(
 			return c.dbVolumeRepository.CreateVolume(teamID, artifactID, workerName, volumeType)
 		},
 	)
+}
+
+func (c *volumeClient) FindVolumeForArtifact(logger lager.Logger, artifactID int) (Volume, error) {
+	dbVolume, err := c.dbVolumeRepository.FindArtifactVolume(artifactID)
+	if err != nil {
+		logger.Error("failed-to-find-db-volume-for-artifact", err, lager.Data{"artifactID": artifactID})
+		return nil, err
+	}
+
+	if dbVolume == nil {
+		return nil, nil
+	}
+
+	bcVolume, found, err := c.baggageclaimClient.LookupVolume(logger, dbVolume.Handle())
+	if err != nil {
+		logger.Error("failed-to-find-baggageclaim-volume-for-artifact", err, lager.Data{"artifactID": artifactID})
+		return nil, err
+	}
+
+	if !found {
+		err = errors.New("could not find baggageclaim volume")
+		logger.Error(
+			"no baggageclaim volume found for db volume",
+			err,
+			lager.Data{"createdVolumeHandle": dbVolume.Handle()},
+		)
+		return nil, err
+	}
+
+	return NewVolume(bcVolume, dbVolume, c), nil
 }
 
 func (c *volumeClient) FindOrCreateVolumeForBaseResourceType(

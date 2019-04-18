@@ -61,14 +61,24 @@ type Worker interface {
 	GardenClient() garden.Client
 }
 
+//go:generate counterfeiter . Artifact
+
+type ArtifactManager interface {
+	FindArtifactForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (Artifact, bool, error)
+	FindArtifactForTaskCache(lager.Logger, int, int, string, string) (Artifact, bool, error)
+	CertsArtifact(lager.Logger) (artifact Artifact, found bool, err error)
+	LookupArtifact(lager.Logger, string) (Artifact, bool, error)
+	CreateVolumeForArtifact(logger lager.Logger, teamID int, artifactID int) (Volume, error)
+}
+
 type gardenWorker struct {
-	gardenClient    garden.Client
-	volumeClient    VolumeClient
-	artifactCreator db.ArtifactCreator
-	imageFactory    ImageFactory
-	dbWorker        db.Worker
-	buildContainers int
-	helper          workerHelper
+	gardenClient     garden.Client
+	volumeClient     VolumeClient
+	artifactProvider db.ArtifactProvider
+	imageFactory     ImageFactory
+	dbWorker         db.Worker
+	buildContainers  int
+	helper           workerHelper
 }
 
 // NewGardenWorker constructs a Worker using the gardenWorker runtime implementation and allows container and volume
@@ -167,12 +177,6 @@ func (worker *gardenWorker) LookupVolume(logger lager.Logger, handle string) (Vo
 }
 
 func (worker *gardenWorker) CreateVolumeForArtifact(logger lager.Logger, teamID int, artifactID int) (Volume, error) {
-	// artifact, err := worker.artifactCreator.CreateArtifact(artifactName)
-	// if err != nil {
-	// 	logger.Error("failed-to-create-artifact", err)
-	// 	return nil, nil, err
-	// }
-
 	volumeSpec := VolumeSpec{
 		Strategy: baggageclaim.EmptyStrategy{},
 	}

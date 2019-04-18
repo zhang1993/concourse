@@ -20,17 +20,22 @@ type WorkerArtifact interface {
 	CreatedAt() time.Time
 	Volume(teamID int) (CreatedVolume, bool, error)
 	AttachToBuild(build Build) error
+	AttachToResourceCache(workerResourceCache UsedWorkerResourceCache) error
 	Initialized() bool
 }
 
 type artifact struct {
 	conn Conn
 
-	id          int
-	name        string
-	buildID     int
-	createdAt   time.Time
-	initialized bool
+	id                       int
+	name                     string
+	createdAt                time.Time
+	initialized              bool
+	buildID                  int
+	resourceCacheID          int
+	workerBaseResourceTypeID int
+	workerTaskCacheID        int
+	workerResourceCertsID    int
 }
 
 func (a *artifact) ID() int              { return a.id }
@@ -60,6 +65,28 @@ func (a *artifact) Volume(teamID int) (CreatedVolume, bool, error) {
 func (a *artifact) AttachToBuild(build Build) error {
 	result, err := psql.Update("worker_artifacts").
 		Set("build_id", build.ID()).
+		Set("initialized", true).
+		Where(sq.Eq{"id": a.id}).
+		RunWith(a.conn).Exec()
+
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return errors.New("artifact not found")
+	}
+	return nil
+}
+
+func (a *artifact) AttachToResourceCache(resourceCache UsedWorkerResourceCache) error {
+	result, err := psql.Update("worker_artifacts").
+		Set("worker_resource_cache_id", resourceCache.ID).
 		Set("initialized", true).
 		Where(sq.Eq{"id": a.id}).
 		RunWith(a.conn).Exec()

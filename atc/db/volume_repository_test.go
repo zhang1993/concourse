@@ -212,7 +212,7 @@ var _ = Describe("VolumeFactory", func() {
 			err = resourceCacheVolumeCreated.InitializeResourceCache(usedResourceCache)
 			Expect(err).NotTo(HaveOccurred())
 
-			artifact, err := workerArtifactLifecycle.CreateArtifact("some-name", defaultWorker.Name())
+			artifact, err := workerArtifactLifecycle.CreateArtifact("some-name")
 			Expect(err).NotTo(HaveOccurred())
 
 			artifactVolume, err := volumeRepository.CreateVolume(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
@@ -425,7 +425,7 @@ var _ = Describe("VolumeFactory", func() {
 
 	Describe("CreateVolume", func() {
 		It("creates a CreatingVolume of the given type with a teamID and artifactID", func() {
-			artifact, err := workerArtifactLifecycle.CreateArtifact("dummy-artifact", defaultWorker.Name())
+			artifact, err := workerArtifactLifecycle.CreateArtifact("dummy-artifact")
 			Expect(err).NotTo(HaveOccurred())
 			volume, err := volumeRepository.CreateVolume(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
 			Expect(err).NotTo(HaveOccurred())
@@ -439,6 +439,47 @@ var _ = Describe("VolumeFactory", func() {
 			Expect(workerName).To(Equal(defaultWorker.Name()))
 			Expect(artID).To(Equal(artifact.ID()))
 		})
+	})
+
+	Describe("FindArtifactVolume", func() {
+		var dbArtifact db.WorkerArtifact
+		var artifactProvider db.ArtifactProvider
+		var err error
+
+		BeforeEach(func() {
+			artifactProvider = db.NewArtifactLifecycle(dbConn)
+			dbArtifact, err = artifactProvider.CreateArtifact("some-name")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Context("when there is a creating volume for artifact", func() {
+			BeforeEach(func() {
+				_, err = volumeRepository.CreateVolume(defaultTeam.ID(), dbArtifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
+			})
+			It("returns no error and a nil volume", func() {
+				createdVolume, err := volumeRepository.FindArtifactVolume(dbArtifact.ID())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(createdVolume).To(BeNil())
+			})
+		})
+
+		Context("when there is a created volume for artifact", func() {
+			var existingVolume db.CreatingVolume
+			BeforeEach(func() {
+				existingVolume, err = volumeRepository.CreateVolume(defaultTeam.ID(), dbArtifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
+				_, err = existingVolume.Created()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("returns created volume", func() {
+				createdVolume, err := volumeRepository.FindArtifactVolume(dbArtifact.ID())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(createdVolume).ToNot(BeNil())
+				Expect(createdVolume.Handle()).To(Equal(existingVolume.Handle()))
+			})
+		})
+
 	})
 
 	Describe("FindBaseResourceTypeVolume", func() {

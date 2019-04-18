@@ -6,18 +6,20 @@ import (
 
 	"code.cloudfoundry.org/lager"
 	sq "github.com/Masterminds/squirrel"
+	"github.com/lib/pq"
 )
 
-//go:generate counterfeiter . ArtifactCreator
+//go:generate counterfeiter . ArtifactProvider
 
-type ArtifactCreator interface {
+type ArtifactProvider interface {
 	CreateArtifact(name string) (WorkerArtifact, error)
+	FindArtifactForResourceCache(lager.Logger, int) (WorkerArtifact, error)
 }
 
 //go:generate counterfeiter . WorkerArtifactLifecycle
 
 type WorkerArtifactLifecycle interface {
-	ArtifactCreator
+	ArtifactProvider
 	RemoveExpiredArtifacts(lager.Logger) error
 	RemoveOrphanedArtifacts(lager.Logger) error
 }
@@ -53,6 +55,10 @@ func (lifecycle *artifactLifecycle) CreateArtifact(name string) (WorkerArtifact,
 		createdAt: createdAt,
 		name:      name,
 	}, nil
+}
+
+func (lifecycle *artifactLifecycle) FindArtifactForResourceCache(logger lager.Logger, workerResourceCacheID int) (WorkerArtifact, error) {
+	return lifecycle.findArtifact(sq.Eq{"worker_resource_cache_id": workerResourceCacheID})
 }
 
 func (lifecycle *artifactLifecycle) RemoveExpiredArtifacts(logger lager.Logger) error {
@@ -156,6 +162,102 @@ func (lifecycle *artifactLifecycle) markArtifactsOwnedByTerminatedBuilds() error
 	return err
 }
 
+func (lifecycle *artifactLifecycle) findArtifact(whereClause map[string]interface{}) (WorkerArtifact, error) {
+	row := psql.Select("*").
+		From("worker_artifacts").
+		Where(whereClause).
+		RunWith(lifecycle.conn).
+		QueryRow()
+
+	return scanArtifact(row, lifecycle.conn)
+}
+
+func scanArtifact(row sq.RowScanner, conn Conn) (WorkerArtifact, error) {
+	var (
+		sqID                       sql.NullInt64
+		sqName                     sql.NullString
+		sqCreatedAt                pq.NullTime
+		sqInitialized              sql.NullBool
+		sqBuildID                  sql.NullInt64
+		sqResourceCacheID          sql.NullInt64
+		sqWorkerBaseResourceTypeID sql.NullInt64
+		sqWorkerTaskCacheID        sql.NullInt64
+		sqWorkerResourceCertsID    sql.NullInt64
+	)
+
+	err := row.Scan(
+		&sqID,
+		&sqName,
+		&sqBuildID,
+		&sqCreatedAt,
+		&sqResourceCacheID,
+		&sqWorkerTaskCacheID,
+		&sqWorkerResourceCertsID,
+		&sqWorkerBaseResourceTypeID,
+		&sqInitialized,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var id int
+	if sqID.Valid {
+		id = int(sqID.Int64)
+	}
+
+	var name string
+	if sqName.Valid {
+		name = sqName.String
+	}
+
+	var buildID int
+	if sqBuildID.Valid {
+		buildID = int(sqBuildID.Int64)
+	}
+
+	var createdAt time.Time
+	if sqCreatedAt.Valid {
+		createdAt = sqCreatedAt.Time
+	}
+
+	var initialized bool
+	if sqInitialized.Valid {
+		initialized = sqInitialized.Bool
+	}
+	var workerResourceCertsID int
+	if sqWorkerResourceCertsID.Valid {
+		workerResourceCertsID = int(sqWorkerResourceCertsID.Int64)
+	}
+
+	var workerTaskCacheID int
+	if sqWorkerTaskCacheID.Valid {
+		workerTaskCacheID = int(sqWorkerTaskCacheID.Int64)
+	}
+
+	var workerResourceCacheID int
+	if sqResourceCacheID.Valid {
+		workerResourceCacheID = int(sqResourceCacheID.Int64)
+	}
+
+	var workerBaseResourceTypeID int
+	if sqWorkerBaseResourceTypeID.Valid {
+		workerBaseResourceTypeID = int(sqWorkerBaseResourceTypeID.Int64)
+	}
+
+	return &artifact{
+		conn,
+		id,
+		name,
+		createdAt,
+		initialized,
+		buildID,
+		workerResourceCacheID,
+		workerBaseResourceTypeID,
+		workerTaskCacheID,
+		workerResourceCertsID,
+	}, nil
+
+}
 func isTerminated(buildStatus sql.NullString) bool {
 	return buildStatus.Valid && buildStatus.String != string(BuildStatusPending) && buildStatus.String != string(BuildStatusStarted)
 }

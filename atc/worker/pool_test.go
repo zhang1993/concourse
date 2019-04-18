@@ -418,7 +418,7 @@ var _ = Describe("Pool", func() {
 		})
 	})
 
-	FDescribe("CreateArtifact", func() {
+	Describe("CreateArtifact", func() {
 		var (
 			fakeWorker     *workerfakes.FakeWorker
 			fakeDBArtifact *dbfakes.FakeWorkerArtifact
