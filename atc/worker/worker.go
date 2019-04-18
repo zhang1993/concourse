@@ -64,26 +64,26 @@ type Worker interface {
 //go:generate counterfeiter . Artifact
 
 type ArtifactManager interface {
-	FindArtifactForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (Artifact, bool, error)
 	FindArtifactForTaskCache(lager.Logger, int, int, string, string) (Artifact, bool, error)
 	CertsArtifact(lager.Logger) (artifact Artifact, found bool, err error)
 	LookupArtifact(lager.Logger, string) (Artifact, bool, error)
 	CreateVolumeForArtifact(logger lager.Logger, teamID int, artifactID int) (Volume, error)
+	FindOrCreateArtifact(lager.Logger, int, string) (Artifact, error)
 }
 
 type gardenWorker struct {
-	gardenClient     garden.Client
-	volumeClient     VolumeClient
-	artifactProvider db.ArtifactProvider
-	imageFactory     ImageFactory
-	dbWorker         db.Worker
-	buildContainers  int
-	helper           workerHelper
+	gardenClient    garden.Client
+	volumeClient    VolumeClient
+	artifactManager ArtifactManager
+	imageFactory    ImageFactory
+	dbWorker        db.Worker
+	buildContainers int
+	helper          workerHelper
 }
 
 // NewGardenWorker constructs a Worker using the gardenWorker runtime implementation and allows container and volume
 // creation on a specific Garden worker.
-// A Garden Worker is comprised of: db.Worker, garden Client, container provider, and a volume client
+// A Garden Worker is comprised of: db.Worker, garden Client, container provider, and a artifact manager
 func NewGardenWorker(
 	gardenClient garden.Client,
 	volumeRepository db.VolumeRepository,

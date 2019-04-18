@@ -707,14 +707,13 @@ func (cmd *RunCommand) constructBackendMembers(
 		dbWorkerBaseResourceTypeFactory,
 		dbWorkerTaskCacheFactory,
 		dbVolumeRepository,
-		dbArtifactLifecycle,
 		teamFactory,
 		dbWorkerFactory,
 		workerVersion,
 		cmd.BaggageclaimResponseHeaderTimeout,
 	)
 
-	pool := worker.NewPool(workerProvider)
+	pool := worker.NewPool(workerProvider, dbArtifactLifecycle)
 	workerClient := worker.NewClient(pool, workerProvider)
 
 	defaultLimits, err := cmd.parseDefaultLimits()

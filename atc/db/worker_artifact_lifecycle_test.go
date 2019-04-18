@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/lager/lagertest"
+	"github.com/cloudfoundry/bosh-cli/director/template"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -396,7 +397,7 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 			artifact, err = workerArtifactLifecycle.CreateArtifact("some-artifact")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(artifact).ToNot(BeNil())
-			err = artifact.AttachToResourceCache(*usedWorkerResourceCache)
+			err = artifact.AttachToResourceCache(usedWorkerResourceCache.ID)
 			Expect(err).ToNot(HaveOccurred())
 		})
 

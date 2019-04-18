@@ -20,7 +20,7 @@ type WorkerArtifact interface {
 	CreatedAt() time.Time
 	Volume(teamID int) (CreatedVolume, bool, error)
 	AttachToBuild(build Build) error
-	AttachToResourceCache(workerResourceCache UsedWorkerResourceCache) error
+	AttachToResourceCache(workerResourceCacheID int) error
 	Initialized() bool
 }
 
@@ -84,9 +84,9 @@ func (a *artifact) AttachToBuild(build Build) error {
 	return nil
 }
 
-func (a *artifact) AttachToResourceCache(resourceCache UsedWorkerResourceCache) error {
+func (a *artifact) AttachToResourceCache(workerResourceCacheID int) error {
 	result, err := psql.Update("worker_artifacts").
-		Set("worker_resource_cache_id", resourceCache.ID).
+		Set("worker_resource_cache_id", workerResourceCacheID).
 		Set("initialized", true).
 		Where(sq.Eq{"id": a.id}).
 		RunWith(a.conn).Exec()

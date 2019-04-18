@@ -9,11 +9,17 @@ import (
 	"github.com/lib/pq"
 )
 
+const (
+	ArtifactTypeResourceCache    = "resource-cache"
+	ArtifactTypeTaskCache        = "task-cache"
+	ArtifactTypeResourceCerts    = "resource-certs"
+	ArtifactTypeBaseResourceType = "base-resource"
+)
+
 //go:generate counterfeiter . ArtifactProvider
 
 type ArtifactProvider interface {
 	CreateArtifact(name string) (WorkerArtifact, error)
-	FindArtifactForResourceCache(lager.Logger, int) (WorkerArtifact, error)
 }
 
 //go:generate counterfeiter . WorkerArtifactLifecycle

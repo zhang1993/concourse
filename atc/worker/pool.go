@@ -69,11 +69,6 @@ type Pool interface {
 		lager.Logger,
 		WorkerSpec,
 	) (Worker, error)
-	CreateArtifact(
-		lager.Logger,
-		int,
-		string,
-	) (Artifact, error)
 }
 
 type pool struct {

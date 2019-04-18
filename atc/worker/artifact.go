@@ -15,6 +15,7 @@ type Artifact interface {
 	Retrieve(string) (io.ReadCloser, error)
 	Volume() Volume
 	Initialized() bool
+	DBArtifact() db.WorkerArtifact
 }
 
 type artifact struct {
@@ -34,6 +35,10 @@ func NewArtifact(
 
 func (a *artifact) Volume() Volume {
 	return a.volume
+}
+
+func (a *artifact) DBArtifact() db.WorkerArtifact {
+	return a.dbArtifact
 }
 
 // I did this so our tests don't need to make a tree of fakes
@@ -61,28 +66,33 @@ func NewArtifactManager(lifecycle db.ArtifactProvider, client VolumeClient) Arti
 	}
 }
 
-func (manager *artifactManager) FindArtifactForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (Artifact, bool, error) {
-	dbArtifact, err := manager.artifactProvider.FindArtifactForResourceCache(logger, resourceCache.ID())
+func (manager *artifactManager) FindOrCreateArtifact(logger lager.Logger, artifactOwnerID int, artifactOwnerType string) (Artifact, error) {
+	artifact, err := manager.artifactProvider.FindArtifactForOwner(logger, artifactOwnerID, artifactOwnerType)
+
+}
+
+func (manager *artifactManager) findArtifactForResourceCache(logger lager.Logger, resourceCacheID int) (Artifact, error) {
+	dbArtifact, err := manager.artifactProvider.FindArtifactForResourceCache(logger, resourceCacheID)
 
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	if dbArtifact == nil {
-		return nil, false, nil
+		return nil, nil
 	}
 
 	volume, err := manager.volumeClient.FindVolumeForArtifact(logger, dbArtifact.ID())
 
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	if volume == nil {
-		return nil, false, nil
+		return nil, nil
 	}
 
-	return NewArtifact(dbArtifact, volume), true, nil
+	return NewArtifact(dbArtifact, volume), nil
 }
 
 func (manager *artifactManager) FindArtifactForTaskCache(lager.Logger, int, int, string, string) (Artifact, bool, error) {

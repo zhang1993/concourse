@@ -418,44 +418,4 @@ var _ = Describe("Pool", func() {
 		})
 	})
 
-	Describe("CreateArtifact", func() {
-		var (
-			fakeWorker     *workerfakes.FakeWorker
-			fakeDBArtifact *dbfakes.FakeWorkerArtifact
-			err            error
-			artifact       Artifact
-		)
-
-		JustBeforeEach(func() {
-			fakeDBArtifact = new(dbfakes.FakeWorkerArtifact)
-			fakeWorker = new(workerfakes.FakeWorker)
-			fakeWorker.NameReturns("workerA")
-			fakeWorker.SatisfiesReturns(true)
-
-			fakeProvider.RunningWorkersReturns([]Worker{fakeWorker}, nil)
-
-			fakeDBArtifact.IDReturns(1)
-			fakeDBArtifact.NameReturns("some-artifact")
-			fakeArtifactLifecycle.CreateArtifactReturns(fakeDBArtifact, nil)
-
-			artifact, err = pool.CreateArtifact(logger, 1, "some-artifact")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(artifact).ToNot(BeNil())
-		})
-
-		It("creates an uninitialized artifact", func() {
-			Expect(artifact.Initialized()).To(BeFalse())
-		})
-
-		Context("when the worker can be found", func() {
-			It("creates the volume on the worker", func() {
-				Expect(err).ToNot(HaveOccurred())
-				Expect(fakeWorker.CreateVolumeForArtifactCallCount()).To(Equal(1))
-				l, teamID, artifactID := fakeWorker.CreateVolumeForArtifactArgsForCall(0)
-				Expect(l).To(Equal(logger))
-				Expect(teamID).To(Equal(1))
-				Expect(artifactID).To(Equal(1))
-			})
-		})
-	})
 })
