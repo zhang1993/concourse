@@ -2,10 +2,10 @@ package present
 
 import (
 	"github.com/concourse/concourse/atc"
-	"github.com/concourse/concourse/atc/worker"
+	"github.com/concourse/concourse/atc/db"
 )
 
-func WorkerArtifacts(artifacts []worker.Artifact) []atc.WorkerArtifact {
+func WorkerArtifacts(artifacts []db.WorkerArtifact) []atc.WorkerArtifact {
 	wa := []atc.WorkerArtifact{}
 	for _, a := range artifacts {
 		wa = append(wa, WorkerArtifact(a))
@@ -14,8 +14,7 @@ func WorkerArtifacts(artifacts []worker.Artifact) []atc.WorkerArtifact {
 }
 
 // TODO: reduce the number to artifact structs
-func WorkerArtifact(artifact worker.Artifact) atc.WorkerArtifact {
-	dbArtifact := artifact.DBArtifact()
+func WorkerArtifact(dbArtifact db.WorkerArtifact) atc.WorkerArtifact {
 	return atc.WorkerArtifact{
 		ID:        dbArtifact.ID(),
 		Name:      dbArtifact.Name(),

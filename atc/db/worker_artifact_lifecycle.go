@@ -20,6 +20,7 @@ const (
 
 type ArtifactProvider interface {
 	CreateArtifact(name string) (WorkerArtifact, error)
+	FindArtifactForResourceCache(logger lager.Logger, workerResourceCacheID int) (WorkerArtifact, error)
 }
 
 //go:generate counterfeiter . WorkerArtifactLifecycle

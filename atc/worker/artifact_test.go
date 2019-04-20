@@ -35,7 +35,7 @@ var _ = Describe("ArtifactManager", func() {
 		artifactManager = worker.NewArtifactManager(fakeArtifactLifecycle, fakeVolumeClient)
 	})
 
-	FDescribe("FindOrCreateArtifact", func() {
+	Describe("FindOrCreateArtifact", func() {
 		BeforeEach(func() {
 			fakeDBResourceCache = new(dbfakes.FakeUsedResourceCache)
 			fakeDBResourceCache.IDReturns(7)
@@ -46,7 +46,7 @@ var _ = Describe("ArtifactManager", func() {
 
 				fakeArtifactLifecycle.FindArtifactForResourceCacheReturns(fakeDBArtifact, nil)
 
-				artifact, err := artifactManager.FindOrCreateArtifact(testLogger, fakeDBResourceCache.ID(), worker.ArtifactTypeResourceCache)
+				artifact, err := artifactManager.FindOrCreateArtifact(testLogger, fakeDBResourceCache.ID(), db.ArtifactTypeResourceCache)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(fakeArtifactLifecycle.FindArtifactForResourceCacheCallCount()).To(Equal(1))
@@ -61,7 +61,7 @@ var _ = Describe("ArtifactManager", func() {
 				fakeArtifactLifecycle.FindArtifactForResourceCacheReturns(nil, nil)
 				fakeArtifactLifecycle.CreateArtifactReturns(fakeDBArtifact, nil)
 
-				artifact, err := artifactManager.FindOrCreateArtifact(testLogger, fakeDBResourceCache.ID(), worker.ArtifactTypeResourceCache)
+				artifact, err := artifactManager.FindOrCreateArtifact(testLogger, fakeDBResourceCache.ID(), db.ArtifactTypeResourceCache)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(fakeArtifactLifecycle.FindArtifactForResourceCacheCallCount()).To(Equal(1))

@@ -20,10 +20,10 @@ type FakeWorkerArtifact struct {
 	attachToBuildReturnsOnCall map[int]struct {
 		result1 error
 	}
-	AttachToResourceCacheStub        func(db.UsedWorkerResourceCache) error
+	AttachToResourceCacheStub        func(int) error
 	attachToResourceCacheMutex       sync.RWMutex
 	attachToResourceCacheArgsForCall []struct {
-		arg1 db.UsedWorkerResourceCache
+		arg1 int
 	}
 	attachToResourceCacheReturns struct {
 		result1 error
@@ -160,11 +160,11 @@ func (fake *FakeWorkerArtifact) AttachToBuildReturnsOnCall(i int, result1 error)
 	}{result1}
 }
 
-func (fake *FakeWorkerArtifact) AttachToResourceCache(arg1 db.UsedWorkerResourceCache) error {
+func (fake *FakeWorkerArtifact) AttachToResourceCache(arg1 int) error {
 	fake.attachToResourceCacheMutex.Lock()
 	ret, specificReturn := fake.attachToResourceCacheReturnsOnCall[len(fake.attachToResourceCacheArgsForCall)]
 	fake.attachToResourceCacheArgsForCall = append(fake.attachToResourceCacheArgsForCall, struct {
-		arg1 db.UsedWorkerResourceCache
+		arg1 int
 	}{arg1})
 	fake.recordInvocation("AttachToResourceCache", []interface{}{arg1})
 	fake.attachToResourceCacheMutex.Unlock()
@@ -184,13 +184,13 @@ func (fake *FakeWorkerArtifact) AttachToResourceCacheCallCount() int {
 	return len(fake.attachToResourceCacheArgsForCall)
 }
 
-func (fake *FakeWorkerArtifact) AttachToResourceCacheCalls(stub func(db.UsedWorkerResourceCache) error) {
+func (fake *FakeWorkerArtifact) AttachToResourceCacheCalls(stub func(int) error) {
 	fake.attachToResourceCacheMutex.Lock()
 	defer fake.attachToResourceCacheMutex.Unlock()
 	fake.AttachToResourceCacheStub = stub
 }
 
-func (fake *FakeWorkerArtifact) AttachToResourceCacheArgsForCall(i int) db.UsedWorkerResourceCache {
+func (fake *FakeWorkerArtifact) AttachToResourceCacheArgsForCall(i int) int {
 	fake.attachToResourceCacheMutex.RLock()
 	defer fake.attachToResourceCacheMutex.RUnlock()
 	argsForCall := fake.attachToResourceCacheArgsForCall[i]

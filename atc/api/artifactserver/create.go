@@ -34,6 +34,6 @@ func (s *Server) CreateArtifact(team db.Team) http.Handler {
 
 		w.WriteHeader(http.StatusCreated)
 
-		json.NewEncoder(w).Encode(present.WorkerArtifact(artifact))
+		json.NewEncoder(w).Encode(present.WorkerArtifact(artifact.DBArtifact()))
 	})
 }

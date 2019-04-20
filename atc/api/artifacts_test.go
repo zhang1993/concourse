@@ -76,7 +76,7 @@ var _ = Describe("Artifacts API", func() {
 
 			Context("when creating an artifact fails", func() {
 				BeforeEach(func() {
-					fakeWorkerClient.CreateArtifactReturns(nil, nil, errors.New("nope"))
+					fakeWorkerClient.CreateArtifactReturns(nil, errors.New("nope"))
 				})
 
 				It("returns 500 InternalServerError", func() {
@@ -86,16 +86,20 @@ var _ = Describe("Artifacts API", func() {
 
 			Context("when creating an artifact succeeds", func() {
 				var (
-					fakeVolume   *workerfakes.FakeVolume
-					fakeArtifact *dbfakes.FakeWorkerArtifact
+					fakeVolume         *workerfakes.FakeVolume
+					fakeWorkerArtifact *workerfakes.FakeArtifact
+					fakeDBArtifact *dbfakes.FakeWorkerArtifact
 				)
 
 				BeforeEach(func() {
-					fakeArtifact = new(dbfakes.FakeWorkerArtifact)
+					fakeWorkerArtifact = new(workerfakes.FakeArtifact)
+					fakeDBArtifact = new(dbfakes.FakeWorkerArtifact)
 					fakeVolume = new(workerfakes.FakeVolume)
+					fakeWorkerArtifact.DBArtifactReturns(fakeDBArtifact)
+					fakeWorkerArtifact.VolumeReturns(fakeVolume)
 
-					fakeWorkerClient.CreateArtifactReturns(fakeArtifact, fakeVolume, nil)
-					fakeArtifact.CreatedAtReturns(time.Unix(42, 0))
+					fakeWorkerClient.CreateArtifactReturns(fakeWorkerArtifact, nil)
+					fakeDBArtifact.CreatedAtReturns(time.Unix(42, 0))
 				})
 
 				It("creates the artifact using the worker client", func() {
@@ -155,8 +159,7 @@ var _ = Describe("Artifacts API", func() {
 									"id": 0,
 									"name": "",
 									"build_id": 0,
-									"created_at": 42,
-									"worker_name": ""
+									"created_at": 42
 								}`))
 							})
 						})
