@@ -100,7 +100,6 @@ func (w workerHelper) createGardenContainer(
 	})
 }
 
-
 func (w workerHelper) constructGardenWorkerContainer(
 	logger lager.Logger,
 	createdContainer db.CreatedContainer,
