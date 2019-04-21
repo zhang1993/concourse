@@ -10,21 +10,6 @@ import (
 )
 
 type FakePool struct {
-	CreateArtifactStub        func(lager.Logger, int, string) (worker.Artifact, error)
-	createArtifactMutex       sync.RWMutex
-	createArtifactArgsForCall []struct {
-		arg1 lager.Logger
-		arg2 int
-		arg3 string
-	}
-	createArtifactReturns struct {
-		result1 worker.Artifact
-		result2 error
-	}
-	createArtifactReturnsOnCall map[int]struct {
-		result1 worker.Artifact
-		result2 error
-	}
 	FindOrChooseWorkerStub        func(lager.Logger, worker.WorkerSpec) (worker.Worker, error)
 	findOrChooseWorkerMutex       sync.RWMutex
 	findOrChooseWorkerArgsForCall []struct {
@@ -58,71 +43,6 @@ type FakePool struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakePool) CreateArtifact(arg1 lager.Logger, arg2 int, arg3 string) (worker.Artifact, error) {
-	fake.createArtifactMutex.Lock()
-	ret, specificReturn := fake.createArtifactReturnsOnCall[len(fake.createArtifactArgsForCall)]
-	fake.createArtifactArgsForCall = append(fake.createArtifactArgsForCall, struct {
-		arg1 lager.Logger
-		arg2 int
-		arg3 string
-	}{arg1, arg2, arg3})
-	fake.recordInvocation("CreateArtifact", []interface{}{arg1, arg2, arg3})
-	fake.createArtifactMutex.Unlock()
-	if fake.CreateArtifactStub != nil {
-		return fake.CreateArtifactStub(arg1, arg2, arg3)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	fakeReturns := fake.createArtifactReturns
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakePool) CreateArtifactCallCount() int {
-	fake.createArtifactMutex.RLock()
-	defer fake.createArtifactMutex.RUnlock()
-	return len(fake.createArtifactArgsForCall)
-}
-
-func (fake *FakePool) CreateArtifactCalls(stub func(lager.Logger, int, string) (worker.Artifact, error)) {
-	fake.createArtifactMutex.Lock()
-	defer fake.createArtifactMutex.Unlock()
-	fake.CreateArtifactStub = stub
-}
-
-func (fake *FakePool) CreateArtifactArgsForCall(i int) (lager.Logger, int, string) {
-	fake.createArtifactMutex.RLock()
-	defer fake.createArtifactMutex.RUnlock()
-	argsForCall := fake.createArtifactArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
-}
-
-func (fake *FakePool) CreateArtifactReturns(result1 worker.Artifact, result2 error) {
-	fake.createArtifactMutex.Lock()
-	defer fake.createArtifactMutex.Unlock()
-	fake.CreateArtifactStub = nil
-	fake.createArtifactReturns = struct {
-		result1 worker.Artifact
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakePool) CreateArtifactReturnsOnCall(i int, result1 worker.Artifact, result2 error) {
-	fake.createArtifactMutex.Lock()
-	defer fake.createArtifactMutex.Unlock()
-	fake.CreateArtifactStub = nil
-	if fake.createArtifactReturnsOnCall == nil {
-		fake.createArtifactReturnsOnCall = make(map[int]struct {
-			result1 worker.Artifact
-			result2 error
-		})
-	}
-	fake.createArtifactReturnsOnCall[i] = struct {
-		result1 worker.Artifact
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *FakePool) FindOrChooseWorker(arg1 lager.Logger, arg2 worker.WorkerSpec) (worker.Worker, error) {
@@ -259,8 +179,6 @@ func (fake *FakePool) FindOrChooseWorkerForContainerReturnsOnCall(i int, result1
 func (fake *FakePool) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createArtifactMutex.RLock()
-	defer fake.createArtifactMutex.RUnlock()
 	fake.findOrChooseWorkerMutex.RLock()
 	defer fake.findOrChooseWorkerMutex.RUnlock()
 	fake.findOrChooseWorkerForContainerMutex.RLock()

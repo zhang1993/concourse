@@ -25,6 +25,7 @@ type dbWorkerProvider struct {
 	dbWorkerBaseResourceTypeFactory   db.WorkerBaseResourceTypeFactory
 	dbWorkerTaskCacheFactory          db.WorkerTaskCacheFactory
 	dbVolumeRepository                db.VolumeRepository
+	dbArtifactProvider                db.ArtifactProvider
 	dbTeamFactory                     db.TeamFactory
 	dbWorkerFactory                   db.WorkerFactory
 	workerVersion                     version.Version
@@ -40,6 +41,7 @@ func NewDBWorkerProvider(
 	dbWorkerBaseResourceTypeFactory db.WorkerBaseResourceTypeFactory,
 	dbWorkerTaskCacheFactory db.WorkerTaskCacheFactory,
 	dbVolumeRepository db.VolumeRepository,
+	dbArtifactProvider db.ArtifactProvider,
 	dbTeamFactory db.TeamFactory,
 	workerFactory db.WorkerFactory,
 	workerVersion version.Version,
@@ -54,6 +56,7 @@ func NewDBWorkerProvider(
 		dbWorkerBaseResourceTypeFactory:   dbWorkerBaseResourceTypeFactory,
 		dbWorkerTaskCacheFactory:          dbWorkerTaskCacheFactory,
 		dbVolumeRepository:                dbVolumeRepository,
+		dbArtifactProvider:                dbArtifactProvider,
 		dbTeamFactory:                     dbTeamFactory,
 		dbWorkerFactory:                   workerFactory,
 		workerVersion:                     workerVersion,
@@ -202,6 +205,7 @@ func (provider *dbWorkerProvider) NewGardenWorker(logger lager.Logger, tikTok cl
 		gClient,
 		provider.dbVolumeRepository,
 		volumeClient,
+		provider.dbArtifactProvider,
 		provider.imageFactory,
 		provider.dbTeamFactory,
 		savedWorker,

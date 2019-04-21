@@ -32,6 +32,7 @@ var _ = Describe("Worker", func() {
 	var (
 		logger                    *lagertest.TestLogger
 		fakeVolumeClient          *workerfakes.FakeVolumeClient
+		fakeArtifactProvider	*dbfakes.FakeArtifactProvider
 		activeContainers          int
 		resourceTypes             []atc.WorkerResourceType
 		platform                  string
@@ -103,6 +104,7 @@ var _ = Describe("Worker", func() {
 		fakeImageFactory = new(workerfakes.FakeImageFactory)
 		fakeImage = new(workerfakes.FakeImage)
 		fakeImageFactory.GetImageReturns(fakeImage, nil)
+		fakeArtifactProvider = new(dbfakes.FakeArtifactProvider)
 
 		fakeCreatingContainer = new(dbfakes.FakeCreatingContainer)
 		fakeCreatingContainer.HandleReturns("some-handle")
@@ -277,6 +279,7 @@ var _ = Describe("Worker", func() {
 			fakeGardenClient,
 			fakeDBVolumeRepository,
 			fakeVolumeClient,
+			fakeArtifactProvider,
 			fakeImageFactory,
 			fakeDBTeamFactory,
 			dbWorker,

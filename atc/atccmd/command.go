@@ -530,13 +530,14 @@ func (cmd *RunCommand) constructAPIMembers(
 		dbWorkerBaseResourceTypeFactory,
 		dbWorkerTaskCacheFactory,
 		dbVolumeRepository,
+		dbArtifactLifecycle,
 		teamFactory,
 		dbWorkerFactory,
 		workerVersion,
 		cmd.BaggageclaimResponseHeaderTimeout,
 	)
 
-	pool := worker.NewPool(workerProvider, dbArtifactLifecycle)
+	pool := worker.NewPool(workerProvider)
 	workerClient := worker.NewClient(pool, workerProvider)
 
 	checkContainerStrategy := worker.NewRandomPlacementStrategy()
@@ -707,13 +708,14 @@ func (cmd *RunCommand) constructBackendMembers(
 		dbWorkerBaseResourceTypeFactory,
 		dbWorkerTaskCacheFactory,
 		dbVolumeRepository,
+		dbArtifactLifecycle,
 		teamFactory,
 		dbWorkerFactory,
 		workerVersion,
 		cmd.BaggageclaimResponseHeaderTimeout,
 	)
 
-	pool := worker.NewPool(workerProvider, dbArtifactLifecycle)
+	pool := worker.NewPool(workerProvider)
 	workerClient := worker.NewClient(pool, workerProvider)
 
 	defaultLimits, err := cmd.parseDefaultLimits()

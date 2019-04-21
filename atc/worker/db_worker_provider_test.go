@@ -47,6 +47,7 @@ var _ = Describe("DBProvider", func() {
 		fakeImageFactory                    *workerfakes.FakeImageFactory
 		fakeImageFetchingDelegate           *workerfakes.FakeImageFetchingDelegate
 		fakeDBVolumeRepository              *dbfakes.FakeVolumeRepository
+		fakeArtifactProvider	            *dbfakes.FakeArtifactProvider
 		fakeDBWorkerFactory                 *dbfakes.FakeWorkerFactory
 		fakeDBTeamFactory                   *dbfakes.FakeTeamFactory
 		fakeDBWorkerBaseResourceTypeFactory *dbfakes.FakeWorkerBaseResourceTypeFactory
@@ -142,6 +143,7 @@ var _ = Describe("DBProvider", func() {
 		fakeDBTeam.IDReturns(1)
 		fakeDBTeamFactory.GetByIDReturns(fakeDBTeam)
 		fakeDBVolumeRepository = new(dbfakes.FakeVolumeRepository)
+		fakeArtifactProvider = new(dbfakes.FakeArtifactProvider)
 
 		fakeBackOffFactory := new(retryhttpfakes.FakeBackOffFactory)
 		fakeBackOff := new(retryhttpfakes.FakeBackOff)
@@ -169,6 +171,7 @@ var _ = Describe("DBProvider", func() {
 			fakeDBWorkerBaseResourceTypeFactory,
 			fakeDBWorkerTaskCacheFactory,
 			fakeDBVolumeRepository,
+			fakeArtifactProvider,
 			fakeDBTeamFactory,
 			fakeDBWorkerFactory,
 			wantWorkerVersion,

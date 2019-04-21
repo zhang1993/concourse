@@ -56,18 +56,20 @@ type Worker interface {
 
 	CertsVolume(lager.Logger) (volume Volume, found bool, err error)
 	LookupVolume(lager.Logger, string) (Volume, bool, error)
+	CreateArtifact(lager.Logger, string) (db.WorkerArtifact, error)
 	CreateVolumeForArtifact(logger lager.Logger, teamID int, artifactID int) (Volume, error)
 
 	GardenClient() garden.Client
 }
 
 type gardenWorker struct {
-	gardenClient    garden.Client
-	volumeClient    VolumeClient
-	imageFactory    ImageFactory
-	dbWorker        db.Worker
-	buildContainers int
-	helper          workerHelper
+	gardenClient     garden.Client
+	volumeClient     VolumeClient
+	artifactProvider db.ArtifactProvider
+	imageFactory     ImageFactory
+	dbWorker         db.Worker
+	buildContainers  int
+	helper           workerHelper
 }
 
 // NewGardenWorker constructs a Worker using the gardenWorker runtime implementation and allows container and volume
@@ -77,13 +79,14 @@ func NewGardenWorker(
 	gardenClient garden.Client,
 	volumeRepository db.VolumeRepository,
 	volumeClient VolumeClient,
+	artifactProvider db.ArtifactProvider,
 	imageFactory ImageFactory,
 	dbTeamFactory db.TeamFactory,
 	dbWorker db.Worker,
 	numBuildContainers int,
-	// TODO: numBuildContainers is only needed for placement strategy but this
-	// method is called in ContainerProvider.FindOrCreateContainer as well and
-	// hence we pass in 0 values for numBuildContainers everywhere.
+// TODO: numBuildContainers is only needed for placement strategy but this
+// method is called in ContainerProvider.FindOrCreateContainer as well and
+// hence we pass in 0 values for numBuildContainers everywhere.
 ) Worker {
 	workerHelper := workerHelper{
 		gardenClient:  gardenClient,
@@ -94,12 +97,13 @@ func NewGardenWorker(
 	}
 
 	return &gardenWorker{
-		gardenClient:    gardenClient,
-		volumeClient:    volumeClient,
-		imageFactory:    imageFactory,
-		dbWorker:        dbWorker,
-		buildContainers: numBuildContainers,
-		helper:          workerHelper,
+		gardenClient:     gardenClient,
+		volumeClient:     volumeClient,
+		artifactProvider: artifactProvider,
+		imageFactory:     imageFactory,
+		dbWorker:         dbWorker,
+		buildContainers:  numBuildContainers,
+		helper:           workerHelper,
 	}
 }
 
@@ -163,6 +167,15 @@ func (worker *gardenWorker) CertsVolume(logger lager.Logger) (Volume, bool, erro
 
 func (worker *gardenWorker) LookupVolume(logger lager.Logger, handle string) (Volume, bool, error) {
 	return worker.volumeClient.LookupVolume(logger, handle)
+}
+
+func (worker *gardenWorker) CreateArtifact(logger lager.Logger, artifactName string) (db.WorkerArtifact, error) {
+	dbArtifact, err := worker.artifactProvider.CreateArtifact(artifactName)
+	if err != nil {
+		logger.Error("failed-to-create-artifact", err, lager.Data{"name": artifactName})
+		return nil, err
+	}
+	return dbArtifact, nil
 }
 
 func (worker *gardenWorker) CreateVolumeForArtifact(logger lager.Logger, teamID int, artifactID int) (Volume, error) {

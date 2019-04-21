@@ -11,14 +11,13 @@ import (
 type Client interface {
 	FindContainer(logger lager.Logger, teamID int, handle string) (Container, bool, error)
 	FindVolume(logger lager.Logger, teamID int, handle string) (Volume, bool, error)
-	// CreateArtifact(logger lager.Logger, teamID int, name string) (Artifact, error)
+	CreateArtifact(logger lager.Logger, teamID int, name string) (Artifact, error)
 }
 
 func NewClient(pool Pool, provider WorkerProvider) *client {
 	return &client{
 		pool:     pool,
 		provider: provider,
-		artifactProvider:artifactProvider
 	}
 }
 
@@ -63,9 +62,23 @@ func (client *client) FindVolume(logger lager.Logger, teamID int, handle string)
 	return worker.LookupVolume(logger, handle)
 }
 
-// func (client *client) CreateArtifact(logger lager.Logger, teamID int, name string) (Artifact, error) {
-// 	return client.pool.CreateArtifact(logger.Session("create-artifact"), teamID, name)
-// }
+func (client *client) CreateArtifact(logger lager.Logger, teamID int, name string) (Artifact, error) {
+	worker, err := client.pool.FindOrChooseWorker(logger, WorkerSpec{TeamID: teamID})
+	if err != nil {
+		return nil, err
+	}
+
+	artifact, err := worker.CreateArtifact(logger, name)
+	if err != nil {
+		return nil, err
+	}
+
+	volume, err := worker.CreateVolumeForArtifact(logger, teamID, artifact.ID())
+	if err != nil {
+		return nil, err
+	}
+	return NewArtifact(artifact, volume), nil
+}
 
 func doRunStep() {
 	// create any artifacts from the resource type ( for a get step )
