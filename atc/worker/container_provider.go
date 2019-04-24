@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -360,6 +361,8 @@ func (p *containerProvider) createGardenContainer(
 
 	inputDestinationPaths := make(map[string]bool)
 
+	var streamingWaiter sync.WaitGroup
+	streamErrs := make(chan error, 1)
 	for _, inputSource := range spec.Inputs {
 		var inputVolume Volume
 
@@ -404,10 +407,17 @@ func (p *containerProvider) createGardenContainer(
 				"dest-volume": inputVolume.Handle(),
 				"dest-worker": inputVolume.WorkerName(),
 			}
-			err = inputSource.Source().StreamTo(logger.Session("stream-to", destData), inputVolume)
-			if err != nil {
-				return nil, err
-			}
+
+			go func() {
+				streamingWaiter.Add(1)
+
+				err = inputSource.Source().StreamTo(logger.Session("stream-to", destData), inputVolume)
+				if err != nil {
+					streamErrs <- err
+				}
+
+				streamingWaiter.Done()
+			}()
 		}
 
 		ioVolumeMounts = append(ioVolumeMounts, VolumeMount{
@@ -416,6 +426,12 @@ func (p *containerProvider) createGardenContainer(
 		})
 
 		inputDestinationPaths[cleanedInputPath] = true
+	}
+
+	streamingWaiter.Wait()
+	select {
+	case err = <-streamErrs:
+		return nil, err
 	}
 
 	for _, outputPath := range spec.Outputs {
