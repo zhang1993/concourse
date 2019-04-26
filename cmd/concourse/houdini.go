@@ -19,7 +19,7 @@ func (cmd *WorkerCommand) houdiniRunner(logger lager.Logger) (ifrit.Runner, erro
 		return nil, fmt.Errorf("failed to create depot dir: %s", err)
 	}
 
-	backend := houdini.NewBackend(depotDir)
+	backend := houdini.NewBackend(depotDir, cmd.Garden.UseHoudiniPrivileged)
 
 	server := server.New(
 		"tcp",

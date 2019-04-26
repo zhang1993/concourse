@@ -26,7 +26,8 @@ type Certs struct {
 }
 
 type GardenBackend struct {
-	UseHoudini bool `long:"use-houdini" description:"Use the insecure Houdini Garden backend."`
+	UseHoudini           bool `long:"use-houdini" description:"Use the insecure Houdini Garden backend."`
+	UseHoudiniPrivileged bool `long:"use-houdini-privileged" description:"Will houdini run as privileged user?"`
 
 	GDN          string    `long:"bin"    default:"gdn" description:"Path to 'gdn' executable (or leave as 'gdn' to find it in $PATH)."`
 	GardenConfig flag.File `long:"config"               description:"Path to a config file to use for Garden. You can also specify Garden flags as env vars, e.g. 'CONCOURSE_GARDEN_FOO_BAR=a,b' for '--foo-bar a --foo-bar b'."`
