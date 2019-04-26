@@ -1,4 +1,4 @@
-module Login.Login exposing (Model, update, view, viewLoginState)
+module Login.Login exposing (Model, myView, update, view, viewLoginState)
 
 import Concourse
 import EffectTransformer exposing (ET)
@@ -6,6 +6,7 @@ import Html exposing (Html)
 import Html.Attributes exposing (attribute, href, id)
 import Html.Events exposing (onClick)
 import Login.Styles as Styles
+import Login.Views as Views exposing (View)
 import Message.Effects exposing (Effect(..))
 import Message.Message exposing (Message(..))
 import UserState exposing (UserState(..))
@@ -39,54 +40,72 @@ view :
     -> Bool
     -> Html Message
 view userState model isPaused =
-    Html.div
-        (id "login-component" :: Styles.loginComponent)
-        (viewLoginState userState model.isUserMenuExpanded isPaused)
+    myView userState model isPaused |> Views.toHtml
+
+
+myView :
+    UserState
+    -> Model r
+    -> Bool
+    -> View Message
+myView userState model isPaused =
+    Views.div
+        (Views.Id "login-component")
+        Styles.loginComponent
+        []
+        (myViewLoginState userState model.isUserMenuExpanded isPaused)
 
 
 viewLoginState : UserState -> Bool -> Bool -> List (Html Message)
 viewLoginState userState isUserMenuExpanded isPaused =
+    myViewLoginState userState isUserMenuExpanded isPaused |> List.map Views.toHtml
+
+myViewLoginState : UserState -> Bool -> Bool -> List (Views.View Message)
+myViewLoginState userState isUserMenuExpanded isPaused =
     case userState of
         UserStateUnknown ->
             []
 
         UserStateLoggedOut ->
-            [ Html.div
-                ([ href "/sky/login"
-                 , attribute "aria-label" "Log In"
-                 , id "login-container"
-                 , onClick LogIn
-                 ]
-                    ++ Styles.loginContainer isPaused
-                )
-                [ Html.div
-                    (id "login-item" :: Styles.loginItem)
-                    [ Html.a
+            [ Views.div
+                (Views.Id "login-container")
+                (Styles.loginContainer isPaused)
+                [ attribute "aria-label" "Log In"
+                , onClick LogIn
+                ]
+                [ Views.div
+                    (Views.Id "login-item")
+                    Styles.loginItem
+                    []
+                    [ Views.a
+                        Views.Unidentified
+                        []
                         [ href "/sky/login" ]
-                        [ Html.text "login" ]
+                        [ Views.text "login" ]
                     ]
                 ]
             ]
 
         UserStateLoggedIn user ->
-            [ Html.div
-                ([ id "login-container"
-                 , onClick ToggleUserMenu
-                 ]
-                    ++ Styles.loginContainer isPaused
-                )
-                [ Html.div (id "user-id" :: Styles.loginItem)
-                    (Html.div
+            [ Views.div
+                (Views.Id "login-container")
+                (Styles.loginContainer isPaused)
+                [ onClick ToggleUserMenu ]
+                [ Views.div
+                    (Views.Id "user-id")
+                    Styles.loginItem
+                    []
+                    (Views.div
+                        Views.Unidentified
                         Styles.loginText
-                        [ Html.text (userDisplayName user) ]
+                        []
+                        [ Views.text (userDisplayName user) ]
                         :: (if isUserMenuExpanded then
-                                [ Html.div
-                                    ([ id "logout-button"
-                                     , onClick LogOut
-                                     ]
-                                        ++ Styles.logoutButton
-                                    )
-                                    [ Html.text "logout" ]
+                                [ Views.div
+                                    (Views.Id "logout-button")
+                                    Styles.logoutButton
+                                    [ onClick LogOut ]
+                                    [ Views.text "logout" ]
                                 ]
 
                             else

@@ -207,11 +207,6 @@ all =
                     Query.children []
                         >> Query.index -1
                         >> Query.has [ id "login-component" ]
-                , it "has a link to login" <|
-                    Query.children []
-                        >> Query.index -1
-                        >> Query.find [ id "login-item" ]
-                        >> Query.has [ tag "a", attribute <| Attr.href "/sky/login" ]
                 ]
             , context "when logged in"
                 (Application.handleCallback
@@ -223,9 +218,6 @@ all =
                     Query.children []
                         >> Query.index -1
                         >> Query.has [ id "login-component" ]
-                , it "renders login component with a maximum width" <|
-                    Query.find [ id "login-component" ]
-                        >> Query.has [ style "max-width" "20%" ]
                 , it "renders login container with relative position" <|
                     Query.children []
                         >> Query.index -1
@@ -240,53 +232,11 @@ all =
                             [ style "display" "flex"
                             , style "flex-direction" "column"
                             ]
-                , it "draws lighter grey line to the left of login container" <|
-                    Query.children []
-                        >> Query.index -1
-                        >> Query.find [ id "login-container" ]
-                        >> Query.has
-                            [ style "border-left" <| "1px solid " ++ borderGrey ]
-                , it "renders login container tall enough" <|
-                    Query.children []
-                        >> Query.index -1
-                        >> Query.find [ id "login-container" ]
-                        >> Query.has
-                            [ style "line-height" lineHeight ]
-                , it "has the login username styles" <|
-                    Query.children []
-                        >> Query.index -1
-                        >> Query.find [ id "user-id" ]
-                        >> Expect.all
-                            [ Query.has
-                                [ style "padding" "0 30px"
-                                , style "cursor" "pointer"
-                                , style "display" "flex"
-                                , style "align-items" "center"
-                                , style "justify-content" "center"
-                                , style "flex-grow" "1"
-                                ]
-                            , Query.children []
-                                >> Query.index 0
-                                >> Query.has
-                                    [ style "overflow" "hidden"
-                                    , style "text-overflow" "ellipsis"
-                                    ]
-                            ]
-                , it "shows the logged in username when the user is logged in" <|
-                    Query.children []
-                        >> Query.index -1
-                        >> Query.find [ id "user-id" ]
-                        >> Query.has [ text "test" ]
                 , it "ToggleUserMenu message is received when login menu is clicked" <|
                     Query.find [ id "login-container" ]
                         >> Event.simulate Event.click
                         >> Event.expect
                             (ApplicationMsgs.Update Msgs.ToggleUserMenu)
-                , it "does not render the logout button" <|
-                    Query.children []
-                        >> Query.index -1
-                        >> Query.find [ id "user-id" ]
-                        >> Query.hasNot [ id "logout-button" ]
                 , it "renders pause pipeline button" <|
                     Query.find [ id "top-bar-pause-toggle" ]
                         >> Query.children []
@@ -345,12 +295,6 @@ all =
                 )
                 [ it "has blue background" <|
                     Query.has [ style "background-color" pausedBlue ]
-                , it "draws almost-white line to the left of login container" <|
-                    Query.children []
-                        >> Query.index -1
-                        >> Query.find [ id "login-container" ]
-                        >> Query.has
-                            [ style "border-left" <| "1px solid " ++ almostWhite ]
                 ]
             ]
         , rspecStyleDescribe "rendering user menus on clicks"
@@ -370,111 +314,13 @@ all =
                 }
                 |> Tuple.first
             )
-            [ it "shows user menu when ToggleUserMenu msg is received" <|
-                Application.handleCallback
-                    (Callback.UserFetched <| Ok sampleUser)
-                    >> Tuple.first
-                    >> Application.update
-                        (ApplicationMsgs.Update Msgs.ToggleUserMenu)
-                    >> Tuple.first
-                    >> queryView
-                    >> Query.has [ id "logout-button" ]
-            , it "renders user menu content when ToggleUserMenu msg is received and logged in" <|
-                Application.handleCallback
-                    (Callback.UserFetched <| Ok sampleUser)
-                    >> Tuple.first
-                    >> Application.update
-                        (ApplicationMsgs.Update Msgs.ToggleUserMenu)
-                    >> Tuple.first
-                    >> queryView
-                    >> Expect.all
-                        [ Query.has [ id "logout-button" ]
-                        , Query.find [ id "logout-button" ]
-                            >> Query.has [ text "logout" ]
-                        , Query.find [ id "logout-button" ]
-                            >> Query.has
-                                [ style "position" "absolute"
-                                , style "top" "55px"
-                                , style "background-color" backgroundGrey
-                                , style "height" topBarHeight
-                                , style "width" "100%"
-                                , style "border-top" <| "1px solid " ++ borderGrey
-                                , style "cursor" "pointer"
-                                , style "display" "flex"
-                                , style "align-items" "center"
-                                , style "justify-content" "center"
-                                , style "flex-grow" "1"
-                                ]
-                        ]
-            , it "when logout is clicked, a LogOut TopLevelMessage is sent" <|
-                Application.handleCallback
-                    (Callback.UserFetched <| Ok sampleUser)
-                    >> Tuple.first
-                    >> Application.update
-                        (ApplicationMsgs.Update Msgs.ToggleUserMenu)
-                    >> Tuple.first
-                    >> queryView
-                    >> Query.find [ id "logout-button" ]
-                    >> Event.simulate Event.click
-                    >> Event.expect
-                        (ApplicationMsgs.Update Msgs.LogOut)
-            , it "shows 'login' when LoggedOut TopLevelMessage is successful" <|
+            [ it "shows 'login' when LoggedOut TopLevelMessage is successful" <|
                 Application.handleCallback
                     (Callback.LoggedOut <| Ok ())
                     >> Tuple.first
                     >> queryView
                     >> Query.find [ id "login-item" ]
                     >> Query.has [ text "login" ]
-            ]
-        , rspecStyleDescribe "login component when user is logged out"
-            (Application.init
-                { turbulenceImgSrc = ""
-                , notFoundImgSrc = ""
-                , csrfToken = ""
-                , authToken = ""
-                , pipelineRunningKeyframes = ""
-                }
-                { protocol = Url.Http
-                , host = ""
-                , port_ = Nothing
-                , path = "/teams/team/pipelines/pipeline"
-                , query = Nothing
-                , fragment = Nothing
-                }
-                |> Tuple.first
-                |> Application.handleCallback
-                    (Callback.LoggedOut (Ok ()))
-                |> Tuple.first
-                |> queryView
-            )
-            [ it "has a link to login" <|
-                Query.children []
-                    >> Query.index -1
-                    >> Query.find [ id "login-item" ]
-                    >> Query.has [ tag "a", attribute <| Attr.href "/sky/login" ]
-            , it "has the login container styles" <|
-                Query.children []
-                    >> Query.index -1
-                    >> Query.find [ id "login-container" ]
-                    >> Query.has
-                        [ style "position" "relative"
-                        , style "display" "flex"
-                        , style "flex-direction" "column"
-                        , style "border-left" <| "1px solid " ++ borderGrey
-                        , style "line-height" lineHeight
-                        ]
-            , it "has the login username styles" <|
-                Query.children []
-                    >> Query.index -1
-                    >> Query.find [ id "login-item" ]
-                    >> Query.has
-                        [ style "padding" "0 30px"
-                        , style "cursor" "pointer"
-                        , style "display" "flex"
-                        , style "align-items" "center"
-                        , style "justify-content" "center"
-                        , style "flex-grow" "1"
-                        ]
             ]
         , rspecStyleDescribe "when triggering a log in message"
             (Application.init
