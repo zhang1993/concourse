@@ -7,6 +7,8 @@ module Views.Styles exposing
     , pageHeaderHeight
     , pageIncludingTopBar
     , pauseToggleIcon
+    , pipelinePageIncludingTopBar
+    , pipelineTopBar
     , topBar
     )
 
@@ -14,6 +16,7 @@ import Colors
 import Html
 import Html.Attributes exposing (style)
 import Routes
+import Views.Views as Views
 
 
 pageHeaderHeight : Float
@@ -26,6 +29,14 @@ pageIncludingTopBar =
     [ style "-webkit-font-smoothing" "antialiased"
     , style "font-weight" "700"
     , style "height" "100%"
+    ]
+
+
+pipelinePageIncludingTopBar : List Views.Style
+pipelinePageIncludingTopBar =
+    [ Views.style "-webkit-font-smoothing" "antialiased"
+    , Views.style "font-weight" "700"
+    , Views.style "height" "100%"
     ]
 
 
@@ -59,6 +70,24 @@ topBar isPaused =
     , style "justify-content" "space-between"
     , style "font-weight" "700"
     , style "background-color" <|
+        if isPaused then
+            Colors.paused
+
+        else
+            Colors.frame
+    ]
+
+
+pipelineTopBar : Bool -> List Views.Style
+pipelineTopBar isPaused =
+    [ Views.style "position" "fixed"
+    , Views.style "top" "0"
+    , Views.style "width" "100%"
+    , Views.style "z-index" "999"
+    , Views.style "display" "flex"
+    , Views.style "justify-content" "space-between"
+    , Views.style "font-weight" "700"
+    , Views.style "background-color" <|
         if isPaused then
             Colors.paused
 

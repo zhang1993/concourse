@@ -6,7 +6,7 @@ import Expect
 import Html.Attributes exposing (href)
 import Html.Events exposing (onClick)
 import Login.Login as Login
-import Login.Views as Views
+import Views.Views as Views
 import Message.Message as Message
 import Test exposing (Test, describe, test)
 import Test.Html.Event as Event

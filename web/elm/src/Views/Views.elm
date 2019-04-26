@@ -1,4 +1,4 @@
-module Login.Views exposing
+module Views.Views exposing
     ( Identifier(..)
     , NodeType(..)
     , Style
@@ -9,10 +9,15 @@ module Login.Views exposing
     , find
     , getStyle
     , hasAttribute
+    , li
     , nodeType
     , style
+    , table
+    , td
     , text
     , toHtml
+    , tr
+    , ul
     )
 
 import Html
@@ -27,6 +32,11 @@ type View msg
 type NodeType
     = Div
     | A
+    | Ul
+    | Li
+    | Table
+    | Tr
+    | Td
     | Text String
 
 
@@ -42,6 +52,31 @@ type Style
 div : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
 div id styles children =
     View id Div styles children
+
+
+ul : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+ul id styles children =
+    View id Ul styles children
+
+
+li : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+li id styles children =
+    View id Li styles children
+
+
+table : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+table id styles children =
+    View id Table styles children
+
+
+tr : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+tr id styles children =
+    View id Tr styles children
+
+
+td : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+td id styles children =
+    View id Td styles children
 
 
 a : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
@@ -85,6 +120,31 @@ toHtml (View identifier nt styles attributes children) =
 
         A ->
             Html.a
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Ul ->
+            Html.ul
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Li ->
+            Html.li
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Table ->
+            Html.table
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Tr ->
+            Html.tr
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Td ->
+            Html.td
                 (idAttrs ++ List.map toAttr styles ++ attributes)
                 (List.map toHtml children)
 

@@ -51,6 +51,7 @@ import UserState exposing (UserState)
 import Views.PauseToggle as PauseToggle
 import Views.Styles
 import Views.TopBar as TopBar
+import Views.Views as Views
 
 
 type alias Model =
@@ -384,9 +385,19 @@ documentTitle model =
 
 view : UserState -> Model -> Html Message
 view userState model =
-    Html.div [ Html.Attributes.style "height" "100%" ]
-        [ Html.div
-            (id "page-including-top-bar" :: Views.Styles.pageIncludingTopBar)
+    myView userState model |> Views.toHtml
+
+
+myView : UserState -> Model -> Views.View Message
+myView userState model =
+    Views.div
+        Views.Unidentified
+        [ Views.style "height" "100%" ]
+        []
+        [ Views.div
+            (Views.Id "page-including-top-bar")
+            Views.Styles.pipelinePageIncludingTopBar
+            []
             [ if model.screenSize == Phone then
                 topBarPhone userState model
 
@@ -410,19 +421,19 @@ view userState model =
         ]
 
 
-topBarPhone : UserState -> Model -> Html Message
+topBarPhone : UserState -> Model -> Views.View Message
 topBarPhone userState model =
-    Html.div
-        (id "top-bar-app"
-            :: (Views.Styles.topBar <|
-                    isPaused model.pipeline
-               )
-            ++ [ style "flex-direction" "column" ]
+    Views.div
+        (Views.Id "top-bar-app")
+        ((Views.Styles.pipelineTopBar <| isPaused model.pipeline)
+            ++ [ Views.style "flex-direction" "column" ]
         )
-        [ Html.div
-            [ style "display" "flex"
-            , style "justify-content" "space-between"
-            , style "border-bottom" <|
+        []
+        [ Views.div
+            Views.Unidentified
+            [ Views.style "display" "flex"
+            , Views.style "justify-content" "space-between"
+            , Views.style "border-bottom" <|
                 "1px solid "
                     ++ (if isPaused model.pipeline then
                             Colors.pausedTopbarSeparator
@@ -431,36 +442,53 @@ topBarPhone userState model =
                             Colors.background
                        )
             ]
-            [ TopBar.concourseLogo
-            , Html.div
-                [ id "login-component", style "max-width" "100%" ]
-                (Login.viewLoginState
+            []
+            [ Views.a Views.Unidentified
+                [ Views.style "background-image" "url(/public/images/concourse-logo-white.svg)"
+                , Views.style "background-position" "50% 50%"
+                , Views.style "background-repeat" "no-repeat"
+                , Views.style "background-size" "42px 42px"
+                , Views.style "width" "54px"
+                , Views.style "height" "54px"
+                ]
+                [ href "/" ]
+                []
+            , Views.div
+                (Views.Id "login-component")
+                [ Views.style "max-width" "100%" ]
+                []
+                (Login.myViewLoginState
                     userState
                     model.isUserMenuExpanded
                     (isPaused model.pipeline)
                 )
             ]
-        , Html.div
-            [ style "display" "flex"
-            , style "justify-content" "space-between"
+        , Views.div
+            Views.Unidentified
+            [ Views.style "display" "flex"
+            , Views.style "justify-content" "space-between"
             ]
-            [ Html.div
-                [ style "font-size" "18px"
-                , style "padding" "15px"
-                , style "text-overflow" "ellipsis"
-                , style "overflow" "hidden"
-                , style "white-space" "nowrap"
+            []
+            [ Views.div
+                Views.Unidentified
+                [ Views.style "font-size" "18px"
+                , Views.style "padding" "15px"
+                , Views.style "text-overflow" "ellipsis"
+                , Views.style "overflow" "hidden"
+                , Views.style "white-space" "nowrap"
                 ]
-                [ Html.text
+                []
+                [ Views.text
                     (model.pipeline
                         |> RemoteData.map .name
                         |> RemoteData.withDefault
                             model.pipelineLocator.pipelineName
                     )
                 ]
-            , Html.div
-                [ style "display" "flex"
-                , style "border-left" <|
+            , Views.div
+                Views.Unidentified
+                [ Views.style "display" "flex"
+                , Views.style "border-left" <|
                     "1px solid "
                         ++ (if isPaused model.pipeline then
                                 Colors.pausedTopbarSeparator
@@ -469,36 +497,40 @@ topBarPhone userState model =
                                 Colors.background
                            )
                 ]
-                [ Html.div
-                    ([ id "pin-icon"
-                     , style "position" "relative"
-                     , style "margin" "8.5px"
+                []
+                [ Views.div
+                    (Views.Id "pin-icon")
+                    ([ Views.style "position" "relative"
+                     , Views.style "margin" "8.5px"
                      ]
                         ++ (if model.hovered == Just PinIcon then
-                                [ style "background-color" Colors.pinHighlight
-                                , style "border-radius" "50%"
+                                [ Views.style "background-color" Colors.pinHighlight
+                                , Views.style "border-radius" "50%"
                                 ]
 
                             else
                                 []
                            )
                     )
+                    []
                   <|
                     let
                         numPinnedResources =
                             List.length <| getPinnedResources model
                     in
                     [ if numPinnedResources > 0 then
-                        Html.div
-                            ([ onMouseEnter <| Hover <| Just PinIcon
-                             , onMouseLeave <| Hover Nothing
-                             ]
-                                ++ Styles.pinIcon
-                            )
+                        Views.div
+                            Views.Unidentified
+                            Styles.pinIcon
+                            [ onMouseEnter <| Hover <| Just PinIcon
+                            , onMouseLeave <| Hover Nothing
+                            ]
                             (Html.div
-                                (id "pin-badge" :: Styles.pinBadge)
-                                [ Html.div []
-                                    [ Html.text <|
+                                (Views.Id "pin-badge")
+                                Styles.pinBadge
+                                []
+                                [ Views.div []
+                                    [ Views.text <|
                                         String.fromInt numPinnedResources
                                     ]
                                 ]
@@ -544,11 +576,10 @@ topBarOther userState model =
             ++ [ style "flex-direction" "row" ]
         )
         [ TopBar.concourseLogo
-        , Html.div
-            (id "breadcrumbs"
-                :: Views.Styles.breadcrumbContainer
-                ++ [ style "overflow" "hidden" ]
-            )
+        , Views.div
+            (Views.Id "breadcrumbs")
+            (Views.Styles.breadcrumbContainer ++ [ style "overflow" "hidden" ])
+            []
             [ Html.a
                 ([ id "breadcrumb-pipeline"
                  , href <|
@@ -604,21 +635,28 @@ viewPinMenu :
     , pipeline : Concourse.PipelineIdentifier
     , isPinMenuExpanded : Bool
     }
-    -> Html Message
+    -> Views.View Message
 viewPinMenu ({ pinnedResources, isPinMenuExpanded } as params) =
-    Html.div
-        (id "pin-icon" :: Styles.pinIconContainer isPinMenuExpanded)
+    Views.div
+        (Views.Id "pin-icon")
+        (Styles.pinIconContainer isPinMenuExpanded)
+        []
         [ if List.length pinnedResources > 0 then
-            Html.div
-                ([ onMouseEnter <| Hover <| Just PinIcon
-                 , onMouseLeave <| Hover Nothing
-                 ]
-                    ++ Styles.pinIcon
-                )
-                (Html.div
-                    (id "pin-badge" :: Styles.pinBadge)
-                    [ Html.div []
-                        [ Html.text <|
+            Views.div
+                Views.Unidentified
+                Styles.pinIcon
+                [ onMouseEnter <| Hover <| Just PinIcon
+                , onMouseLeave <| Hover Nothing
+                ]
+                (Views.div
+                    (Views.Id "pin-badge")
+                    Styles.pinBadge
+                    []
+                    [ Views.div
+                        Views.Unidentified
+                        []
+                        []
+                        [ Views.text <|
                             String.fromInt <|
                                 List.length pinnedResources
                         ]
@@ -627,7 +665,7 @@ viewPinMenu ({ pinnedResources, isPinMenuExpanded } as params) =
                 )
 
           else
-            Html.div Styles.pinIcon []
+            Views.div Views.Unidentified Styles.pinIcon [] []
         ]
 
 
@@ -636,16 +674,20 @@ viewPinMenuDropdown :
     , pipeline : Concourse.PipelineIdentifier
     , isPinMenuExpanded : Bool
     }
-    -> List (Html Message)
+    -> List (Views.View Message)
 viewPinMenuDropdown { pinnedResources, pipeline, isPinMenuExpanded } =
     if isPinMenuExpanded then
-        [ Html.ul
+        [ Views.ul
+            Views.Unidentified
             Styles.pinIconDropdown
+            []
             (pinnedResources
                 |> List.map
                     (\( resourceName, pinnedVersion ) ->
-                        Html.li
-                            (onClick
+                        Views.li
+                            Views.Unidentified
+                            Styles.pinDropdownCursor
+                            [ onClick
                                 (GoToRoute <|
                                     Routes.Resource
                                         { id =
@@ -656,26 +698,33 @@ viewPinMenuDropdown { pinnedResources, pipeline, isPinMenuExpanded } =
                                         , page = Nothing
                                         }
                                 )
-                                :: Styles.pinDropdownCursor
-                            )
-                            [ Html.div
+                            ]
+                            [ Views.div
+                                Views.Unidentified
                                 Styles.pinText
-                                [ Html.text resourceName ]
-                            , Html.table []
+                                []
+                                [ Views.text resourceName ]
+                            , Views.table
+                                Views.Unidentified
+                                []
+                                []
                                 (pinnedVersion
                                     |> Dict.toList
                                     |> List.map
                                         (\( k, v ) ->
-                                            Html.tr []
-                                                [ Html.td [] [ Html.text k ]
-                                                , Html.td [] [ Html.text v ]
+                                            Views.tr
+                                                Views.Unidentified
+                                                []
+                                                []
+                                                [ Views.td Views.Unidentified [] [] [ Views.text k ]
+                                                , Views.td Views.Unidentified [] [] [ Views.text v ]
                                                 ]
                                         )
                                 )
                             ]
                     )
             )
-        , Html.div Styles.pinHoverHighlight []
+        , Views.div Views.Unidentified Styles.pinHoverHighlight [] []
         ]
 
     else

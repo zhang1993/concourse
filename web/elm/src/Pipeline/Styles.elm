@@ -16,6 +16,7 @@ import Colors
 import Concourse.Cli as Cli
 import Html
 import Html.Attributes exposing (style)
+import Views.Views as Views
 
 
 groupsBar : List (Html.Attribute msg)
@@ -52,82 +53,82 @@ groupItem { selected, hovered } =
            )
 
 
-pinHoverHighlight : List (Html.Attribute msg)
+pinHoverHighlight : List Views.Style
 pinHoverHighlight =
-    [ style "border-width" "5px"
-    , style "border-style" "solid"
-    , style "border-color" <| "transparent transparent " ++ Colors.white ++ " transparent"
-    , style "position" "absolute"
-    , style "top" "100%"
-    , style "right" "50%"
-    , style "margin-right" "-5px"
-    , style "margin-top" "-10px"
+    [ Views.style "border-width" "5px"
+    , Views.style "border-style" "solid"
+    , Views.style "border-color" <| "transparent transparent " ++ Colors.white ++ " transparent"
+    , Views.style "position" "absolute"
+    , Views.style "top" "100%"
+    , Views.style "right" "50%"
+    , Views.style "margin-right" "-5px"
+    , Views.style "margin-top" "-10px"
     ]
 
 
-pinText : List (Html.Attribute msg)
+pinText : List Views.Style
 pinText =
-    [ style "font-weight" "700" ]
+    [ Views.style "font-weight" "700" ]
 
 
-pinDropdownCursor : List (Html.Attribute msg)
+pinDropdownCursor : List Views.Style
 pinDropdownCursor =
-    [ style "cursor" "pointer" ]
+    [ Views.style "cursor" "pointer" ]
 
 
-pinIconDropdown : List (Html.Attribute msg)
+pinIconDropdown : List Views.Style
 pinIconDropdown =
-    [ style "background-color" Colors.white
-    , style "color" Colors.pinIconHover
-    , style "position" "absolute"
-    , style "top" "100%"
-    , style "right" "0"
-    , style "white-space" "nowrap"
-    , style "list-style-type" "none"
-    , style "padding" "10px"
-    , style "margin-top" "0"
-    , style "z-index" "1"
+    [ Views.style "background-color" Colors.white
+    , Views.style "color" Colors.pinIconHover
+    , Views.style "position" "absolute"
+    , Views.style "top" "100%"
+    , Views.style "right" "0"
+    , Views.style "white-space" "nowrap"
+    , Views.style "list-style-type" "none"
+    , Views.style "padding" "10px"
+    , Views.style "margin-top" "0"
+    , Views.style "z-index" "1"
     ]
 
 
-pinIcon : List (Html.Attribute msg)
+pinIcon : List Views.Style
 pinIcon =
-    [ style "background-image" "url(/public/images/pin-ic-white.svg)"
-    , style "width" "40px"
-    , style "height" "40px"
-    , style "background-repeat" "no-repeat"
-    , style "background-position" "50% 50%"
-    , style "position" "relative"
+    [ Views.style "background-image" "url(/public/images/pin-ic-white.svg)"
+    , Views.style "width" "40px"
+    , Views.style "height" "40px"
+    , Views.style "background-repeat" "no-repeat"
+    , Views.style "background-position" "50% 50%"
+    , Views.style "position" "relative"
     ]
 
 
-pinBadge : List (Html.Attribute msg)
+pinBadge : List Views.Style
 pinBadge =
-    [ style "background-color" Colors.pinned
-    , style "border-radius" "50%"
-    , style "width" "15px"
-    , style "height" "15px"
-    , style "position" "absolute"
-    , style "top" "3px"
-    , style "right" "3px"
-    , style "display" "flex"
-    , style "align-items" "center"
-    , style "justify-content" "center"
+    [ Views.style "background-color" Colors.pinned
+    , Views.style "border-radius" "50%"
+    , Views.style "width" "15px"
+    , Views.style "height" "15px"
+    , Views.style "position" "absolute"
+    , Views.style "top" "3px"
+    , Views.style "right" "3px"
+    , Views.style "display" "flex"
+    , Views.style "align-items" "center"
+    , Views.style "justify-content" "center"
     ]
 
 
-pinIconContainer : Bool -> List (Html.Attribute msg)
+pinIconContainer : Bool -> List Views.Style
 pinIconContainer showBackground =
-    [ style "margin-right" "15px"
-    , style "top" "10px"
-    , style "position" "relative"
-    , style "height" "40px"
-    , style "display" "flex"
-    , style "max-width" "20%"
+    [ Views.style "margin-right" "15px"
+    , Views.style "top" "10px"
+    , Views.style "position" "relative"
+    , Views.style "height" "40px"
+    , Views.style "display" "flex"
+    , Views.style "max-width" "20%"
     ]
         ++ (if showBackground then
-                [ style "background-color" Colors.pinHighlight
-                , style "border-radius" "50%"
+                [ Views.style "background-color" Colors.pinHighlight
+                , Views.style "border-radius" "50%"
                 ]
 
             else

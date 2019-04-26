@@ -1,4 +1,4 @@
-module Login.Login exposing (Model, myView, update, view, viewLoginState)
+module Login.Login exposing (Model, myView, update, view, viewLoginState, myViewLoginState)
 
 import Concourse
 import EffectTransformer exposing (ET)
@@ -6,7 +6,7 @@ import Html exposing (Html)
 import Html.Attributes exposing (attribute, href, id)
 import Html.Events exposing (onClick)
 import Login.Styles as Styles
-import Login.Views as Views exposing (View)
+import Views.Views as Views exposing (View)
 import Message.Effects exposing (Effect(..))
 import Message.Message exposing (Message(..))
 import UserState exposing (UserState(..))

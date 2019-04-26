@@ -329,8 +329,7 @@ infoBar { hideLegend, screenSize } =
                     []
 
                 ScreenSize.Desktop ->
-                    --[ style "flex-direction" "column" ]
-                    []
+                    [ style "flex-direction" "column" ]
 
                 ScreenSize.BigDesktop ->
                     []

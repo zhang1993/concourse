@@ -9,7 +9,7 @@ module Login.Styles exposing
 import Colors
 import Html
 import Html.Attributes exposing (style)
-import Login.Views as Views
+import Views.Views as Views
 
 
 loginComponent : List Views.Style
