@@ -182,7 +182,7 @@ var _ = Describe("Client", func() {
 			))
 			fakeWorker = new(workerfakes.FakeWorker)
 			fakeVolume = new(workerfakes.FakeVolume)
-			fakeWorker.CreateVolumeReturns(fakeVolume, nil)
+			fakeWorker.FindOrCreateVolumeForArtifactReturns(fakeVolume, nil)
 		})
 
 		Context("volume associated with artifact does not exist", func() {
@@ -195,7 +195,7 @@ var _ = Describe("Client", func() {
 				err := client.Store(logger, 123, artifact, "/", readCloser)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(fakePool.FindOrChooseWorkerCallCount()).To(Equal(1))
-				Expect(fakeWorker.CreateVolumeCallCount()).To(Equal(1))
+				Expect(fakeWorker.FindOrCreateVolumeForArtifactCallCount()).To(Equal(1))
 			})
 		})
 

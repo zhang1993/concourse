@@ -560,7 +560,7 @@ var _ = Describe("Worker", func() {
 		})
 	})
 
-	Describe("CreateVolume", func() {
+	Describe("FindOrCreateVolumeForArtifact", func() {
 		var (
 			fakeVolume *workerfakes.FakeVolume
 			volume     Volume
@@ -569,15 +569,15 @@ var _ = Describe("Worker", func() {
 
 		BeforeEach(func() {
 			fakeVolume = new(workerfakes.FakeVolume)
-			fakeVolumeClient.CreateVolumeReturns(fakeVolume, nil)
+			fakeVolumeClient.FindOrCreateVolumeForArtifactReturns(fakeVolume, nil)
 		})
 
 		JustBeforeEach(func() {
-			volume, err = gardenWorker.CreateVolume(logger, VolumeSpec{}, 42, 123, db.VolumeTypeArtifact)
+			volume, err = gardenWorker.FindOrCreateVolume(logger, VolumeSpec{}, 42, 123, db.VolumeTypeArtifact)
 		})
 
 		It("calls the volume client", func() {
-			Expect(fakeVolumeClient.CreateVolumeCallCount()).To(Equal(1))
+			Expect(fakeVolumeClient.FindOrCreateVolumeForArtifactCallCount()).To(Equal(1))
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(volume).To(Equal(fakeVolume))

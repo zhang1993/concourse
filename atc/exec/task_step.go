@@ -92,6 +92,8 @@ type TaskStep struct {
 	succeeded bool
 
 	strategy worker.ContainerPlacementStrategy
+
+	client worker.Client
 }
 
 func NewTaskStep(
@@ -113,6 +115,7 @@ func NewTaskStep(
 	resourceTypes creds.VersionedResourceTypes,
 	defaultLimits atc.ContainerLimits,
 	strategy worker.ContainerPlacementStrategy,
+	client worker.Client,
 ) Step {
 	return &TaskStep{
 		privileged:        privileged,
@@ -133,6 +136,7 @@ func NewTaskStep(
 		resourceTypes:     resourceTypes,
 		defaultLimits:     defaultLimits,
 		strategy:          strategy,
+		client:            client,
 	}
 }
 
@@ -491,6 +495,7 @@ func (TaskStep) envForParams(params map[string]string) []string {
 }
 
 type taskArtifactSource struct {
+	worker.Client
 	worker.Volume
 }
 

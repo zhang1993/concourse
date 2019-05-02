@@ -639,7 +639,7 @@ var _ = Describe("VolumeClient", func() {
 		})
 	})
 
-	Describe("CreateVolume", func() {
+	Describe("FindOrCreateVolumeForArtifact", func() {
 		var err error
 		var workerVolume worker.Volume
 
@@ -648,7 +648,7 @@ var _ = Describe("VolumeClient", func() {
 		})
 
 		JustBeforeEach(func() {
-			workerVolume, err = volumeClient.CreateVolume(testLogger, worker.VolumeSpec{}, 42, 123, "some-mount", db.VolumeTypeArtifact)
+			workerVolume, err = volumeClient.FindOrCreateVolumeForArtifact(testLogger, worker.VolumeSpec{}, 42, 123, "some-mount", db.VolumeTypeArtifact)
 		})
 
 		Context("when trying to create a new volume", func() {

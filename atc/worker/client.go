@@ -104,7 +104,7 @@ func (client *client) Store(logger lager.Logger, teamID int, artifact atc.Worker
 	spec := VolumeSpec{
 		Strategy: baggageclaim.EmptyStrategy{},
 	}
-	volume, err := worker.CreateVolume(logger, spec, teamID, artifact.ID, db.VolumeTypeArtifact)
+	volume, err := worker.FindOrCreateVolume(logger, spec, teamID, artifact.ID, db.VolumeTypeArtifact)
 	if err != nil {
 		return err
 	}

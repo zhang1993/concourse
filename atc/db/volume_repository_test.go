@@ -215,7 +215,7 @@ var _ = Describe("VolumeFactory", func() {
 			artifact, err := artifactLifecycle.CreateArtifact("blah")
 			Expect(err).NotTo(HaveOccurred())
 
-			artifactVolume, err := volumeRepository.CreateVolume(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
+			artifactVolume, err := volumeRepository.CreateVolumeForArtifact(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
 			Expect(err).NotTo(HaveOccurred())
 			expectedCreatedHandles = append(expectedCreatedHandles, artifactVolume.Handle())
 
@@ -424,12 +424,12 @@ var _ = Describe("VolumeFactory", func() {
 		})
 	})
 
-	Describe("CreateVolume", func() {
+	Describe("FindOrCreateVolumeForArtifact", func() {
 		It("creates a CreatingVolume of the given type with a teamID and artifactID", func() {
 			artifact, err := artifactLifecycle.CreateArtifact("jon-snows-artifact")
 			Expect(err).NotTo(HaveOccurred())
 
-			volume, err := volumeRepository.CreateVolume(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
+			volume, err := volumeRepository.CreateVolumeForArtifact(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
 			Expect(err).NotTo(HaveOccurred())
 
 			var teamID int
@@ -942,7 +942,7 @@ var _ = Describe("VolumeFactory", func() {
 		})
 		Context("When the creating volume exists", func() {
 			BeforeEach(func() {
-				creatingVolume, err = volumeRepository.CreateVolume(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
+				creatingVolume, err = volumeRepository.CreateVolumeForArtifact(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("returns the CreatingVolume associated with the ArtifactID", func() {
@@ -954,7 +954,7 @@ var _ = Describe("VolumeFactory", func() {
 		})
 		Context("when the created volume exists", func() {
 			BeforeEach(func() {
-				creatingVolume, err = volumeRepository.CreateVolume(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
+				creatingVolume, err = volumeRepository.CreateVolumeForArtifact(defaultTeam.ID(), artifact.ID(), defaultWorker.Name(), db.VolumeTypeArtifact)
 				Expect(err).ToNot(HaveOccurred())
 
 				createdVolume, err = creatingVolume.Created()

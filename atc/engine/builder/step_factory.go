@@ -203,6 +203,7 @@ func (factory *stepFactory) TaskStep(
 		creds.NewVersionedResourceTypes(credMgrVariables, plan.Task.VersionedResourceTypes),
 		factory.defaultLimits,
 		factory.strategy,
+		factory.client,
 	)
 
 	return exec.LogError(taskStep, delegate)

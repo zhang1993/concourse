@@ -79,4 +79,41 @@ var _ = Describe("WorkerArtifactLifecycle", func() {
 		})
 
 	})
+
+	Describe("LookUpArtifact", func() {
+		var (
+			artifactID   sql.NullInt64
+			artifactName sql.NullString
+			createdAt    pq.NullTime
+			err          error
+			artifact     db.WorkerArtifact
+		)
+
+		Context("when the artifact exists", func() {
+			It("finds an artifact", func() {
+				currentTime := time.Now()
+				artifact, err := workerArtifactLifecycle.CreateArtifact("some-artifact")
+				Expect(err).ToNot(HaveOccurred())
+
+				err = dbConn.QueryRow("SELECT id, name, created_at FROM worker_artifacts").Scan(&artifactID, &artifactName, &createdAt)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(artifactID.Int64).To(BeEquivalentTo(artifact.ID()))
+				Expect(artifactName.String).To(Equal(artifact.Name()))
+				Expect(createdAt.Time.After(currentTime))
+
+				artifact, err = workerArtifactLifecycle.LookUpArtifact(artifactID)
+				Expect(artifactID.Int64).To(BeEquivalentTo(artifact.ID()))
+				Expect(artifactName.String).To(Equal(artifact.Name()))
+				Expect(createdAt.Time.After(currentTime))
+
+			})
+		})
+		Context("when the artifact doesn't exist", func() {
+			It("returns a missing artifact error", func() {
+				artifact, err = workerArtifactLifecycle.LookUpArtifact(9)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+	})
 })

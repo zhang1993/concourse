@@ -37,7 +37,7 @@ type VolumeRepository interface {
 
 	GetDestroyingVolumes(workerName string) ([]string, error)
 
-	CreateVolume(int, int, string, VolumeType) (CreatingVolume, error)
+	CreateVolumeForArtifact(int, int, string, VolumeType) (CreatingVolume, error)
 	FindCreatedVolume(handle string) (CreatedVolume, bool, error)
 
 	RemoveDestroyingVolumes(workerName string, handles []string) (int, error)
@@ -257,7 +257,7 @@ func (repository *volumeRepository) CreateBaseResourceTypeVolume(uwbrt *UsedWork
 	return volume, nil
 }
 
-func (repository *volumeRepository) CreateVolume(teamID int, artifactID int, workerName string, volumeType VolumeType) (CreatingVolume, error) {
+func (repository *volumeRepository) CreateVolumeForArtifact(teamID int, artifactID int, workerName string, volumeType VolumeType) (CreatingVolume, error) {
 	volume, err := repository.createVolume(
 		0,
 		workerName,

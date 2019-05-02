@@ -27,6 +27,9 @@ type ContainerSpec struct {
 	// Working directory for processes run in the container.
 	Dir string
 
+	// The artifacts which will be attached to the container.
+	Artifacts []atc.WorkerArtifact
+
 	// Inputs to provide to the container. Inputs with a volume local to the
 	// selected worker will be made available via a COW volume; others will be
 	// streamed.
