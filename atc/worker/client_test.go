@@ -94,7 +94,7 @@ var _ = Describe("Client", func() {
 
 	Describe("FindVolume", func() {
 		var (
-			foundVolume worker.Volume
+			foundVolume worker.Artifact
 			found       bool
 			findErr     error
 		)
@@ -128,7 +128,7 @@ var _ = Describe("Client", func() {
 			})
 		})
 
-		Context("when a worker is found with the volume", func() {
+		Context("when a worker is found with the artifact", func() {
 			var fakeWorker *workerfakes.FakeWorker
 			var fakeVolume *workerfakes.FakeVolume
 
@@ -145,7 +145,7 @@ var _ = Describe("Client", func() {
 				Expect(findErr).NotTo(HaveOccurred())
 			})
 
-			It("returns the volume", func() {
+			It("returns the artifact", func() {
 				Expect(foundVolume).To(Equal(fakeVolume))
 			})
 		})
@@ -185,13 +185,13 @@ var _ = Describe("Client", func() {
 			fakeWorker.FindOrCreateVolumeForArtifactReturns(fakeVolume, nil)
 		})
 
-		Context("volume associated with artifact does not exist", func() {
+		Context("artifact associated with artifact does not exist", func() {
 			BeforeEach(func() {
 				fakeWorkerProvider.FindWorkerForArtifactReturns(nil, false, nil)
 				fakePool.FindOrChooseWorkerReturns(fakeWorker, nil)
 			})
 
-			It("selects a worker and creates an associated volume on it", func() {
+			It("selects a worker and creates an associated artifact on it", func() {
 				err := client.Store(logger, 123, artifact, "/", readCloser)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(fakePool.FindOrChooseWorkerCallCount()).To(Equal(1))
@@ -199,7 +199,7 @@ var _ = Describe("Client", func() {
 			})
 		})
 
-		It("puts data into the volume", func() {
+		It("puts data into the artifact", func() {
 			fakeWorkerProvider.FindWorkerForArtifactReturns(fakeWorker, true, nil)
 
 			err := client.Store(logger, 123, artifact, "/", readCloser)

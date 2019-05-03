@@ -14,7 +14,7 @@ import (
 
 type Client interface {
 	FindContainer(logger lager.Logger, teamID int, handle string) (Container, bool, error)
-	FindVolume(logger lager.Logger, teamID int, handle string) (Volume, bool, error)
+	FindVolume(logger lager.Logger, teamID int, handle string) (Artifact, bool, error)
 	CreateArtifact(logger lager.Logger, name string) (atc.WorkerArtifact, error)
 	Store(logger lager.Logger, teamID int, artifact atc.WorkerArtifact, volumePath string, data io.ReadCloser) error
 }
@@ -50,7 +50,7 @@ func (client *client) FindContainer(logger lager.Logger, teamID int, handle stri
 	return worker.FindContainerByHandle(logger, teamID, handle)
 }
 
-func (client *client) FindVolume(logger lager.Logger, teamID int, handle string) (Volume, bool, error) {
+func (client *client) FindVolume(logger lager.Logger, teamID int, handle string) (Artifact, bool, error) {
 	worker, found, err := client.workerProvider.FindWorkerForVolume(
 		logger.Session("find-worker"),
 		teamID,
@@ -67,18 +67,19 @@ func (client *client) FindVolume(logger lager.Logger, teamID int, handle string)
 	return worker.LookupVolume(logger, handle)
 }
 
-func (client *client) CreateArtifact(logger lager.Logger, name string) (atc.WorkerArtifact, error) {
-	artifact, err := client.artifactProvider.CreateArtifact(name)
+func (client *client) CreateArtifact(logger lager.Logger, name string) (Artifact, error) {
+	art, err := client.artifactProvider.CreateArtifact(name)
 	if err != nil {
 		logger.Error("failed-to-create-artifact", err, lager.Data{"name": name})
-		return atc.WorkerArtifact{}, err
+		return nil, err
 	}
-	return atc.WorkerArtifact{
-		ID:        artifact.ID(),
-		Name:      artifact.Name(),
-		BuildID:   artifact.BuildID(),
-		CreatedAt: artifact.CreatedAt().Unix(),
-	}, nil
+	return &artifact{dbArtifact: art}, nil
+	// return atc.WorkerArtifact{
+	// 	ID:        artifact.ID(),
+	// 	Name:      artifact.Name(),
+	// 	BuildID:   artifact.BuildID(),
+	// 	CreatedAt: artifact.CreatedAt().Unix(),
+	// }, nil
 }
 
 func (client *client) Store(logger lager.Logger, teamID int, artifact atc.WorkerArtifact, volumePath string, data io.ReadCloser) error {

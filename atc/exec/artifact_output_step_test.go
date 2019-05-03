@@ -60,7 +60,7 @@ var _ = Describe("ArtifactOutputStep", func() {
 	})
 
 	Context("when the source exists", func() {
-		Context("when the source is not a worker.Volume", func() {
+		Context("when the source is not a worker.Artifact", func() {
 			BeforeEach(func() {
 				fakeSource := new(workerfakes.FakeArtifactSource)
 				state.Artifacts().RegisterSource(artifact.Name("some-name"), fakeSource)
@@ -70,7 +70,7 @@ var _ = Describe("ArtifactOutputStep", func() {
 			})
 		})
 
-		Context("when the source is a worker.Volume", func() {
+		Context("when the source is a worker.Artifact", func() {
 			var fakeWorkerVolume *workerfakes.FakeVolume
 
 			BeforeEach(func() {

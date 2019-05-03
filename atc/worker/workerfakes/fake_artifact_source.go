@@ -36,19 +36,19 @@ type FakeArtifactSource struct {
 	streamToReturnsOnCall map[int]struct {
 		result1 error
 	}
-	VolumeOnStub        func(lager.Logger, worker.Worker) (worker.Volume, bool, error)
+	VolumeOnStub        func(lager.Logger, worker.Worker) (worker.Artifact, bool, error)
 	volumeOnMutex       sync.RWMutex
 	volumeOnArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 worker.Worker
 	}
 	volumeOnReturns struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}
 	volumeOnReturnsOnCall map[int]struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}
@@ -181,7 +181,7 @@ func (fake *FakeArtifactSource) StreamToReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeArtifactSource) VolumeOn(arg1 lager.Logger, arg2 worker.Worker) (worker.Volume, bool, error) {
+func (fake *FakeArtifactSource) VolumeOn(arg1 lager.Logger, arg2 worker.Worker) (worker.Artifact, bool, error) {
 	fake.volumeOnMutex.Lock()
 	ret, specificReturn := fake.volumeOnReturnsOnCall[len(fake.volumeOnArgsForCall)]
 	fake.volumeOnArgsForCall = append(fake.volumeOnArgsForCall, struct {
@@ -206,7 +206,7 @@ func (fake *FakeArtifactSource) VolumeOnCallCount() int {
 	return len(fake.volumeOnArgsForCall)
 }
 
-func (fake *FakeArtifactSource) VolumeOnCalls(stub func(lager.Logger, worker.Worker) (worker.Volume, bool, error)) {
+func (fake *FakeArtifactSource) VolumeOnCalls(stub func(lager.Logger, worker.Worker) (worker.Artifact, bool, error)) {
 	fake.volumeOnMutex.Lock()
 	defer fake.volumeOnMutex.Unlock()
 	fake.VolumeOnStub = stub
@@ -219,30 +219,30 @@ func (fake *FakeArtifactSource) VolumeOnArgsForCall(i int) (lager.Logger, worker
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeArtifactSource) VolumeOnReturns(result1 worker.Volume, result2 bool, result3 error) {
+func (fake *FakeArtifactSource) VolumeOnReturns(result1 worker.Artifact, result2 bool, result3 error) {
 	fake.volumeOnMutex.Lock()
 	defer fake.volumeOnMutex.Unlock()
 	fake.VolumeOnStub = nil
 	fake.volumeOnReturns = struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *FakeArtifactSource) VolumeOnReturnsOnCall(i int, result1 worker.Volume, result2 bool, result3 error) {
+func (fake *FakeArtifactSource) VolumeOnReturnsOnCall(i int, result1 worker.Artifact, result2 bool, result3 error) {
 	fake.volumeOnMutex.Lock()
 	defer fake.volumeOnMutex.Unlock()
 	fake.VolumeOnStub = nil
 	if fake.volumeOnReturnsOnCall == nil {
 		fake.volumeOnReturnsOnCall = make(map[int]struct {
-			result1 worker.Volume
+			result1 worker.Artifact
 			result2 bool
 			result3 error
 		})
 	}
 	fake.volumeOnReturnsOnCall[i] = struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}{result1, result2, result3}

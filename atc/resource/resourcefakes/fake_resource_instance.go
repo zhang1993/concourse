@@ -22,19 +22,19 @@ type FakeResourceInstance struct {
 	containerOwnerReturnsOnCall map[int]struct {
 		result1 db.ContainerOwner
 	}
-	FindOnStub        func(lager.Logger, worker.Worker) (worker.Volume, bool, error)
+	FindOnStub        func(lager.Logger, worker.Worker) (worker.Artifact, bool, error)
 	findOnMutex       sync.RWMutex
 	findOnArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 worker.Worker
 	}
 	findOnReturns struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}
 	findOnReturnsOnCall map[int]struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}
@@ -157,7 +157,7 @@ func (fake *FakeResourceInstance) ContainerOwnerReturnsOnCall(i int, result1 db.
 	}{result1}
 }
 
-func (fake *FakeResourceInstance) FindOn(arg1 lager.Logger, arg2 worker.Worker) (worker.Volume, bool, error) {
+func (fake *FakeResourceInstance) FindOn(arg1 lager.Logger, arg2 worker.Worker) (worker.Artifact, bool, error) {
 	fake.findOnMutex.Lock()
 	ret, specificReturn := fake.findOnReturnsOnCall[len(fake.findOnArgsForCall)]
 	fake.findOnArgsForCall = append(fake.findOnArgsForCall, struct {
@@ -182,7 +182,7 @@ func (fake *FakeResourceInstance) FindOnCallCount() int {
 	return len(fake.findOnArgsForCall)
 }
 
-func (fake *FakeResourceInstance) FindOnCalls(stub func(lager.Logger, worker.Worker) (worker.Volume, bool, error)) {
+func (fake *FakeResourceInstance) FindOnCalls(stub func(lager.Logger, worker.Worker) (worker.Artifact, bool, error)) {
 	fake.findOnMutex.Lock()
 	defer fake.findOnMutex.Unlock()
 	fake.FindOnStub = stub
@@ -195,30 +195,30 @@ func (fake *FakeResourceInstance) FindOnArgsForCall(i int) (lager.Logger, worker
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeResourceInstance) FindOnReturns(result1 worker.Volume, result2 bool, result3 error) {
+func (fake *FakeResourceInstance) FindOnReturns(result1 worker.Artifact, result2 bool, result3 error) {
 	fake.findOnMutex.Lock()
 	defer fake.findOnMutex.Unlock()
 	fake.FindOnStub = nil
 	fake.findOnReturns = struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *FakeResourceInstance) FindOnReturnsOnCall(i int, result1 worker.Volume, result2 bool, result3 error) {
+func (fake *FakeResourceInstance) FindOnReturnsOnCall(i int, result1 worker.Artifact, result2 bool, result3 error) {
 	fake.findOnMutex.Lock()
 	defer fake.findOnMutex.Unlock()
 	fake.FindOnStub = nil
 	if fake.findOnReturnsOnCall == nil {
 		fake.findOnReturnsOnCall = make(map[int]struct {
-			result1 worker.Volume
+			result1 worker.Artifact
 			result2 bool
 			result3 error
 		})
 	}
 	fake.findOnReturnsOnCall[i] = struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}{result1, result2, result3}

@@ -44,7 +44,7 @@ var _ = Describe("ResourceInstance", func() {
 
 	Describe("FindOn", func() {
 		var (
-			foundVolume worker.Volume
+			foundVolume worker.Artifact
 			found       bool
 			findErr     error
 		)
@@ -53,7 +53,7 @@ var _ = Describe("ResourceInstance", func() {
 			foundVolume, found, findErr = resourceInstance.FindOn(logger, fakeWorker)
 		})
 
-		Context("when initialized volume for resource cache exists on worker", func() {
+		Context("when initialized artifact for resource cache exists on worker", func() {
 			var fakeVolume *workerfakes.FakeVolume
 
 			BeforeEach(func() {
@@ -61,19 +61,19 @@ var _ = Describe("ResourceInstance", func() {
 				fakeWorker.FindVolumeForResourceCacheReturns(fakeVolume, true, nil)
 			})
 
-			It("returns found volume", func() {
+			It("returns found artifact", func() {
 				Expect(findErr).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 				Expect(foundVolume).To(Equal(fakeVolume))
 			})
 		})
 
-		Context("when initialized volume for resource cache does not exist on worker", func() {
+		Context("when initialized artifact for resource cache does not exist on worker", func() {
 			BeforeEach(func() {
 				fakeWorker.FindVolumeForResourceCacheReturns(nil, false, nil)
 			})
 
-			It("does not return any volume", func() {
+			It("does not return any artifact", func() {
 				Expect(findErr).NotTo(HaveOccurred())
 				Expect(found).To(BeFalse())
 				Expect(foundVolume).To(BeNil())

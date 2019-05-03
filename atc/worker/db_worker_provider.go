@@ -150,7 +150,7 @@ func (provider *dbWorkerProvider) FindWorkerForVolume(
 	teamID int,
 	handle string,
 ) (Worker, bool, error) {
-	logger = logger.Session("worker-for-volume")
+	logger = logger.Session("worker-for-artifact")
 	team := provider.dbTeamFactory.GetByID(teamID)
 
 	dbWorker, found, err := team.FindWorkerForVolume(handle)

@@ -49,12 +49,12 @@ type Worker interface {
 		creds.VersionedResourceTypes,
 	) (Container, error)
 
-	FindVolumeForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (Volume, bool, error)
-	FindVolumeForTaskCache(lager.Logger, int, int, string, string) (Volume, bool, error)
+	FindVolumeForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (Artifact, bool, error)
+	FindVolumeForTaskCache(lager.Logger, int, int, string, string) (Artifact, bool, error)
 
-	CertsVolume(lager.Logger) (volume Volume, found bool, err error)
-	LookupVolume(lager.Logger, string) (Volume, bool, error)
-	FindOrCreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, artifactID int, volumeType db.VolumeType) (Volume, error)
+	CertsVolume(lager.Logger) (volume Artifact, found bool, err error)
+	LookupVolume(lager.Logger, string) (Artifact, bool, error)
+	FindOrCreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, artifactID int, volumeType db.VolumeType) (Artifact, error)
 
 	GardenClient() garden.Client
 }
@@ -68,9 +68,9 @@ type gardenWorker struct {
 	helper          workerHelper
 }
 
-// NewGardenWorker constructs a Worker using the gardenWorker runtime implementation and allows container and volume
+// NewGardenWorker constructs a Worker using the gardenWorker runtime implementation and allows container and artifact
 // creation on a specific Garden worker.
-// A Garden Worker is comprised of: db.Worker, garden Client, container provider, and a volume client
+// A Garden Worker is comprised of: db.Worker, garden Client, container provider, and a artifact client
 func NewGardenWorker(
 	gardenClient garden.Client,
 	volumeRepository db.VolumeRepository,
@@ -147,23 +147,23 @@ func (worker *gardenWorker) FindResourceTypeByPath(path string) (atc.WorkerResou
 	return atc.WorkerResourceType{}, false
 }
 
-func (worker *gardenWorker) FindVolumeForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (Volume, bool, error) {
+func (worker *gardenWorker) FindVolumeForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (Artifact, bool, error) {
 	return worker.volumeClient.FindVolumeForResourceCache(logger, resourceCache)
 }
 
-func (worker *gardenWorker) FindVolumeForTaskCache(logger lager.Logger, teamID int, jobID int, stepName string, path string) (Volume, bool, error) {
+func (worker *gardenWorker) FindVolumeForTaskCache(logger lager.Logger, teamID int, jobID int, stepName string, path string) (Artifact, bool, error) {
 	return worker.volumeClient.FindVolumeForTaskCache(logger, teamID, jobID, stepName, path)
 }
 
-func (worker *gardenWorker) CertsVolume(logger lager.Logger) (Volume, bool, error) {
+func (worker *gardenWorker) CertsVolume(logger lager.Logger) (Artifact, bool, error) {
 	return worker.volumeClient.FindOrCreateVolumeForResourceCerts(logger.Session("find-or-create"))
 }
 
-func (worker *gardenWorker) FindOrCreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, artifactID int, volumeType db.VolumeType) (Volume, error) {
+func (worker *gardenWorker) FindOrCreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, artifactID int, volumeType db.VolumeType) (Artifact, error) {
 	return worker.volumeClient.FindOrCreateVolumeForArtifact(logger.Session("find-or-create"), spec, teamID, artifactID, worker.dbWorker.Name(), volumeType)
 }
 
-func (worker *gardenWorker) LookupVolume(logger lager.Logger, handle string) (Volume, bool, error) {
+func (worker *gardenWorker) LookupVolume(logger lager.Logger, handle string) (Artifact, bool, error) {
 	return worker.volumeClient.LookupVolume(logger, handle)
 }
 
@@ -225,7 +225,7 @@ func (worker *gardenWorker) FindOrCreateContainer(
 		volumeMounts, err := worker.createVolumes(logger, fetchedImage.Privileged, creatingContainer, containerSpec)
 		if err != nil {
 			creatingContainer.Failed()
-			logger.Error("failed-to-create-volume-mounts-for-container", err)
+			logger.Error("failed-to-create-artifact-mounts-for-container", err)
 			return nil, err
 		}
 
@@ -374,7 +374,7 @@ func (worker *gardenWorker) createVolumes(logger lager.Logger, isPrivileged bool
 	inputDestinationPaths := make(map[string]bool)
 
 	for _, inputSource := range spec.Inputs {
-		var inputVolume Volume
+		var inputVolume Artifact
 
 		localVolume, found, err := inputSource.Source().VolumeOn(logger, worker)
 		if err != nil {
@@ -414,7 +414,7 @@ func (worker *gardenWorker) createVolumes(logger lager.Logger, isPrivileged bool
 			}
 
 			destData := lager.Data{
-				"dest-volume": inputVolume.Handle(),
+				"dest-artifact": inputVolume.Handle(),
 				"dest-worker": inputVolume.WorkerName(),
 			}
 			err = inputSource.Source().StreamTo(logger.Session("stream-to", destData), inputVolume)
@@ -434,7 +434,7 @@ func (worker *gardenWorker) createVolumes(logger lager.Logger, isPrivileged bool
 	for _, outputPath := range spec.Outputs {
 		cleanedOutputPath := filepath.Clean(outputPath)
 
-		// reuse volume if output path is the same as input
+		// reuse artifact if output path is the same as input
 		if inputDestinationPaths[cleanedOutputPath] {
 			continue
 		}

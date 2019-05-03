@@ -16,7 +16,7 @@ import (
 const RawRootFSScheme = "raw"
 
 type imageProvidedByPreviousStepOnSameWorker struct {
-	artifactVolume worker.Volume
+	artifactVolume worker.Artifact
 	imageSpec      worker.ImageSpec
 	teamID         int
 	volumeClient   worker.VolumeClient
@@ -257,7 +257,7 @@ func (i *imageFromRootfsURI) FetchForContainer(
 }
 
 type artifactDestination struct {
-	destination worker.Volume
+	destination worker.Artifact
 }
 
 func (wad *artifactDestination) StreamIn(path string, tarStream io.Reader) error {

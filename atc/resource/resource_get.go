@@ -15,7 +15,7 @@ type getRequest struct {
 
 func (resource *resource) Get(
 	ctx context.Context,
-	volume worker.Volume,
+	volume worker.Artifact,
 	ioConfig IOConfig,
 	source atc.Source,
 	params atc.Params,

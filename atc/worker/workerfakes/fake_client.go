@@ -42,7 +42,7 @@ type FakeClient struct {
 		result2 bool
 		result3 error
 	}
-	FindVolumeStub        func(lager.Logger, int, string) (worker.Volume, bool, error)
+	FindVolumeStub        func(lager.Logger, int, string) (worker.Artifact, bool, error)
 	findVolumeMutex       sync.RWMutex
 	findVolumeArgsForCall []struct {
 		arg1 lager.Logger
@@ -50,12 +50,12 @@ type FakeClient struct {
 		arg3 string
 	}
 	findVolumeReturns struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}
 	findVolumeReturnsOnCall map[int]struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}
@@ -210,7 +210,7 @@ func (fake *FakeClient) FindContainerReturnsOnCall(i int, result1 worker.Contain
 	}{result1, result2, result3}
 }
 
-func (fake *FakeClient) FindVolume(arg1 lager.Logger, arg2 int, arg3 string) (worker.Volume, bool, error) {
+func (fake *FakeClient) FindVolume(arg1 lager.Logger, arg2 int, arg3 string) (worker.Artifact, bool, error) {
 	fake.findVolumeMutex.Lock()
 	ret, specificReturn := fake.findVolumeReturnsOnCall[len(fake.findVolumeArgsForCall)]
 	fake.findVolumeArgsForCall = append(fake.findVolumeArgsForCall, struct {
@@ -236,7 +236,7 @@ func (fake *FakeClient) FindVolumeCallCount() int {
 	return len(fake.findVolumeArgsForCall)
 }
 
-func (fake *FakeClient) FindVolumeCalls(stub func(lager.Logger, int, string) (worker.Volume, bool, error)) {
+func (fake *FakeClient) FindVolumeCalls(stub func(lager.Logger, int, string) (worker.Artifact, bool, error)) {
 	fake.findVolumeMutex.Lock()
 	defer fake.findVolumeMutex.Unlock()
 	fake.FindVolumeStub = stub
@@ -249,30 +249,30 @@ func (fake *FakeClient) FindVolumeArgsForCall(i int) (lager.Logger, int, string)
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeClient) FindVolumeReturns(result1 worker.Volume, result2 bool, result3 error) {
+func (fake *FakeClient) FindVolumeReturns(result1 worker.Artifact, result2 bool, result3 error) {
 	fake.findVolumeMutex.Lock()
 	defer fake.findVolumeMutex.Unlock()
 	fake.FindVolumeStub = nil
 	fake.findVolumeReturns = struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *FakeClient) FindVolumeReturnsOnCall(i int, result1 worker.Volume, result2 bool, result3 error) {
+func (fake *FakeClient) FindVolumeReturnsOnCall(i int, result1 worker.Artifact, result2 bool, result3 error) {
 	fake.findVolumeMutex.Lock()
 	defer fake.findVolumeMutex.Unlock()
 	fake.FindVolumeStub = nil
 	if fake.findVolumeReturnsOnCall == nil {
 		fake.findVolumeReturnsOnCall = make(map[int]struct {
-			result1 worker.Volume
+			result1 worker.Artifact
 			result2 bool
 			result3 error
 		})
 	}
 	fake.findVolumeReturnsOnCall[i] = struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 		result2 bool
 		result3 error
 	}{result1, result2, result3}

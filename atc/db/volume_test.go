@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Volume", func() {
+var _ = Describe("Artifact", func() {
 	var defaultCreatingContainer db.CreatingContainer
 	var defaultCreatedContainer db.CreatedContainer
 

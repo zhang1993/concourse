@@ -18,7 +18,7 @@ type VersionedSource interface {
 	StreamOut(string) (io.ReadCloser, error)
 	StreamIn(string, io.Reader) error
 
-	Volume() worker.Volume
+	Artifact() worker.Artifact
 }
 
 type versionResult struct {
@@ -50,7 +50,7 @@ func (vs *putVersionedSource) StreamOut(src string) (io.ReadCloser, error) {
 	})
 }
 
-func (vs *putVersionedSource) Volume() worker.Volume {
+func (vs *putVersionedSource) Artifact() worker.Artifact {
 	return nil
 }
 
@@ -61,9 +61,9 @@ func (vs *putVersionedSource) StreamIn(dst string, src io.Reader) error {
 	})
 }
 
-func NewGetVersionedSource(volume worker.Volume, version atc.Version, metadata []atc.MetadataField) VersionedSource {
+func NewGetVersionedSource(artifact worker.Artifact, version atc.Version, metadata []atc.MetadataField) VersionedSource {
 	return &getVersionedSource{
-		volume:      volume,
+		artifact:    artifact,
 		resourceDir: ResourcesDir("get"),
 
 		versionResult: versionResult{
@@ -76,7 +76,7 @@ func NewGetVersionedSource(volume worker.Volume, version atc.Version, metadata [
 type getVersionedSource struct {
 	versionResult versionResult
 
-	volume      worker.Volume
+	artifact    worker.Artifact
 	resourceDir string
 }
 
@@ -89,7 +89,7 @@ func (vs *getVersionedSource) Metadata() []atc.MetadataField {
 }
 
 func (vs *getVersionedSource) StreamOut(src string) (io.ReadCloser, error) {
-	readCloser, err := vs.volume.StreamOut(src)
+	readCloser, err := vs.artifact.StreamOut(src)
 	if err != nil {
 		return nil, err
 	}
@@ -98,12 +98,12 @@ func (vs *getVersionedSource) StreamOut(src string) (io.ReadCloser, error) {
 }
 
 func (vs *getVersionedSource) StreamIn(dst string, src io.Reader) error {
-	return vs.volume.StreamIn(
+	return vs.artifact.StreamIn(
 		path.Join(vs.resourceDir, dst),
 		src,
 	)
 }
 
-func (vs *getVersionedSource) Volume() worker.Volume {
-	return vs.volume
+func (vs *getVersionedSource) Artifact() worker.Artifact {
+	return vs.artifact
 }

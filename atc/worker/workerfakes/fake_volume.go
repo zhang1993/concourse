@@ -1042,4 +1042,4 @@ func (fake *FakeVolume) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ worker.Volume = new(FakeVolume)
+var _ worker.Artifact = new(FakeVolume)

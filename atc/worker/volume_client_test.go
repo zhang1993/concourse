@@ -63,7 +63,7 @@ var _ = Describe("VolumeClient", func() {
 
 	Describe("FindOrCreateVolumeForContainer", func() {
 		var fakeBaggageclaimVolume *baggageclaimfakes.FakeVolume
-		var foundOrCreatedVolume worker.Volume
+		var foundOrCreatedVolume worker.Artifact
 		var foundOrCreatedErr error
 		var container db.CreatingContainer
 		var fakeCreatingVolume *dbfakes.FakeCreatingVolume
@@ -93,12 +93,12 @@ var _ = Describe("VolumeClient", func() {
 			)
 		})
 
-		Context("when volume exists in creating state", func() {
+		Context("when artifact exists in creating state", func() {
 			BeforeEach(func() {
 				fakeDBVolumeRepository.FindContainerVolumeReturns(fakeCreatingVolume, nil, nil)
 			})
 
-			Context("when acquiring volume creating lock fails", func() {
+			Context("when acquiring artifact creating lock fails", func() {
 				var disaster = errors.New("disaster")
 
 				BeforeEach(func() {
@@ -126,7 +126,7 @@ var _ = Describe("VolumeClient", func() {
 					}
 				})
 
-				It("retries to find volume again", func() {
+				It("retries to find artifact again", func() {
 					Expect(fakeLockFactory.AcquireCallCount()).To(Equal(3))
 					Expect(fakeDBVolumeRepository.FindContainerVolumeCallCount()).To(Equal(3))
 				})
@@ -137,7 +137,7 @@ var _ = Describe("VolumeClient", func() {
 					fakeLockFactory.AcquireReturns(fakeLock, true, nil)
 				})
 
-				Context("when checking for the volume in baggageclaim", func() {
+				Context("when checking for the artifact in baggageclaim", func() {
 					BeforeEach(func() {
 						fakeBaggageclaimClient.LookupVolumeStub = func(lager.Logger, string) (baggageclaim.Volume, bool, error) {
 							Expect(fakeLockFactory.AcquireCallCount()).To(Equal(1))
@@ -150,34 +150,34 @@ var _ = Describe("VolumeClient", func() {
 					})
 				})
 
-				Context("when volume exists in baggageclaim", func() {
+				Context("when artifact exists in baggageclaim", func() {
 					BeforeEach(func() {
 						fakeBaggageclaimClient.LookupVolumeReturns(fakeBaggageclaimVolume, true, nil)
 					})
 
-					It("returns the volume", func() {
+					It("returns the artifact", func() {
 						Expect(foundOrCreatedErr).NotTo(HaveOccurred())
 						Expect(foundOrCreatedVolume).NotTo(BeNil())
 					})
 				})
 
-				Context("when volume does not exist in baggageclaim", func() {
+				Context("when artifact does not exist in baggageclaim", func() {
 					BeforeEach(func() {
 						fakeBaggageclaimClient.LookupVolumeReturns(nil, false, nil)
 					})
 
-					It("creates volume in baggageclaim", func() {
+					It("creates artifact in baggageclaim", func() {
 						Expect(foundOrCreatedErr).NotTo(HaveOccurred())
 						Expect(foundOrCreatedVolume).NotTo(BeNil())
 						Expect(fakeBaggageclaimClient.CreateVolumeCallCount()).To(Equal(1))
 					})
 
-					Context("when creating the volume in baggageclaim fails", func() {
+					Context("when creating the artifact in baggageclaim fails", func() {
 						BeforeEach(func() {
-							fakeBaggageclaimClient.CreateVolumeReturns(nil, errors.New("failed to create volume, oh no"))
+							fakeBaggageclaimClient.CreateVolumeReturns(nil, errors.New("failed to create artifact, oh no"))
 						})
 
-						It("marks the creating volume as failed", func() {
+						It("marks the creating artifact as failed", func() {
 							Expect(fakeCreatingVolume.FailedCallCount()).To(Equal(1))
 						})
 					})
@@ -189,7 +189,7 @@ var _ = Describe("VolumeClient", func() {
 			})
 		})
 
-		Context("when volume exists in created state", func() {
+		Context("when artifact exists in created state", func() {
 			BeforeEach(func() {
 				fakeCreatedVolume := new(dbfakes.FakeCreatedVolume)
 				fakeCreatedVolume.HandleReturns("fake-handle")
@@ -197,30 +197,30 @@ var _ = Describe("VolumeClient", func() {
 				fakeDBVolumeRepository.FindContainerVolumeReturns(nil, fakeCreatedVolume, nil)
 			})
 
-			Context("when volume exists in baggageclaim", func() {
+			Context("when artifact exists in baggageclaim", func() {
 				BeforeEach(func() {
 					fakeBaggageclaimClient.LookupVolumeReturns(fakeBaggageclaimVolume, true, nil)
 				})
 
-				It("returns the volume", func() {
+				It("returns the artifact", func() {
 					Expect(foundOrCreatedErr).NotTo(HaveOccurred())
 					Expect(foundOrCreatedVolume).NotTo(BeNil())
 				})
 			})
 
-			Context("when volume does not exist in baggageclaim", func() {
+			Context("when artifact does not exist in baggageclaim", func() {
 				BeforeEach(func() {
 					fakeBaggageclaimClient.LookupVolumeReturns(nil, false, nil)
 				})
 
 				It("returns an error", func() {
 					Expect(foundOrCreatedErr).To(HaveOccurred())
-					Expect(foundOrCreatedErr.Error()).To(ContainSubstring("volume 'fake-handle' disappeared from worker 'fake-worker'"))
+					Expect(foundOrCreatedErr.Error()).To(ContainSubstring("artifact 'fake-handle' disappeared from worker 'fake-worker'"))
 				})
 			})
 		})
 
-		Context("when volume does not exist in db", func() {
+		Context("when artifact does not exist in db", func() {
 			var fakeCreatedVolume *dbfakes.FakeCreatedVolume
 
 			BeforeEach(func() {
@@ -235,7 +235,7 @@ var _ = Describe("VolumeClient", func() {
 				Expect(fakeLockFactory.AcquireCallCount()).To(Equal(1))
 			})
 
-			It("creates volume in creating state", func() {
+			It("creates artifact in creating state", func() {
 				Expect(fakeDBVolumeRepository.CreateContainerVolumeCallCount()).To(Equal(1))
 				actualTeamID, actualWorkerName, actualContainer, actualMountPath := fakeDBVolumeRepository.CreateContainerVolumeArgsForCall(0)
 				Expect(actualTeamID).To(Equal(42))
@@ -244,18 +244,18 @@ var _ = Describe("VolumeClient", func() {
 				Expect(actualMountPath).To(Equal("some-mount-path"))
 			})
 
-			It("creates volume in baggageclaim", func() {
+			It("creates artifact in baggageclaim", func() {
 				Expect(foundOrCreatedErr).NotTo(HaveOccurred())
-				Expect(foundOrCreatedVolume).To(Equal(worker.NewVolume(fakeBaggageclaimVolume, fakeCreatedVolume, volumeClient)))
+				Expect(foundOrCreatedVolume).To(Equal(worker.NewArtifact(fakeBaggageclaimVolume, fakeCreatedVolume, volumeClient)))
 				Expect(fakeBaggageclaimClient.CreateVolumeCallCount()).To(Equal(1))
 			})
 
-			Context("when creating the volume in baggageclaim fails", func() {
+			Context("when creating the artifact in baggageclaim fails", func() {
 				BeforeEach(func() {
-					fakeBaggageclaimClient.CreateVolumeReturns(nil, errors.New("failed to create volume, oh no"))
+					fakeBaggageclaimClient.CreateVolumeReturns(nil, errors.New("failed to create artifact, oh no"))
 				})
 
-				It("marks the creating volume for removal", func() {
+				It("marks the creating artifact for removal", func() {
 					Expect(fakeCreatingVolume.FailedCallCount()).To(Equal(1))
 				})
 			})
@@ -264,7 +264,7 @@ var _ = Describe("VolumeClient", func() {
 
 	Describe("FindOrCreateCOWVolumeForContainer", func() {
 		var fakeBaggageclaimVolume *baggageclaimfakes.FakeVolume
-		var foundOrCreatedVolume worker.Volume
+		var foundOrCreatedVolume worker.Artifact
 		var foundOrCreatedErr error
 		var container db.CreatingContainer
 		var fakeCreatingVolume *dbfakes.FakeCreatingVolume
@@ -307,12 +307,12 @@ var _ = Describe("VolumeClient", func() {
 			)
 		})
 
-		Context("when volume exists in creating state", func() {
+		Context("when artifact exists in creating state", func() {
 			BeforeEach(func() {
 				fakeDBVolumeRepository.FindContainerVolumeReturns(fakeCreatingVolume, nil, nil)
 			})
 
-			Context("when acquiring volume creating lock fails", func() {
+			Context("when acquiring artifact creating lock fails", func() {
 				var disaster = errors.New("disaster")
 
 				BeforeEach(func() {
@@ -340,7 +340,7 @@ var _ = Describe("VolumeClient", func() {
 					}
 				})
 
-				It("retries to find volume again", func() {
+				It("retries to find artifact again", func() {
 					Expect(fakeLockFactory.AcquireCallCount()).To(Equal(3))
 					Expect(fakeDBVolumeRepository.FindContainerVolumeCallCount()).To(Equal(3))
 				})
@@ -351,23 +351,23 @@ var _ = Describe("VolumeClient", func() {
 					fakeLockFactory.AcquireReturns(fakeLock, true, nil)
 				})
 
-				Context("when volume exists in baggageclaim", func() {
+				Context("when artifact exists in baggageclaim", func() {
 					BeforeEach(func() {
 						fakeBaggageclaimClient.LookupVolumeReturns(fakeBaggageclaimVolume, true, nil)
 					})
 
-					It("returns the volume", func() {
+					It("returns the artifact", func() {
 						Expect(foundOrCreatedErr).NotTo(HaveOccurred())
 						Expect(foundOrCreatedVolume).NotTo(BeNil())
 					})
 				})
 
-				Context("when volume does not exist in baggageclaim", func() {
+				Context("when artifact does not exist in baggageclaim", func() {
 					BeforeEach(func() {
 						fakeBaggageclaimClient.LookupVolumeReturns(nil, false, nil)
 					})
 
-					It("creates volume in baggageclaim", func() {
+					It("creates artifact in baggageclaim", func() {
 						Expect(foundOrCreatedErr).NotTo(HaveOccurred())
 						Expect(foundOrCreatedVolume).NotTo(BeNil())
 						Expect(fakeBaggageclaimClient.CreateVolumeCallCount()).To(Equal(1))
@@ -380,7 +380,7 @@ var _ = Describe("VolumeClient", func() {
 			})
 		})
 
-		Context("when volume exists in created state", func() {
+		Context("when artifact exists in created state", func() {
 			BeforeEach(func() {
 				fakeCreatedVolume := new(dbfakes.FakeCreatedVolume)
 				fakeCreatedVolume.HandleReturns("fake-handle")
@@ -388,30 +388,30 @@ var _ = Describe("VolumeClient", func() {
 				fakeDBVolumeRepository.FindContainerVolumeReturns(nil, fakeCreatedVolume, nil)
 			})
 
-			Context("when volume exists in baggageclaim", func() {
+			Context("when artifact exists in baggageclaim", func() {
 				BeforeEach(func() {
 					fakeBaggageclaimClient.LookupVolumeReturns(fakeBaggageclaimVolume, true, nil)
 				})
 
-				It("returns the volume", func() {
+				It("returns the artifact", func() {
 					Expect(foundOrCreatedErr).NotTo(HaveOccurred())
 					Expect(foundOrCreatedVolume).NotTo(BeNil())
 				})
 			})
 
-			Context("when volume does not exist in baggageclaim", func() {
+			Context("when artifact does not exist in baggageclaim", func() {
 				BeforeEach(func() {
 					fakeBaggageclaimClient.LookupVolumeReturns(nil, false, nil)
 				})
 
 				It("returns an error", func() {
 					Expect(foundOrCreatedErr).To(HaveOccurred())
-					Expect(foundOrCreatedErr.Error()).To(ContainSubstring("volume 'fake-handle' disappeared from worker 'fake-worker'"))
+					Expect(foundOrCreatedErr.Error()).To(ContainSubstring("artifact 'fake-handle' disappeared from worker 'fake-worker'"))
 				})
 			})
 		})
 
-		Context("when volume does not exist in db", func() {
+		Context("when artifact does not exist in db", func() {
 			BeforeEach(func() {
 				fakeDBVolumeRepository.FindContainerVolumeReturns(nil, nil, nil)
 				fakeLockFactory.AcquireReturns(fakeLock, true, nil)
@@ -421,16 +421,16 @@ var _ = Describe("VolumeClient", func() {
 				Expect(fakeLockFactory.AcquireCallCount()).To(Equal(1))
 			})
 
-			It("creates volume in creating state with parent volume", func() {
+			It("creates artifact in creating state with parent artifact", func() {
 				Expect(parentVolume.CreateChildForContainerCallCount()).To(Equal(1))
 				actualContainer, actualMountPath := parentVolume.CreateChildForContainerArgsForCall(0)
 				Expect(actualContainer).To(Equal(container))
 				Expect(actualMountPath).To(Equal("some-mount-path"))
 			})
 
-			It("creates volume in baggageclaim", func() {
+			It("creates artifact in baggageclaim", func() {
 				Expect(foundOrCreatedErr).NotTo(HaveOccurred())
-				Expect(foundOrCreatedVolume).To(Equal(worker.NewVolume(fakeBaggageclaimVolume, fakeCreatedVolume, volumeClient)))
+				Expect(foundOrCreatedVolume).To(Equal(worker.NewArtifact(fakeBaggageclaimVolume, fakeCreatedVolume, volumeClient)))
 				Expect(fakeBaggageclaimClient.CreateVolumeCallCount()).To(Equal(1))
 			})
 		})
@@ -441,7 +441,7 @@ var _ = Describe("VolumeClient", func() {
 			fakeBaggageclaimVolume *baggageclaimfakes.FakeVolume
 			fakeCreatingVolume     *dbfakes.FakeCreatingVolume
 			fakeCreatedVolume      *dbfakes.FakeCreatedVolume
-			volume                 worker.Volume
+			volume                 worker.Artifact
 			found                  bool
 			err                    error
 		)
@@ -475,90 +475,90 @@ var _ = Describe("VolumeClient", func() {
 				dbWorker.ResourceCertsReturns(nil, false, nil)
 			})
 
-			It("doesn't find a volume", func() {
+			It("doesn't find a artifact", func() {
 				Expect(found).To(BeFalse())
 			})
 		})
 
-		Context("when a created volume exists in the database", func() {
+		Context("when a created artifact exists in the database", func() {
 			BeforeEach(func() {
 				fakeCreatedVolume.HandleReturns("created-handle")
 				fakeDBVolumeRepository.FindResourceCertsVolumeReturns(nil, fakeCreatedVolume, nil)
 			})
 
-			It("looks up the volume in baggageclaim", func() {
+			It("looks up the artifact in baggageclaim", func() {
 				Expect(fakeBaggageclaimClient.LookupVolumeCallCount()).To(Equal(1))
 				_, handle := fakeBaggageclaimClient.LookupVolumeArgsForCall(0)
 				Expect(handle).To(Equal("created-handle"))
 			})
 
-			It("finds a volume", func() {
+			It("finds a artifact", func() {
 				Expect(found).To(BeTrue())
 				Expect(volume).ToNot(BeNil())
 			})
 		})
 
-		Context("when a creating volume exists in the database", func() {
+		Context("when a creating artifact exists in the database", func() {
 			BeforeEach(func() {
 				fakeCreatingVolume.HandleReturns("creating-handle")
 				fakeDBVolumeRepository.FindResourceCertsVolumeReturns(fakeCreatingVolume, nil, nil)
 			})
 
-			It("looks up the volume in baggageclaim", func() {
+			It("looks up the artifact in baggageclaim", func() {
 				Expect(fakeBaggageclaimClient.LookupVolumeCallCount()).To(Equal(1))
 				_, handle := fakeBaggageclaimClient.LookupVolumeArgsForCall(0)
 				Expect(handle).To(Equal("creating-handle"))
 			})
 
-			It("marks the volume as created in the db", func() {
+			It("marks the artifact as created in the db", func() {
 				Expect(fakeCreatingVolume.CreatedCallCount()).To(Equal(1))
 			})
 		})
 
-		Context("when the volume doesn't exist on the worker", func() {
+		Context("when the artifact doesn't exist on the worker", func() {
 			BeforeEach(func() {
 				fakeBaggageclaimClient.LookupVolumeReturns(nil, false, nil)
 				fakeBaggageclaimClient.CreateVolumeReturns(fakeBaggageclaimVolume, nil)
 				fakeDBVolumeRepository.CreateResourceCertsVolumeReturns(fakeCreatingVolume, nil)
 			})
 
-			Context("when the resource certs volume doesn't exist in the db", func() {
+			Context("when the resource certs artifact doesn't exist in the db", func() {
 				BeforeEach(func() {
 					fakeDBVolumeRepository.FindResourceCertsVolumeReturns(nil, nil, nil)
 				})
 
-				It("creates the resource certs volume in the db", func() {
+				It("creates the resource certs artifact in the db", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeDBVolumeRepository.CreateResourceCertsVolumeCallCount()).To(Equal(1))
 				})
 
-				It("creates the volume in baggageclaim", func() {
+				It("creates the artifact in baggageclaim", func() {
 					Expect(fakeBaggageclaimClient.CreateVolumeCallCount()).To(Equal(1))
 				})
 			})
 
-			Context("when a creating volume exists in the database", func() {
+			Context("when a creating artifact exists in the database", func() {
 				BeforeEach(func() {
 					fakeCreatingVolume.HandleReturns("creating-handle")
 					fakeDBVolumeRepository.FindResourceCertsVolumeReturns(fakeCreatingVolume, nil, nil)
 				})
 
-				It("looks up the volume in baggageclaim", func() {
+				It("looks up the artifact in baggageclaim", func() {
 					Expect(fakeBaggageclaimClient.LookupVolumeCallCount()).To(Equal(1))
 					_, handle := fakeBaggageclaimClient.LookupVolumeArgsForCall(0)
 					Expect(handle).To(Equal("creating-handle"))
 				})
 
-				It("marks the volume as created in the db", func() {
+				It("marks the artifact as created in the db", func() {
 					Expect(fakeCreatingVolume.CreatedCallCount()).To(Equal(1))
 				})
 			})
 
-			It("marks the volume as created in the db", func() {
+			It("marks the artifact as created in the db", func() {
 				Expect(fakeCreatingVolume.CreatedCallCount()).To(Equal(1))
 			})
 
-			It("creates the volume in baggageclaim", func() {
+			It("creates the artifact in baggageclaim", func() {
 				Expect(fakeBaggageclaimClient.CreateVolumeCallCount()).To(Equal(1))
 			})
 		})
@@ -587,7 +587,7 @@ var _ = Describe("VolumeClient", func() {
 				fakeWorkerTaskCacheFactory.FindReturns(taskCache, true, nil)
 			})
 
-			Context("when task cache volume does not exist in db", func() {
+			Context("when task cache artifact does not exist in db", func() {
 				BeforeEach(func() {
 					fakeDBVolumeRepository.FindTaskCacheVolumeReturns(nil, nil, nil)
 				})
@@ -599,7 +599,7 @@ var _ = Describe("VolumeClient", func() {
 				})
 			})
 
-			Context("when task cache volume exists in db", func() {
+			Context("when task cache artifact exists in db", func() {
 				var dbVolume db.CreatedVolume
 
 				BeforeEach(func() {
@@ -607,7 +607,7 @@ var _ = Describe("VolumeClient", func() {
 					fakeDBVolumeRepository.FindTaskCacheVolumeReturns(nil, dbVolume, nil)
 				})
 
-				Context("when task cache volume does not exist in baggageclaim", func() {
+				Context("when task cache artifact does not exist in baggageclaim", func() {
 					BeforeEach(func() {
 						fakeBaggageclaimClient.LookupVolumeReturns(nil, false, nil)
 					})
@@ -619,7 +619,7 @@ var _ = Describe("VolumeClient", func() {
 					})
 				})
 
-				Context("when task cache volume exists in baggageclaim", func() {
+				Context("when task cache artifact exists in baggageclaim", func() {
 					var bcVolume *baggageclaimfakes.FakeVolume
 
 					BeforeEach(func() {
@@ -627,12 +627,12 @@ var _ = Describe("VolumeClient", func() {
 						fakeBaggageclaimClient.LookupVolumeReturns(bcVolume, true, nil)
 					})
 
-					It("returns volume", func() {
+					It("returns artifact", func() {
 						volume, found, err := volumeClient.FindVolumeForTaskCache(testLogger, 123, 456, "some-step", "some-cache-path")
 						Expect(err).NotTo(HaveOccurred())
 						Expect(found).To(BeTrue())
 
-						Expect(volume).To(Equal(worker.NewVolume(bcVolume, dbVolume, volumeClient)))
+						Expect(volume).To(Equal(worker.NewArtifact(bcVolume, dbVolume, volumeClient)))
 					})
 				})
 			})
@@ -641,7 +641,7 @@ var _ = Describe("VolumeClient", func() {
 
 	Describe("FindOrCreateVolumeForArtifact", func() {
 		var err error
-		var workerVolume worker.Volume
+		var workerVolume worker.Artifact
 
 		BeforeEach(func() {
 			fakeLockFactory.AcquireReturns(nil, false, errors.New("nope"))
@@ -651,9 +651,9 @@ var _ = Describe("VolumeClient", func() {
 			workerVolume, err = volumeClient.FindOrCreateVolumeForArtifact(testLogger, worker.VolumeSpec{}, 42, 123, "some-mount", db.VolumeTypeArtifact)
 		})
 
-		Context("when trying to create a new volume", func() {
+		Context("when trying to create a new artifact", func() {
 
-			Context("when creating the volume in the db fails", func() {
+			Context("when creating the artifact in the db fails", func() {
 				BeforeEach(func() {
 					fakeDBVolumeRepository.CreateVolumeReturns(nil, errors.New("nope"))
 				})
@@ -663,7 +663,7 @@ var _ = Describe("VolumeClient", func() {
 				})
 			})
 
-			Context("when creating the volume in the db succeeds", func() {
+			Context("when creating the artifact in the db succeeds", func() {
 				var fakeCreatingVolume *dbfakes.FakeCreatingVolume
 
 				BeforeEach(func() {
@@ -687,11 +687,11 @@ var _ = Describe("VolumeClient", func() {
 						fakeLockFactory.AcquireReturns(fakeLock, true, nil)
 					})
 
-					It("creates volume in baggageclaim", func() {
+					It("creates artifact in baggageclaim", func() {
 						Expect(fakeBaggageclaimClient.CreateVolumeCallCount()).To(Equal(1))
 					})
 
-					Context("when creating the volume in baggage claim fails", func() {
+					Context("when creating the artifact in baggage claim fails", func() {
 						BeforeEach(func() {
 							fakeBaggageclaimClient.CreateVolumeReturns(nil, errors.New("nope"))
 						})
@@ -701,7 +701,7 @@ var _ = Describe("VolumeClient", func() {
 						})
 					})
 
-					Context("when creating the volume in baggage claim succeeds", func() {
+					Context("when creating the artifact in baggage claim succeeds", func() {
 						var fakeBGVolume *baggageclaimfakes.FakeVolume
 
 						BeforeEach(func() {
@@ -709,7 +709,7 @@ var _ = Describe("VolumeClient", func() {
 							fakeBaggageclaimClient.CreateVolumeReturns(fakeBGVolume, nil)
 						})
 
-						It("transitions the volume to created in the db", func() {
+						It("transitions the artifact to created in the db", func() {
 							Expect(fakeCreatingVolume.CreatedCallCount()).To(Equal(1))
 						})
 
@@ -731,9 +731,9 @@ var _ = Describe("VolumeClient", func() {
 								fakeCreatingVolume.CreatedReturns(fakeCreatedVolume, nil)
 							})
 
-							It("returns a new volume with the bg volume and created volume", func() {
+							It("returns a new artifact with the bg artifact and created artifact", func() {
 								Expect(err).NotTo(HaveOccurred())
-								Expect(workerVolume).To(Equal(worker.NewVolume(fakeBGVolume, fakeCreatedVolume, volumeClient)))
+								Expect(workerVolume).To(Equal(worker.NewArtifact(fakeBGVolume, fakeCreatedVolume, volumeClient)))
 							})
 						})
 					})
@@ -768,7 +768,7 @@ var _ = Describe("VolumeClient", func() {
 			).LookupVolume(testLogger, handle)
 		})
 
-		Context("when the volume can be found on baggageclaim", func() {
+		Context("when the artifact can be found on baggageclaim", func() {
 			var fakeBaggageclaimVolume *baggageclaimfakes.FakeVolume
 
 			BeforeEach(func() {
@@ -781,7 +781,7 @@ var _ = Describe("VolumeClient", func() {
 				Expect(lookupErr).ToNot(HaveOccurred())
 			})
 
-			It("looks up the volume via BaggageClaim", func() {
+			It("looks up the artifact via BaggageClaim", func() {
 				Expect(fakeBaggageclaimClient.LookupVolumeCallCount()).To(Equal(1))
 
 				_, lookedUpHandle := fakeBaggageclaimClient.LookupVolumeArgsForCall(0)
@@ -789,7 +789,7 @@ var _ = Describe("VolumeClient", func() {
 			})
 		})
 
-		Context("when the volume cannot be found on baggageclaim", func() {
+		Context("when the artifact cannot be found on baggageclaim", func() {
 			BeforeEach(func() {
 				fakeBaggageclaimClient.LookupVolumeReturns(nil, false, nil)
 			})
@@ -803,7 +803,7 @@ var _ = Describe("VolumeClient", func() {
 			})
 		})
 
-		Context("when the volume cannot be found in database", func() {
+		Context("when the artifact cannot be found in database", func() {
 			BeforeEach(func() {
 				fakeDBVolumeRepository.FindCreatedVolumeReturns(nil, false, nil)
 			})
@@ -817,7 +817,7 @@ var _ = Describe("VolumeClient", func() {
 			})
 		})
 
-		Context("when looking up the volume fails", func() {
+		Context("when looking up the artifact fails", func() {
 			disaster := errors.New("nope")
 
 			BeforeEach(func() {

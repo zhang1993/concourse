@@ -47,7 +47,7 @@ func (step *ArtifactOutputStep) Run(ctx context.Context, state RunState) error {
 		return ArtifactNotFoundErr(outputName)
 	}
 
-	volume, ok := source.(worker.Volume)
+	volume, ok := source.(worker.Artifact)
 	if !ok {
 		return ArtifactNotFoundErr(outputName)
 	}

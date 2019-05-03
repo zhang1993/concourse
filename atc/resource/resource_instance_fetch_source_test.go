@@ -130,7 +130,7 @@ var _ = Describe("ResourceInstanceFetchSource", func() {
 	})
 
 	Describe("Find", func() {
-		Context("when there is volume", func() {
+		Context("when there is artifact", func() {
 			var expectedInitializedVersionedSource resource.VersionedSource
 			BeforeEach(func() {
 				expectedMetadata := []atc.MetadataField{
@@ -140,7 +140,7 @@ var _ = Describe("ResourceInstanceFetchSource", func() {
 				fakeResourceInstance.FindOnReturns(fakeVolume, true, nil)
 			})
 
-			It("finds initialized volume and sets versioned source", func() {
+			It("finds initialized artifact and sets versioned source", func() {
 				versionedSource, found, err := fetchSource.Find()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
@@ -148,12 +148,12 @@ var _ = Describe("ResourceInstanceFetchSource", func() {
 			})
 		})
 
-		Context("when there is no volume", func() {
+		Context("when there is no artifact", func() {
 			BeforeEach(func() {
 				fakeResourceInstance.FindOnReturns(nil, false, nil)
 			})
 
-			It("does not find volume", func() {
+			It("does not find artifact", func() {
 				versionedSource, found, err := fetchSource.Find()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeFalse())
@@ -177,7 +177,7 @@ var _ = Describe("ResourceInstanceFetchSource", func() {
 			versionedSource, initErr = fetchSource.Create(ctx)
 		})
 
-		Context("when there is initialized volume", func() {
+		Context("when there is initialized artifact", func() {
 			BeforeEach(func() {
 				fakeResourceInstance.FindOnReturns(fakeVolume, true, nil)
 				expectedMetadata := []atc.MetadataField{
@@ -191,18 +191,18 @@ var _ = Describe("ResourceInstanceFetchSource", func() {
 				Expect(fakeWorker.FindOrCreateContainerCallCount()).To(Equal(0))
 			})
 
-			It("finds initialized volume and sets versioned source", func() {
+			It("finds initialized artifact and sets versioned source", func() {
 				Expect(initErr).NotTo(HaveOccurred())
 				Expect(versionedSource).To(Equal(expectedVersionedSource))
 			})
 		})
 
-		Context("when there is no initialized volume", func() {
+		Context("when there is no initialized artifact", func() {
 			BeforeEach(func() {
 				fakeResourceInstance.FindOnReturns(nil, false, nil)
 			})
 
-			It("creates container with volume and worker", func() {
+			It("creates container with artifact and worker", func() {
 				Expect(initErr).NotTo(HaveOccurred())
 				Expect(fakeWorker.FindOrCreateContainerCallCount()).To(Equal(1))
 				_, logger, delegate, owner, metadata, containerSpec, types := fakeWorker.FindOrCreateContainerArgsForCall(0)

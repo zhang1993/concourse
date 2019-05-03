@@ -8,7 +8,7 @@ import (
 	"github.com/concourse/concourse/atc/db"
 )
 
-var ErrMissingVolume = errors.New("volume mounted to container is missing")
+var ErrMissingVolume = errors.New("artifact mounted to container is missing")
 
 //go:generate counterfeiter . Container
 
@@ -106,19 +106,19 @@ func (container *gardenWorkerContainer) initializeVolumes(
 	volumeMounts := []VolumeMount{}
 
 	for _, dbVolume := range container.dbVolumes {
-		volumeLogger := logger.Session("volume", lager.Data{
+		volumeLogger := logger.Session("artifact", lager.Data{
 			"handle": dbVolume.Handle(),
 		})
 
 		volume, volumeFound, err := volumeClient.LookupVolume(logger, dbVolume.Handle())
 		if err != nil {
-			volumeLogger.Error("failed-to-lookup-volume", err)
+			volumeLogger.Error("failed-to-lookup-artifact", err)
 			return err
 		}
 
 		if !volumeFound {
-			volumeLogger.Error("volume-is-missing-on-worker", ErrMissingVolume, lager.Data{"handle": dbVolume.Handle()})
-			return errors.New("volume mounted to container is missing " + dbVolume.Handle() + " from worker " + container.workerName)
+			volumeLogger.Error("artifact-is-missing-on-worker", ErrMissingVolume, lager.Data{"handle": dbVolume.Handle()})
+			return errors.New("artifact mounted to container is missing " + dbVolume.Handle() + " from worker " + container.workerName)
 		}
 
 		volumeMounts = append(volumeMounts, VolumeMount{

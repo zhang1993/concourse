@@ -496,10 +496,10 @@ func (TaskStep) envForParams(params map[string]string) []string {
 
 type taskArtifactSource struct {
 	worker.Client
-	worker.Volume
+	worker.Artifact
 }
 
-func NewTaskArtifactSource(volume worker.Volume) *taskArtifactSource {
+func NewTaskArtifactSource(volume worker.Artifact) *taskArtifactSource {
 	return &taskArtifactSource{volume}
 }
 
@@ -517,7 +517,7 @@ func (src *taskArtifactSource) StreamFile(logger lager.Logger, filename string) 
 	return streamFileHelper(src, logger, filename)
 }
 
-func (src *taskArtifactSource) VolumeOn(logger lager.Logger, w worker.Worker) (worker.Volume, bool, error) {
+func (src *taskArtifactSource) VolumeOn(logger lager.Logger, w worker.Worker) (worker.Artifact, bool, error) {
 	return w.LookupVolume(logger, src.Handle())
 }
 
@@ -592,6 +592,6 @@ func (src *taskCacheSource) StreamFile(logger lager.Logger, filename string) (io
 	return nil, errors.New("taskCacheSource.StreamFile not implemented")
 }
 
-func (src *taskCacheSource) VolumeOn(logger lager.Logger, w worker.Worker) (worker.Volume, bool, error) {
+func (src *taskCacheSource) VolumeOn(logger lager.Logger, w worker.Worker) (worker.Artifact, bool, error) {
 	return w.FindVolumeForTaskCache(src.logger, src.teamID, src.jobID, src.stepName, src.path)
 }

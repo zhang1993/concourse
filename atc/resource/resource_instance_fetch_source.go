@@ -112,7 +112,7 @@ func (s *resourceInstanceFetchSource) Find() (VersionedSource, bool, error) {
 	), true, nil
 }
 
-// Create runs under the lock but we need to make sure volume does not exist
+// Create runs under the lock but we need to make sure artifact does not exist
 // yet before creating it under the lock
 func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSource, error) {
 	sLog := s.logger.Session("create")
@@ -149,7 +149,7 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 	}
 
 	mountPath := ResourcesDir("get")
-	var volume worker.Volume
+	var volume worker.Artifact
 	for _, mount := range container.VolumeMounts() {
 		if mount.MountPath == mountPath {
 			volume = mount.Volume
@@ -176,7 +176,7 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 
 	err = volume.SetPrivileged(false)
 	if err != nil {
-		sLog.Error("failed-to-set-volume-unprivileged", err)
+		sLog.Error("failed-to-set-artifact-unprivileged", err)
 		return nil, err
 	}
 

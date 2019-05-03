@@ -2,17 +2,25 @@ package worker
 
 import (
 	"io"
+	"time"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/concourse/baggageclaim"
 	"github.com/concourse/concourse/atc/db"
 )
 
-//go:generate counterfeiter . Volume
+//go:generate counterfeiter . Artifact
 
-type Volume interface {
-	Handle() string
-	Path() string
+type Artifact interface {
+	ID() int
+	Name() string
+	BuildID() int
+	CreatedAt() time.Time
+	//TODO: Remove this!
+	DBArtifact() db.WorkerArtifact
+	// TODO: Do we need this after volumes become artifacts?
+	Handle() string // used in worker.createVolumes for inputs/outputs
+	Path() string   // used for cert volume mounts
 
 	SetProperty(key string, value string) error
 	Properties() (baggageclaim.VolumeProperties, error)
@@ -32,14 +40,16 @@ type Volume interface {
 
 	WorkerName() string
 	Destroy() error
+	AttachVolume(bcVolume baggageclaim.Volume, dbVolume db.CreatedVolume, client VolumeClient)
 }
 
 type VolumeMount struct {
-	Volume    Volume
+	Volume    Artifact
 	MountPath string
 }
 
-type volume struct {
+type artifact struct {
+	dbArtifact   db.WorkerArtifact
 	bcVolume     baggageclaim.Volume
 	dbVolume     db.CreatedVolume
 	volumeClient VolumeClient
@@ -59,86 +69,114 @@ func (p byMountPath) Less(i, j int) bool {
 	return path1 < path2
 }
 
-func NewVolume(
+func NewArtifactForVolume(
+	dbArtifact db.WorkerArtifact,
 	bcVolume baggageclaim.Volume,
 	dbVolume db.CreatedVolume,
-	volumeClient VolumeClient,
-) Volume {
-	return &volume{
+	client VolumeClient,
+) Artifact {
+	return &artifact{
+		dbArtifact:   dbArtifact,
 		bcVolume:     bcVolume,
 		dbVolume:     dbVolume,
-		volumeClient: volumeClient,
+		volumeClient: client,
 	}
 }
 
-func (v *volume) Handle() string { return v.bcVolume.Handle() }
-
-func (v *volume) Path() string { return v.bcVolume.Path() }
-
-func (v *volume) SetProperty(key string, value string) error {
-	return v.bcVolume.SetProperty(key, value)
+func (a *artifact) AttachVolume(bcVolume baggageclaim.Volume, dbVolume db.CreatedVolume, client VolumeClient) {
+	a.dbVolume = dbVolume
+	a.bcVolume = bcVolume
+	a.volumeClient = client
 }
 
-func (v *volume) SetPrivileged(privileged bool) error {
-	return v.bcVolume.SetPrivileged(privileged)
+func (a *artifact) DBArtifact() db.WorkerArtifact {
+	return a.dbArtifact
 }
 
-func (v *volume) StreamIn(path string, tarStream io.Reader) error {
-	return v.bcVolume.StreamIn(path, tarStream)
+func (a *artifact) ID() int {
+	return a.dbArtifact.ID()
 }
 
-func (v *volume) StreamOut(path string) (io.ReadCloser, error) {
-	return v.bcVolume.StreamOut(path)
+func (a *artifact) Name() string {
+	return a.dbArtifact.Name()
 }
 
-func (v *volume) Properties() (baggageclaim.VolumeProperties, error) {
-	return v.bcVolume.Properties()
+func (a *artifact) BuildID() int {
+	return a.dbArtifact.BuildID()
 }
 
-func (v *volume) WorkerName() string {
-	return v.dbVolume.WorkerName()
+func (a *artifact) CreatedAt() time.Time {
+	return a.dbArtifact.CreatedAt()
 }
 
-func (v *volume) Destroy() error {
-	return v.bcVolume.Destroy()
+func (a *artifact) Handle() string { return a.bcVolume.Handle() }
+
+func (a *artifact) Path() string { return a.bcVolume.Path() }
+
+func (a *artifact) SetProperty(key string, value string) error {
+	return a.bcVolume.SetProperty(key, value)
 }
 
-func (v *volume) COWStrategy() baggageclaim.COWStrategy {
+func (a *artifact) SetPrivileged(privileged bool) error {
+	return a.bcVolume.SetPrivileged(privileged)
+}
+
+func (a *artifact) StreamIn(path string, tarStream io.Reader) error {
+	return a.bcVolume.StreamIn(path, tarStream)
+}
+
+func (a *artifact) StreamOut(path string) (io.ReadCloser, error) {
+	return a.bcVolume.StreamOut(path)
+}
+
+func (a *artifact) Properties() (baggageclaim.VolumeProperties, error) {
+	return a.bcVolume.Properties()
+}
+
+func (a *artifact) WorkerName() string {
+	return a.dbVolume.WorkerName()
+}
+
+func (a *artifact) Destroy() error {
+	return a.bcVolume.Destroy()
+}
+
+func (a *artifact) COWStrategy() baggageclaim.COWStrategy {
 	return baggageclaim.COWStrategy{
-		Parent: v.bcVolume,
+		Parent: a.bcVolume,
 	}
 }
 
-func (v *volume) InitializeResourceCache(urc db.UsedResourceCache) error {
-	return v.dbVolume.InitializeResourceCache(urc)
+func (a *artifact) InitializeResourceCache(urc db.UsedResourceCache) error {
+	return a.dbVolume.InitializeResourceCache(urc)
 }
 
-func (v *volume) InitializeArtifact(name string, buildID int) (db.WorkerArtifact, error) {
-	return v.dbVolume.InitializeArtifact(name, buildID)
+func (a *artifact) InitializeArtifact(name string, buildID int) (db.WorkerArtifact, error) {
+	return a.dbVolume.InitializeArtifact(name, buildID)
 }
 
-func (v *volume) InitializeTaskCache(
+func (a *artifact) InitializeTaskCache(
 	logger lager.Logger,
 	jobID int,
 	stepName string,
 	path string,
 	privileged bool,
 ) error {
-	if v.dbVolume.ParentHandle() == "" {
-		return v.dbVolume.InitializeTaskCache(jobID, stepName, path)
+	if a.dbVolume.ParentHandle() == "" {
+		return a.dbVolume.InitializeTaskCache(jobID, stepName, path)
 	}
 
-	logger.Debug("creating-an-import-volume", lager.Data{"path": v.bcVolume.Path()})
+	logger.Debug("creating-an-import-artifact", lager.Data{"path": a.bcVolume.Path()})
 
 	// always create, if there are any existing task cache volumes they will be gced
 	// after initialization of the current one
-	importVolume, err := v.volumeClient.CreateVolumeForTaskCache(
+	importVolume, err := a.volumeClient.CreateVolumeForTaskCache(
 		logger,
 		VolumeSpec{
-			Strategy:   baggageclaim.ImportStrategy{Path: v.bcVolume.Path()},
+			Strategy:   baggageclaim.ImportStrategy{Path: a.bcVolume.Path()},
 			Privileged: privileged,
 		},
-		v.dbVolume.TeamID(),
+		a.dbVolume.TeamID(),
 		jobID,
 		stepName,
 		path,
@@ -150,6 +188,6 @@ func (v *volume) InitializeTaskCache(
 	return importVolume.InitializeTaskCache(logger, jobID, stepName, path, privileged)
 }
 
-func (v *volume) CreateChildForContainer(creatingContainer db.CreatingContainer, mountPath string) (db.CreatingVolume, error) {
-	return v.dbVolume.CreateChildForContainer(creatingContainer, mountPath)
+func (a *artifact) CreateChildForContainer(creatingContainer db.CreatingContainer, mountPath string) (db.CreatingVolume, error) {
+	return a.dbVolume.CreateChildForContainer(creatingContainer, mountPath)
 }

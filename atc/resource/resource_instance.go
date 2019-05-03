@@ -26,7 +26,7 @@ type ResourceInstance interface {
 
 	LockName(string) (string, error)
 
-	FindOn(lager.Logger, worker.Worker) (worker.Volume, bool, error)
+	FindOn(lager.Logger, worker.Worker) (worker.Artifact, bool, error)
 }
 
 type resourceInstance struct {
@@ -103,7 +103,7 @@ func (instance resourceInstance) LockName(workerName string) (string, error) {
 	return fmt.Sprintf("%x", sha256.Sum256(taskNameJSON)), nil
 }
 
-func (instance resourceInstance) FindOn(logger lager.Logger, w worker.Worker) (worker.Volume, bool, error) {
+func (instance resourceInstance) FindOn(logger lager.Logger, w worker.Worker) (worker.Artifact, bool, error) {
 	return w.FindVolumeForResourceCache(
 		logger,
 		instance.resourceCache,

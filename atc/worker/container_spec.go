@@ -30,8 +30,8 @@ type ContainerSpec struct {
 	// The artifacts which will be attached to the container.
 	Artifacts []atc.WorkerArtifact
 
-	// Inputs to provide to the container. Inputs with a volume local to the
-	// selected worker will be made available via a COW volume; others will be
+	// Inputs to provide to the container. Inputs with a artifact local to the
+	// selected worker will be made available via a COW artifact; others will be
 	// streamed.
 	Inputs []InputSource
 

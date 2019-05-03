@@ -49,7 +49,7 @@ var _ = Describe("Image", func() {
 	var customTypes creds.VersionedResourceTypes
 	var privileged bool
 
-	var fetchedVolume worker.Volume
+	var fetchedVolume worker.Artifact
 	var fetchedMetadataReader io.ReadCloser
 	var fetchedVersion atc.Version
 	var fetchErr error

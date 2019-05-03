@@ -300,7 +300,7 @@ type getArtifactSource struct {
 
 // VolumeOn locates the cache for the GetStep's resource and version on the
 // given worker.
-func (s *getArtifactSource) VolumeOn(logger lager.Logger, worker worker.Worker) (worker.Volume, bool, error) {
+func (s *getArtifactSource) VolumeOn(logger lager.Logger, worker worker.Worker) (worker.Artifact, bool, error) {
 	return s.resourceInstance.FindOn(logger.Session("volume-on"), worker)
 }
 

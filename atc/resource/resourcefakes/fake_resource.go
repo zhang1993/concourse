@@ -26,11 +26,11 @@ type FakeResource struct {
 		result1 []atc.Version
 		result2 error
 	}
-	GetStub        func(context.Context, worker.Volume, resource.IOConfig, atc.Source, atc.Params, atc.Version) (resource.VersionedSource, error)
+	GetStub        func(context.Context, worker.Artifact, resource.IOConfig, atc.Source, atc.Params, atc.Version) (resource.VersionedSource, error)
 	getMutex       sync.RWMutex
 	getArgsForCall []struct {
 		arg1 context.Context
-		arg2 worker.Volume
+		arg2 worker.Artifact
 		arg3 resource.IOConfig
 		arg4 atc.Source
 		arg5 atc.Params
@@ -129,12 +129,12 @@ func (fake *FakeResource) CheckReturnsOnCall(i int, result1 []atc.Version, resul
 	}{result1, result2}
 }
 
-func (fake *FakeResource) Get(arg1 context.Context, arg2 worker.Volume, arg3 resource.IOConfig, arg4 atc.Source, arg5 atc.Params, arg6 atc.Version) (resource.VersionedSource, error) {
+func (fake *FakeResource) Get(arg1 context.Context, arg2 worker.Artifact, arg3 resource.IOConfig, arg4 atc.Source, arg5 atc.Params, arg6 atc.Version) (resource.VersionedSource, error) {
 	fake.getMutex.Lock()
 	ret, specificReturn := fake.getReturnsOnCall[len(fake.getArgsForCall)]
 	fake.getArgsForCall = append(fake.getArgsForCall, struct {
 		arg1 context.Context
-		arg2 worker.Volume
+		arg2 worker.Artifact
 		arg3 resource.IOConfig
 		arg4 atc.Source
 		arg5 atc.Params
@@ -158,13 +158,13 @@ func (fake *FakeResource) GetCallCount() int {
 	return len(fake.getArgsForCall)
 }
 
-func (fake *FakeResource) GetCalls(stub func(context.Context, worker.Volume, resource.IOConfig, atc.Source, atc.Params, atc.Version) (resource.VersionedSource, error)) {
+func (fake *FakeResource) GetCalls(stub func(context.Context, worker.Artifact, resource.IOConfig, atc.Source, atc.Params, atc.Version) (resource.VersionedSource, error)) {
 	fake.getMutex.Lock()
 	defer fake.getMutex.Unlock()
 	fake.GetStub = stub
 }
 
-func (fake *FakeResource) GetArgsForCall(i int) (context.Context, worker.Volume, resource.IOConfig, atc.Source, atc.Params, atc.Version) {
+func (fake *FakeResource) GetArgsForCall(i int) (context.Context, worker.Artifact, resource.IOConfig, atc.Source, atc.Params, atc.Version) {
 	fake.getMutex.RLock()
 	defer fake.getMutex.RUnlock()
 	argsForCall := fake.getArgsForCall[i]

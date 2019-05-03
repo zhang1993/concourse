@@ -56,15 +56,15 @@ type FakeVersionedSource struct {
 	versionReturnsOnCall map[int]struct {
 		result1 atc.Version
 	}
-	VolumeStub        func() worker.Volume
+	VolumeStub        func() worker.Artifact
 	volumeMutex       sync.RWMutex
 	volumeArgsForCall []struct {
 	}
 	volumeReturns struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 	}
 	volumeReturnsOnCall map[int]struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -298,12 +298,12 @@ func (fake *FakeVersionedSource) VersionReturnsOnCall(i int, result1 atc.Version
 	}{result1}
 }
 
-func (fake *FakeVersionedSource) Volume() worker.Volume {
+func (fake *FakeVersionedSource) Artifact() worker.Artifact {
 	fake.volumeMutex.Lock()
 	ret, specificReturn := fake.volumeReturnsOnCall[len(fake.volumeArgsForCall)]
 	fake.volumeArgsForCall = append(fake.volumeArgsForCall, struct {
 	}{})
-	fake.recordInvocation("Volume", []interface{}{})
+	fake.recordInvocation("Artifact", []interface{}{})
 	fake.volumeMutex.Unlock()
 	if fake.VolumeStub != nil {
 		return fake.VolumeStub()
@@ -321,32 +321,32 @@ func (fake *FakeVersionedSource) VolumeCallCount() int {
 	return len(fake.volumeArgsForCall)
 }
 
-func (fake *FakeVersionedSource) VolumeCalls(stub func() worker.Volume) {
+func (fake *FakeVersionedSource) VolumeCalls(stub func() worker.Artifact) {
 	fake.volumeMutex.Lock()
 	defer fake.volumeMutex.Unlock()
 	fake.VolumeStub = stub
 }
 
-func (fake *FakeVersionedSource) VolumeReturns(result1 worker.Volume) {
+func (fake *FakeVersionedSource) VolumeReturns(result1 worker.Artifact) {
 	fake.volumeMutex.Lock()
 	defer fake.volumeMutex.Unlock()
 	fake.VolumeStub = nil
 	fake.volumeReturns = struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 	}{result1}
 }
 
-func (fake *FakeVersionedSource) VolumeReturnsOnCall(i int, result1 worker.Volume) {
+func (fake *FakeVersionedSource) VolumeReturnsOnCall(i int, result1 worker.Artifact) {
 	fake.volumeMutex.Lock()
 	defer fake.volumeMutex.Unlock()
 	fake.VolumeStub = nil
 	if fake.volumeReturnsOnCall == nil {
 		fake.volumeReturnsOnCall = make(map[int]struct {
-			result1 worker.Volume
+			result1 worker.Artifact
 		})
 	}
 	fake.volumeReturnsOnCall[i] = struct {
-		result1 worker.Volume
+		result1 worker.Artifact
 	}{result1}
 }
 

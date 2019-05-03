@@ -10,7 +10,7 @@ type CertsVolumeMount struct {
 }
 
 func (s *CertsVolumeMount) VolumeOn(worker Worker) (garden.BindMount, bool, error) {
-	volume, found, err := worker.CertsVolume(s.Logger.Session("worker-certs-volume"))
+	volume, found, err := worker.CertsVolume(s.Logger.Session("worker-certs-artifact"))
 	if err != nil {
 		return garden.BindMount{}, false, err
 	}

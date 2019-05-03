@@ -45,7 +45,7 @@ type ImageResourceFetcher interface {
 		logger lager.Logger,
 		container db.CreatingContainer,
 		privileged bool,
-	) (worker.Volume, io.ReadCloser, atc.Version, error)
+	) (worker.Artifact, io.ReadCloser, atc.Version, error)
 }
 
 type imageResourceFetcherFactory struct {
@@ -111,7 +111,7 @@ func (i *imageResourceFetcher) Fetch(
 	logger lager.Logger,
 	container db.CreatingContainer,
 	privileged bool,
-) (worker.Volume, io.ReadCloser, atc.Version, error) {
+) (worker.Artifact, io.ReadCloser, atc.Version, error) {
 	version := i.version
 	if version == nil {
 		var err error
@@ -191,7 +191,7 @@ func (i *imageResourceFetcher) Fetch(
 		return nil, nil, nil, err
 	}
 
-	volume := versionedSource.Volume()
+	volume := versionedSource.Artifact()
 	if volume == nil {
 		return nil, nil, nil, ErrImageGetDidNotProduceVolume
 	}

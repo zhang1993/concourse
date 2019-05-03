@@ -22,8 +22,8 @@ type ArtifactSource interface {
 	// If the file cannot be found, FileNotFoundError should be returned.
 	StreamFile(lager.Logger, string) (io.ReadCloser, error)
 
-	// VolumeOn attempts to locate a volume equivalent to this source on the
-	// given worker. If a volume can be found, it will be used directly. If not,
+	// VolumeOn attempts to locate a artifact equivalent to this source on the
+	// given worker. If a artifact can be found, it will be used directly. If not,
 	// `StreamTo` will be used to copy the data to the destination instead.
-	VolumeOn(lager.Logger, Worker) (Volume, bool, error)
+	VolumeOn(lager.Logger, Worker) (Artifact, bool, error)
 }
