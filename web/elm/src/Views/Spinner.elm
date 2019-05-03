@@ -9,12 +9,12 @@
 module Views.Spinner exposing (spinner)
 
 import Html exposing (Html)
-import Html.Attributes exposing (style)
+import Views.Views as Views exposing (Identifier(..), style)
 
 
-spinner : { size : String, margin : String } -> Html msg
+spinner : { size : String, margin : String } -> Views.View msg
 spinner { size, margin } =
-    Html.div
+    Views.div Unidentified
         -- preloader-wrapper active
         [ style "width" size
         , style "height" size
@@ -22,13 +22,15 @@ spinner { size, margin } =
         , style "animation" "container-rotate 1568ms linear infinite"
         , style "margin" margin
         ]
-        [ Html.div
+        []
+        [ Views.div Unidentified
             -- spinner-layer spinner-blue-only
             [ style "height" "100%"
             , style "border-color" "white"
             , style "animation" "fill-unfill-rotate 5332ms cubic-bezier(0.4, 0.0, 0.2, 1) infinite both"
             ]
-            [ Html.div
+            []
+            [ Views.div Unidentified
                 -- circle-clipper left
                 [ style "position" "relative"
                 , style "width" "50%"
@@ -37,7 +39,8 @@ spinner { size, margin } =
                 , style "border-color" "inherit"
                 , style "float" "left"
                 ]
-                [ Html.div
+                []
+                [ Views.div Unidentified
                     -- circle
                     [ style "width" "200%"
                     , style "border-width" "2px"
@@ -55,8 +58,9 @@ spinner { size, margin } =
                     , style "animation" "left-spin 1333ms cubic-bezier(0.4, 0.0, 0.2, 1) infinite both"
                     ]
                     []
+                    []
                 ]
-            , Html.div
+            , Views.div Unidentified
                 -- circle-clipper right
                 [ style "position" "relative"
                 , style "width" "50%"
@@ -65,7 +69,8 @@ spinner { size, margin } =
                 , style "border-color" "inherit"
                 , style "float" "right"
                 ]
-                [ Html.div
+                []
+                [ Views.div Unidentified
                     -- circle
                     [ style "width" "200%"
                     , style "border-width" "2px"
@@ -82,6 +87,7 @@ spinner { size, margin } =
                     , style "transform" "rotate(-129deg)"
                     , style "animation" "right-spin 1333ms cubic-bezier(0.4, 0.0, 0.2, 1) infinite both"
                     ]
+                    []
                     []
                 ]
             ]

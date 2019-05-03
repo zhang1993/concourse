@@ -19,13 +19,13 @@ import Html.Attributes exposing (style)
 import Views.Views as Views
 
 
-groupsBar : List (Html.Attribute msg)
+groupsBar : List Views.Style
 groupsBar =
-    [ style "background-color" Colors.groupsBarBackground
-    , style "color" Colors.dashboardText
-    , style "display" "flex"
-    , style "flex-flow" "row wrap"
-    , style "padding" "5px"
+    [ Views.style "background-color" Colors.groupsBarBackground
+    , Views.style "color" Colors.dashboardText
+    , Views.style "display" "flex"
+    , Views.style "flex-flow" "row wrap"
+    , Views.style "padding" "5px"
     ]
 
 
@@ -136,9 +136,9 @@ pinIconContainer showBackground =
            )
 
 
-pauseToggle : Bool -> List (Html.Attribute msg)
+pauseToggle : Bool -> List Views.Style
 pauseToggle isPaused =
-    [ style "border-left" <|
+    [ Views.style "border-left" <|
         if isPaused then
             "1px solid rgba(255, 255, 255, 0.5)"
 
@@ -147,13 +147,13 @@ pauseToggle isPaused =
     ]
 
 
-cliIcon : Cli.Cli -> List (Html.Attribute msg)
+cliIcon : Cli.Cli -> List Views.Style
 cliIcon cli =
-    [ style "width" "12px"
-    , style "height" "12px"
-    , style "background-image" <| Cli.iconUrl cli
-    , style "background-repeat" "no-repeat"
-    , style "background-position" "50% 50%"
-    , style "background-size" "contain"
-    , style "display" "inline-block"
+    [ Views.style "width" "12px"
+    , Views.style "height" "12px"
+    , Views.style "background-image" <| Cli.iconUrl cli
+    , Views.style "background-repeat" "no-repeat"
+    , Views.style "background-position" "50% 50%"
+    , Views.style "background-size" "contain"
+    , Views.style "display" "inline-block"
     ]

@@ -60,16 +60,16 @@ pageBelowTopBar route =
            )
 
 
-topBar : Bool -> List (Html.Attribute msg)
+topBar : Bool -> List Views.Style
 topBar isPaused =
-    [ style "position" "fixed"
-    , style "top" "0"
-    , style "width" "100%"
-    , style "z-index" "999"
-    , style "display" "flex"
-    , style "justify-content" "space-between"
-    , style "font-weight" "700"
-    , style "background-color" <|
+    [ Views.style "position" "fixed"
+    , Views.style "top" "0"
+    , Views.style "width" "100%"
+    , Views.style "z-index" "999"
+    , Views.style "display" "flex"
+    , Views.style "justify-content" "space-between"
+    , Views.style "font-weight" "700"
+    , Views.style "background-color" <|
         if isPaused then
             Colors.paused
 
@@ -96,45 +96,45 @@ pipelineTopBar isPaused =
     ]
 
 
-concourseLogo : List (Html.Attribute msg)
+concourseLogo : List Views.Style
 concourseLogo =
-    [ style "background-image" "url(/public/images/concourse-logo-white.svg)"
-    , style "background-position" "50% 50%"
-    , style "background-repeat" "no-repeat"
-    , style "background-size" "42px 42px"
-    , style "width" "54px"
-    , style "height" "54px"
+    [ Views.style "background-image" "url(/public/images/concourse-logo-white.svg)"
+    , Views.style "background-position" "50% 50%"
+    , Views.style "background-repeat" "no-repeat"
+    , Views.style "background-size" "42px 42px"
+    , Views.style "width" "54px"
+    , Views.style "height" "54px"
     ]
 
 
-breadcrumbContainer : List (Html.Attribute msg)
+breadcrumbContainer : List Views.Style
 breadcrumbContainer =
-    [ style "flex-grow" "1" ]
+    [ Views.style "flex-grow" "1" ]
 
 
-breadcrumbComponent : String -> List (Html.Attribute msg)
+breadcrumbComponent : String -> List Views.Style
 breadcrumbComponent componentType =
-    [ style "background-image" <|
+    [ Views.style "background-image" <|
         "url(/public/images/ic-breadcrumb-"
             ++ componentType
             ++ ".svg)"
-    , style "background-repeat" "no-repeat"
-    , style "background-size" "contain"
-    , style "display" "inline-block"
-    , style "vertical-align" "middle"
-    , style "height" "16px"
-    , style "width" "32px"
-    , style "margin-right" "10px"
+    , Views.style "background-repeat" "no-repeat"
+    , Views.style "background-size" "contain"
+    , Views.style "display" "inline-block"
+    , Views.style "vertical-align" "middle"
+    , Views.style "height" "16px"
+    , Views.style "width" "32px"
+    , Views.style "margin-right" "10px"
     ]
 
 
-breadcrumbItem : Bool -> List (Html.Attribute msg)
+breadcrumbItem : Bool -> List Views.Style
 breadcrumbItem clickable =
-    [ style "display" "flex"
-    , style "font-size" "18px"
-    , style "padding" "0 10px"
-    , style "line-height" "54px"
-    , style "cursor" <|
+    [ Views.style "display" "flex"
+    , Views.style "font-size" "18px"
+    , Views.style "padding" "0 10px"
+    , Views.style "line-height" "54px"
+    , Views.style "cursor" <|
         if clickable then
             "pointer"
 

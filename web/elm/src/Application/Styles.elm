@@ -1,10 +1,9 @@
 module Application.Styles exposing (disableInteraction)
 
-import Html
-import Html.Attributes exposing (style)
+import Views.Views as Views exposing (style)
 
 
-disableInteraction : List (Html.Attribute msg)
+disableInteraction : List Views.Style
 disableInteraction =
     [ style "cursor" "default"
     , style "user-select" "none"

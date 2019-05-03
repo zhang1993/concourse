@@ -48,6 +48,7 @@ import Url exposing (fromString)
 import Views.DictView as DictView
 import Views.Icon as Icon
 import Views.Spinner as Spinner
+import Views.Views as Views
 
 
 init :
@@ -402,12 +403,12 @@ updateTooltip { hoveredElement, hoveredCounter } model =
     ( { model | tooltip = newTooltip }, [] )
 
 
-view : Time.Zone -> StepTreeModel -> Html Message
+view : Time.Zone -> StepTreeModel -> Views.View Message
 view timeZone model =
     viewTree timeZone model model.tree
 
 
-viewTree : Time.Zone -> StepTreeModel -> StepTree -> Html Message
+viewTree : Time.Zone -> StepTreeModel -> StepTree -> Views.View Message
 viewTree timeZone model tree =
     case tree of
         Task step ->
@@ -429,8 +430,12 @@ viewTree timeZone model tree =
             viewTree timeZone model step
 
         Retry id tab _ steps ->
-            Html.div [ class "retry" ]
-                [ Html.ul [ class "retry-tabs" ]
+            Views.div Views.Unidentified
+                []
+                [ class "retry" ]
+                [ Views.ul Views.Unidentified
+                    []
+                    [ class "retry-tabs" ]
                     (Array.toList <| Array.indexedMap (viewTab id tab) steps)
                 , case Array.get (tab - 1) steps of
                     Just step ->
@@ -438,18 +443,22 @@ viewTree timeZone model tree =
 
                     Nothing ->
                         -- impossible (bogus tab selected)
-                        Html.text ""
+                        Views.text ""
                 ]
 
         Timeout step ->
             viewTree timeZone model step
 
         Aggregate steps ->
-            Html.div [ class "aggregate" ]
+            Views.div Views.Unidentified
+                []
+                [ class "aggregate" ]
                 (Array.toList <| Array.map (viewSeq timeZone model) steps)
 
         Do steps ->
-            Html.div [ class "do" ]
+            Views.div Views.Unidentified
+                []
+                [ class "do" ]
                 (Array.toList <| Array.map (viewSeq timeZone model) steps)
 
         OnSuccess { step, hook } ->
@@ -468,28 +477,33 @@ viewTree timeZone model tree =
             viewHooked timeZone "ensure" model step hook
 
 
-viewTab : StepID -> Int -> Int -> StepTree -> Html Message
+viewTab : StepID -> Int -> Int -> StepTree -> Views.View Message
 viewTab id currentTab idx step =
     let
         tab =
             idx + 1
     in
-    Html.li
+    Views.li Views.Unidentified
+        []
         [ classList [ ( "current", currentTab == tab ), ( "inactive", not <| treeIsActive step ) ] ]
-        [ Html.a [ onClick (SwitchTab id tab) ] [ Html.text (String.fromInt tab) ] ]
+        [ Views.a Views.Unidentified [] [ onClick (SwitchTab id tab) ] [ Views.text (String.fromInt tab) ] ]
 
 
-viewSeq : Time.Zone -> StepTreeModel -> StepTree -> Html Message
+viewSeq : Time.Zone -> StepTreeModel -> StepTree -> Views.View Message
 viewSeq timeZone model tree =
-    Html.div [ class "seq" ] [ viewTree timeZone model tree ]
+    Views.div Views.Unidentified [] [ class "seq" ] [ viewTree timeZone model tree ]
 
 
-viewHooked : Time.Zone -> String -> StepTreeModel -> StepTree -> StepTree -> Html Message
+viewHooked : Time.Zone -> String -> StepTreeModel -> StepTree -> StepTree -> Views.View Message
 viewHooked timeZone name model step hook =
-    Html.div [ class "hooked" ]
-        [ Html.div [ class "step" ] [ viewTree timeZone model step ]
-        , Html.div [ class "children" ]
-            [ Html.div [ class ("hook hook-" ++ name) ] [ viewTree timeZone model hook ]
+    Views.div Views.Unidentified
+        []
+        [ class "hooked" ]
+        [ Views.div Views.Unidentified [] [ class "step" ] [ viewTree timeZone model step ]
+        , Views.div Views.Unidentified
+            []
+            [ class "children" ]
+            [ Views.div Views.Unidentified [] [ class ("hook hook-" ++ name) ] [ viewTree timeZone model hook ]
             ]
         ]
 
@@ -504,33 +518,36 @@ autoExpanded state =
     isActive state && state /= StepStateSucceeded
 
 
-viewStep : StepTreeModel -> Time.Zone -> Step -> StepHeaderType -> Html Message
+viewStep : StepTreeModel -> Time.Zone -> Step -> StepHeaderType -> Views.View Message
 viewStep model timeZone { id, name, log, state, error, expanded, version, metadata, timestamps, initialize, start, finish } headerType =
-    Html.div
+    Views.div Views.Unidentified
+        []
         [ classList
             [ ( "build-step", True )
             , ( "inactive", not <| isActive state )
             ]
         , attribute "data-step-name" name
         ]
-        [ Html.div
-            ([ class "header"
-             , onClick (ToggleStep id)
-             ]
-                ++ Styles.stepHeader
-            )
-            [ Html.div
-                [ style "display" "flex" ]
+        [ Views.div Views.Unidentified
+            Styles.stepHeader
+            [ class "header"
+            , onClick (ToggleStep id)
+            ]
+            [ Views.div Views.Unidentified
+                [ Views.style "display" "flex" ]
+                []
                 [ viewStepHeaderIcon headerType (model.tooltip == Just (FirstOccurrenceIcon id)) id
-                , Html.h3 [] [ Html.text name ]
+                , Views.h3 Views.Unidentified [] [] [ Views.text name ]
                 ]
-            , Html.div
-                [ style "display" "flex" ]
+            , Views.div Views.Unidentified
+                [ Views.style "display" "flex" ]
+                []
                 [ viewVersion version
                 , viewStepState state id (viewDurationTooltip initialize start finish (model.tooltip == Just (StepState id)))
                 ]
             ]
-        , Html.div
+        , Views.div Views.Unidentified
+            []
             [ classList
                 [ ( "step-body", True )
                 , ( "clearfix", True )
@@ -540,14 +557,21 @@ viewStep model timeZone { id, name, log, state, error, expanded, version, metada
           <|
             if Maybe.withDefault (autoExpanded state) (Maybe.map (always True) expanded) then
                 [ viewMetadata metadata
-                , Html.pre [ class "timestamped-logs" ] <|
+                , Views.pre Views.Unidentified [] [ class "timestamped-logs" ] <|
                     viewLogs log timestamps model.highlight timeZone id
                 , case error of
                     Nothing ->
-                        Html.span [] []
+                        Views.span Views.Unidentified [] [] []
 
                     Just msg ->
-                        Html.span [ class "error" ] [ Html.pre [] [ Html.text msg ] ]
+                        Views.span Views.Unidentified
+                            []
+                            [ class "error" ]
+                            [ Views.pre Views.Unidentified
+                                []
+                                []
+                                [ Views.text msg ]
+                            ]
                 ]
 
             else
@@ -561,7 +585,7 @@ viewLogs :
     -> Highlight
     -> Time.Zone
     -> String
-    -> List (Html Message)
+    -> List (Views.View Message)
 viewLogs { lines } timestamps hl timeZone id =
     Array.toList <|
         Array.indexedMap
@@ -586,7 +610,7 @@ viewTimestampedLine :
     , line : Ansi.Log.Line
     , timeZone : Time.Zone
     }
-    -> Html Message
+    -> Views.View Message
 viewTimestampedLine { timestamps, highlight, id, lineNo, line, timeZone } =
     let
         highlighted =
@@ -603,7 +627,8 @@ viewTimestampedLine { timestamps, highlight, id, lineNo, line, timeZone } =
         ts =
             Dict.get lineNo timestamps
     in
-    Html.tr
+    Views.tr Views.Unidentified
+        []
         [ classList
             [ ( "timestamped-line", True )
             , ( "highlighted-line", highlighted )
@@ -619,11 +644,13 @@ viewTimestampedLine { timestamps, highlight, id, lineNo, line, timeZone } =
         ]
 
 
-viewLine : Ansi.Log.Line -> Html Message
+viewLine : Ansi.Log.Line -> Views.View Message
 viewLine line =
-    Html.td [ class "timestamped-content" ]
-        [ Ansi.Log.viewLine line
-        ]
+    Views.td
+        Views.Unidentified
+        []
+        [ class "timestamped-content" ]
+        [ Views.logLine line ]
 
 
 viewTimestamp :
@@ -632,9 +659,11 @@ viewTimestamp :
     , date : Maybe Time.Posix
     , timeZone : Time.Zone
     }
-    -> Html Message
+    -> Views.View Message
 viewTimestamp { id, line, date, timeZone } =
-    Html.a
+    Views.a
+        Views.Unidentified
+        []
         [ href (showHighlight (HighlightLine id line))
         , StrictEvents.onLeftClickOrShiftLeftClick
             (SetHighlight id line)
@@ -642,9 +671,10 @@ viewTimestamp { id, line, date, timeZone } =
         ]
         [ case date of
             Just d ->
-                Html.td
+                Views.td Views.Unidentified
+                    []
                     [ class "timestamp" ]
-                    [ Html.text <|
+                    [ Views.text <|
                         DateFormat.format
                             [ DateFormat.hourMilitaryFixed
                             , DateFormat.text ":"
@@ -657,34 +687,36 @@ viewTimestamp { id, line, date, timeZone } =
                     ]
 
             _ ->
-                Html.td [ class "timestamp placeholder" ] []
+                Views.td Views.Unidentified [] [ class "timestamp placeholder" ] []
         ]
 
 
-viewVersion : Maybe Version -> Html Message
+viewVersion : Maybe Version -> Views.View Message
 viewVersion version =
     Maybe.withDefault Dict.empty version
-        |> Dict.map (always Html.text)
+        |> Dict.map (always Views.text)
         |> DictView.view []
 
 
-viewMetadata : List MetadataField -> Html Message
+viewMetadata : List MetadataField -> Views.View Message
 viewMetadata =
     List.map
         (\{ name, value } ->
             ( name
-            , Html.pre []
+            , Views.pre Views.Unidentified
+                []
+                []
                 [ case fromString value of
                     Just _ ->
-                        Html.a
+                        Views.a Views.Unidentified
+                            [ Views.style "text-decoration-line" "underline" ]
                             [ href value
                             , target "_blank"
-                            , style "text-decoration-line" "underline"
                             ]
-                            [ Html.text value ]
+                            [ Views.text value ]
 
                     Nothing ->
-                        Html.text value
+                        Views.text value
                 ]
             )
         )
@@ -692,7 +724,7 @@ viewMetadata =
         >> DictView.view []
 
 
-viewStepState : StepState -> StepID -> List (Html Message) -> Html Message
+viewStepState : StepState -> StepID -> List (Views.View Message) -> Views.View Message
 viewStepState state id tooltip =
     let
         eventHandlers =
@@ -772,7 +804,7 @@ viewStepState state id tooltip =
                 tooltip
 
 
-viewStepHeaderIcon : StepHeaderType -> Bool -> StepID -> Html Message
+viewStepHeaderIcon : StepHeaderType -> Bool -> StepID -> Views.View Message
 viewStepHeaderIcon headerType tooltip id =
     let
         eventHandlers =
@@ -784,14 +816,17 @@ viewStepHeaderIcon headerType tooltip id =
             else
                 []
     in
-    Html.div
-        (Styles.stepHeaderIcon headerType ++ eventHandlers)
+    Views.div Views.Unidentified
+        (Styles.stepHeaderIcon headerType)
+        eventHandlers
         (if tooltip then
-            [ Html.div
+            [ Views.div Views.Unidentified
                 Styles.firstOccurrenceTooltip
-                [ Html.text "new version" ]
-            , Html.div
+                []
+                [ Views.text "new version" ]
+            , Views.div Views.Unidentified
                 Styles.firstOccurrenceTooltipArrow
+                []
                 []
             ]
 
@@ -800,7 +835,7 @@ viewStepHeaderIcon headerType tooltip id =
         )
 
 
-viewDurationTooltip : Maybe Time.Posix -> Maybe Time.Posix -> Maybe Time.Posix -> Bool -> List (Html Message)
+viewDurationTooltip : Maybe Time.Posix -> Maybe Time.Posix -> Maybe Time.Posix -> Bool -> List (Views.View Message)
 viewDurationTooltip minit mstart mfinish tooltip =
     if tooltip then
         case ( minit, mstart, mfinish ) of
@@ -812,19 +847,23 @@ viewDurationTooltip minit mstart mfinish tooltip =
                     stepDuration =
                         Duration.between startedAt finishedAt
                 in
-                [ Html.div [ style "position" "inherit", style "margin-left" "-500px" ]
-                    [ Html.div
+                [ Views.div Views.Unidentified
+                    [ Views.style "position" "inherit", Views.style "margin-left" "-500px" ]
+                    []
+                    [ Views.div Views.Unidentified
                         Styles.durationTooltip
+                        []
                         [ DictView.view []
                             (Dict.fromList
-                                [ ( "initialization", Html.text (Duration.format initDuration) )
-                                , ( "step", Html.text (Duration.format stepDuration) )
+                                [ ( "initialization", Views.text (Duration.format initDuration) )
+                                , ( "step", Views.text (Duration.format stepDuration) )
                                 ]
                             )
                         ]
                     ]
-                , Html.div
+                , Views.div Views.Unidentified
                     Styles.durationTooltipArrow
+                    []
                     []
                 ]
 

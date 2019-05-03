@@ -8,6 +8,7 @@ import UserState exposing (UserState(..))
 import Views.Icon as Icon
 import Views.Spinner as Spinner
 import Views.Styles as Styles
+import Views.Views as Views
 
 
 view :
@@ -20,7 +21,7 @@ view :
             , isToggleHovered : Bool
             , isToggleLoading : Bool
         }
-    -> Html Message
+    -> Views.View Message
 view margin userState { isPaused, pipeline, isToggleHovered, isToggleLoading } =
     let
         isClickable =

@@ -21,6 +21,7 @@ import Concourse
 import Dashboard.Styles exposing (striped)
 import Html
 import Html.Attributes exposing (style)
+import Views.Views as Views
 
 
 header : Concourse.BuildStatus -> List (Html.Attribute msg)
@@ -136,14 +137,14 @@ triggerTooltip =
     ]
 
 
-stepHeader : List (Html.Attribute msg)
+stepHeader : List Views.Style
 stepHeader =
-    [ style "display" "flex"
-    , style "justify-content" "space-between"
+    [ Views.style "display" "flex"
+    , Views.style "justify-content" "space-between"
     ]
 
 
-stepHeaderIcon : StepHeaderType -> List (Html.Attribute msg)
+stepHeaderIcon : StepHeaderType -> List Views.Style
 stepHeaderIcon icon =
     let
         image =
@@ -160,16 +161,16 @@ stepHeaderIcon icon =
                 StepHeaderTask ->
                     "terminal"
     in
-    [ style "height" "28px"
-    , style "width" "28px"
-    , style "background-image" <|
+    [ Views.style "height" "28px"
+    , Views.style "width" "28px"
+    , Views.style "background-image" <|
         "url(/public/images/ic-"
             ++ image
             ++ ".svg)"
-    , style "background-repeat" "no-repeat"
-    , style "background-position" "50% 50%"
-    , style "background-size" "14px 14px"
-    , style "position" "relative"
+    , Views.style "background-repeat" "no-repeat"
+    , Views.style "background-position" "50% 50%"
+    , Views.style "background-size" "14px 14px"
+    , Views.style "position" "relative"
     ]
 
 
@@ -180,55 +181,55 @@ stepStatusIcon =
     ]
 
 
-firstOccurrenceTooltip : List (Html.Attribute msg)
+firstOccurrenceTooltip : List Views.Style
 firstOccurrenceTooltip =
-    [ style "position" "absolute"
-    , style "left" "0"
-    , style "bottom" "100%"
-    , style "background-color" Colors.tooltipBackground
-    , style "padding" "5px"
-    , style "z-index" "100"
-    , style "width" "6em"
-    , style "pointer-events" "none"
+    [ Views.style "position" "absolute"
+    , Views.style "left" "0"
+    , Views.style "bottom" "100%"
+    , Views.style "background-color" Colors.tooltipBackground
+    , Views.style "padding" "5px"
+    , Views.style "z-index" "100"
+    , Views.style "width" "6em"
+    , Views.style "pointer-events" "none"
     ]
         ++ Application.Styles.disableInteraction
 
 
-firstOccurrenceTooltipArrow : List (Html.Attribute msg)
+firstOccurrenceTooltipArrow : List Views.Style
 firstOccurrenceTooltipArrow =
-    [ style "width" "0"
-    , style "height" "0"
-    , style "left" "50%"
-    , style "margin-left" "-5px"
-    , style "border-top" <| "5px solid " ++ Colors.tooltipBackground
-    , style "border-left" "5px solid transparent"
-    , style "border-right" "5px solid transparent"
-    , style "position" "absolute"
+    [ Views.style "width" "0"
+    , Views.style "height" "0"
+    , Views.style "left" "50%"
+    , Views.style "margin-left" "-5px"
+    , Views.style "border-top" <| "5px solid " ++ Colors.tooltipBackground
+    , Views.style "border-left" "5px solid transparent"
+    , Views.style "border-right" "5px solid transparent"
+    , Views.style "position" "absolute"
     ]
 
 
-durationTooltip : List (Html.Attribute msg)
+durationTooltip : List Views.Style
 durationTooltip =
-    [ style "position" "absolute"
-    , style "right" "0"
-    , style "bottom" "100%"
-    , style "background-color" Colors.tooltipBackground
-    , style "padding" "5px"
-    , style "z-index" "100"
-    , style "pointer-events" "none"
+    [ Views.style "position" "absolute"
+    , Views.style "right" "0"
+    , Views.style "bottom" "100%"
+    , Views.style "background-color" Colors.tooltipBackground
+    , Views.style "padding" "5px"
+    , Views.style "z-index" "100"
+    , Views.style "pointer-events" "none"
     ]
         ++ Application.Styles.disableInteraction
 
 
-durationTooltipArrow : List (Html.Attribute msg)
+durationTooltipArrow : List Views.Style
 durationTooltipArrow =
-    [ style "width" "0"
-    , style "height" "0"
-    , style "left" "50%"
-    , style "top" "0px"
-    , style "margin-left" "-5px"
-    , style "border-top" <| "5px solid " ++ Colors.tooltipBackground
-    , style "border-left" "5px solid transparent"
-    , style "border-right" "5px solid transparent"
-    , style "position" "absolute"
+    [ Views.style "width" "0"
+    , Views.style "height" "0"
+    , Views.style "left" "50%"
+    , Views.style "top" "0px"
+    , Views.style "margin-left" "-5px"
+    , Views.style "border-top" <| "5px solid " ++ Colors.tooltipBackground
+    , Views.style "border-left" "5px solid transparent"
+    , Views.style "border-right" "5px solid transparent"
+    , Views.style "position" "absolute"
     ]

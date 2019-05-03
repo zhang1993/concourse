@@ -18,6 +18,7 @@ import Time
 import UserState exposing (UserState)
 import Views.Icon as Icon
 import Views.PauseToggle as PauseToggle
+import Views.Views as Views
 
 
 pipelineNotSetView : Html Message
@@ -126,21 +127,24 @@ bodyView pipeline =
         [ DashboardPreview.view pipeline.jobs ]
 
 
-footerView : UserState -> Pipeline -> Time.Posix -> Bool -> Html Message
+footerView : UserState -> Pipeline -> Time.Posix -> Bool -> Views.View Message
 footerView userState pipeline now hovered =
     let
         spacer =
-            Html.div [ style "width" "13.5px" ] []
+            Views.div Views.Unidentified [ Views.style "width" "13.5px" ] [] []
     in
-    Html.div
-        (class "card-footer" :: Styles.pipelineCardFooter)
-        [ Html.div
-            [ style "display" "flex" ]
+    Views.div Views.Unidentified
+        Styles.pipelineCardFooter
+        [ class "card-footer" ]
+        [ Views.div Views.Unidentified
+            [ Views.style "display" "flex" ]
+            []
             [ PipelineStatus.icon pipeline.status
             , transitionView now pipeline
             ]
-        , Html.div
-            [ style "display" "flex" ]
+        , Views.div Views.Unidentified
+            [ Views.style "display" "flex" ]
+            []
           <|
             List.intersperse spacer
                 [ PauseToggle.view "0"
@@ -159,7 +163,7 @@ footerView userState pipeline now hovered =
         ]
 
 
-visibilityView : Bool -> Html Message
+visibilityView : Bool -> Views.View Message
 visibilityView public =
     Icon.icon
         { sizePx = 20
@@ -208,10 +212,9 @@ statusAgeText pipeline now =
             sinceTransitionText details now
 
 
-transitionView : Time.Posix -> Pipeline -> Html Message
+transitionView : Time.Posix -> Pipeline -> Views.View Message
 transitionView time pipeline =
-    Html.div
-        (class "build-duration"
-            :: Styles.pipelineCardTransitionAge pipeline.status
-        )
-        [ Html.text <| statusAgeText pipeline time ]
+    Views.div Views.Unidentified
+        (Styles.pipelineCardTransitionAge pipeline.status)
+        [ class "build-duration" ]
+        [ Views.text <| statusAgeText pipeline time ]

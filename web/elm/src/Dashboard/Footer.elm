@@ -15,6 +15,7 @@ import Message.Subscription exposing (Delivery(..), Interval(..))
 import Routes
 import ScreenSize
 import Views.Icon as Icon
+import Views.Views as Views
 
 
 handleDelivery :
@@ -67,7 +68,7 @@ handleDelivery delivery ( model, effects ) =
             ( model, effects )
 
 
-view : FooterModel r -> Html Message
+view : FooterModel r -> Views.View Message
 view model =
     if model.showHelp then
         keyboardHelp
@@ -76,35 +77,43 @@ view model =
         infoBar model
 
     else
-        Html.text ""
+        Views.text ""
 
 
-keyboardHelp : Html Message
+keyboardHelp : Views.View Message
 keyboardHelp =
-    Html.div
-        [ class "keyboard-help", id "keyboard-help" ]
-        [ Html.div
+    Views.div (Views.Id "keyboard-help")
+        []
+        [ class "keyboard-help" ]
+        [ Views.div Views.Unidentified
+            []
             [ class "help-title" ]
-            [ Html.text "keyboard shortcuts" ]
-        , Html.div
+            [ Views.text "keyboard shortcuts" ]
+        , Views.div Views.Unidentified
+            []
             [ class "help-line" ]
-            [ Html.div
+            [ Views.div Views.Unidentified
+                []
                 [ class "keys" ]
-                [ Html.span
+                [ Views.span Views.Unidentified
+                    []
                     [ class "key" ]
-                    [ Html.text "/" ]
+                    [ Views.text "/" ]
                 ]
-            , Html.text "search"
+            , Views.text "search"
             ]
-        , Html.div
+        , Views.div Views.Unidentified
+            []
             [ class "help-line" ]
-            [ Html.div
+            [ Views.div Views.Unidentified
+                []
                 [ class "keys" ]
-                [ Html.span
+                [ Views.span Views.Unidentified
+                    []
                     [ class "key" ]
-                    [ Html.text "?" ]
+                    [ Views.text "?" ]
                 ]
-            , Html.text "hide/show help"
+            , Views.text "hide/show help"
             ]
         ]
 
@@ -117,15 +126,16 @@ infoBar :
         , highDensity : Bool
         , groups : List Group
     }
-    -> Html Message
+    -> Views.View Message
 infoBar model =
-    Html.div
-        (id "dashboard-info"
-            :: Styles.infoBar
-                { hideLegend = hideLegend model
-                , screenSize = model.screenSize
-                }
+    Views.div
+        (Views.Id "dashboard-info")
+        (Styles.infoBar
+            { hideLegend = hideLegend model
+            , screenSize = model.screenSize
+            }
         )
+        []
         [ legend model
         , concourseInfo model
         ]
@@ -137,28 +147,27 @@ legend :
         , screenSize : ScreenSize.ScreenSize
         , highDensity : Bool
     }
-    -> Html Message
+    -> Views.View Message
 legend model =
     if hideLegend model then
-        Html.text ""
+        Views.text ""
 
     else
-        Html.div
-            (id "legend" :: Styles.legend)
-        <|
+        Views.div (Views.Id "legend") Styles.legend [] <|
             List.map legendItem
                 [ PipelineStatusPending False
                 , PipelineStatusPaused
                 ]
-                ++ Html.div
+                ++ Views.div Views.Unidentified
                     Styles.legendItem
+                    []
                     [ Icon.icon
                         { sizePx = 20
                         , image = "ic-running-legend.svg"
                         }
                         []
-                    , Html.div [ style "width" "10px" ] []
-                    , Html.text "running"
+                    , Views.div Views.Unidentified [ Views.style "width" "10px" ] [] []
+                    , Views.text "running"
                     ]
                 :: List.map legendItem
                     [ PipelineStatusFailed PipelineStatus.Running
@@ -172,16 +181,20 @@ legend model =
 
 concourseInfo :
     { a | version : String, hovered : Maybe Hoverable }
-    -> Html Message
+    -> Views.View Message
 concourseInfo { version, hovered } =
-    Html.div (id "concourse-info" :: Styles.info)
-        [ Html.div
+    Views.div (Views.Id "concourse-info")
+        Styles.info
+        []
+        [ Views.div Views.Unidentified
             Styles.infoItem
-            [ Html.text <| "version: v" ++ version ]
-        , Html.div Styles.infoItem <|
-            [ Html.span
-                [ style "margin-right" "10px" ]
-                [ Html.text "cli: " ]
+            []
+            [ Views.text <| "version: v" ++ version ]
+        , Views.div Views.Unidentified Styles.infoItem [] <|
+            [ Views.span Views.Unidentified
+                [ Views.style "margin-right" "10px" ]
+                []
+                [ Views.text "cli: " ]
             ]
                 ++ List.map (cliIcon hovered) Cli.clis
         ]
@@ -192,58 +205,58 @@ hideLegend { groups } =
     List.isEmpty (groups |> List.concatMap .pipelines)
 
 
-legendItem : PipelineStatus -> Html Message
+legendItem : PipelineStatus -> Views.View Message
 legendItem status =
-    Html.div
+    Views.div Views.Unidentified
         Styles.legendItem
+        []
         [ PipelineStatus.icon status
-        , Html.div [ style "width" "10px" ] []
-        , Html.text <| PipelineStatus.show status
+        , Views.div Views.Unidentified [ Views.style "width" "10px" ] [] []
+        , Views.text <| PipelineStatus.show status
         ]
 
 
-toggleView : Bool -> Html Message
+toggleView : Bool -> Views.View Message
 toggleView highDensity =
-    Html.a
-        ([ href <| Routes.toString <| Routes.dashboardRoute (not highDensity)
-         , attribute "aria-label" "Toggle high-density view"
-         ]
-            ++ Styles.highDensityToggle
-        )
-        [ Html.div (Styles.highDensityIcon highDensity) []
-        , Html.text "high-density"
+    Views.a Views.Unidentified
+        Styles.highDensityToggle
+        [ href <| Routes.toString <| Routes.dashboardRoute (not highDensity)
+        , attribute "aria-label" "Toggle high-density view"
+        ]
+        [ Views.div Views.Unidentified (Styles.highDensityIcon highDensity) [] []
+        , Views.text "high-density"
         ]
 
 
-legendSeparator : ScreenSize.ScreenSize -> Html Message
+legendSeparator : ScreenSize.ScreenSize -> Views.View Message
 legendSeparator screenSize =
     case screenSize of
         ScreenSize.Phone ->
-            Html.text ""
+            Views.text ""
 
         ScreenSize.Tablet ->
-            Html.text ""
+            Views.text ""
 
         ScreenSize.Desktop ->
-            Html.div Styles.legendSeparator [ Html.text "|" ]
+            Views.div Views.Unidentified Styles.legendSeparator [] [ Views.text "|" ]
 
         ScreenSize.BigDesktop ->
-            Html.div Styles.legendSeparator [ Html.text "|" ]
+            Views.div Views.Unidentified Styles.legendSeparator [] [ Views.text "|" ]
 
 
-cliIcon : Maybe Hoverable -> Cli.Cli -> Html Message
+cliIcon : Maybe Hoverable -> Cli.Cli -> Views.View Message
 cliIcon hovered cli =
-    Html.a
-        ([ href <| Cli.downloadUrl cli
-         , attribute "aria-label" <| Cli.label cli
-         , id <| "cli-" ++ Cli.id cli
-         , onMouseEnter <| Hover <| Just <| FooterCliIcon cli
-         , onMouseLeave <| Hover Nothing
-         , download ""
-         ]
-            ++ Styles.infoCliIcon
-                { hovered = hovered == (Just <| FooterCliIcon cli)
-                , cli = cli
-                }
+    Views.a
+        (Views.Id <| "cli-" ++ Cli.id cli)
+        (Styles.infoCliIcon
+            { hovered = hovered == (Just <| FooterCliIcon cli)
+            , cli = cli
+            }
         )
+        [ href <| Cli.downloadUrl cli
+        , attribute "aria-label" <| Cli.label cli
+        , onMouseEnter <| Hover <| Just <| FooterCliIcon cli
+        , onMouseLeave <| Hover Nothing
+        , download ""
+        ]
         []

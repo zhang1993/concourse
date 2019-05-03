@@ -50,6 +50,7 @@ import Concourse.PipelineStatus exposing (PipelineStatus(..))
 import Html
 import Html.Attributes exposing (style)
 import ScreenSize exposing (ScreenSize(..))
+import Views.Views as Views
 
 
 content : Bool -> List (Html.Attribute msg)
@@ -280,38 +281,38 @@ texture pipelineRunningKeyframes isRunning color =
         solid color
 
 
-pipelineCardFooter : List (Html.Attribute msg)
+pipelineCardFooter : List Views.Style
 pipelineCardFooter =
-    [ style "padding" "13.5px"
-    , style "display" "flex"
-    , style "justify-content" "space-between"
-    , style "background-color" Colors.card
+    [ Views.style "padding" "13.5px"
+    , Views.style "display" "flex"
+    , Views.style "justify-content" "space-between"
+    , Views.style "background-color" Colors.card
     ]
 
 
-pipelineCardTransitionAge : PipelineStatus -> List (Html.Attribute msg)
+pipelineCardTransitionAge : PipelineStatus -> List Views.Style
 pipelineCardTransitionAge status =
-    [ style "color" <| Colors.statusColor status
-    , style "font-size" "18px"
-    , style "line-height" "20px"
-    , style "letter-spacing" "0.05em"
-    , style "margin-left" "8px"
+    [ Views.style "color" <| Colors.statusColor status
+    , Views.style "font-size" "18px"
+    , Views.style "line-height" "20px"
+    , Views.style "letter-spacing" "0.05em"
+    , Views.style "margin-left" "8px"
     ]
 
 
 infoBar :
     { hideLegend : Bool, screenSize : ScreenSize.ScreenSize }
-    -> List (Html.Attribute msg)
+    -> List Views.Style
 infoBar { hideLegend, screenSize } =
-    [ style "position" "fixed"
-    , style "bottom" "0"
-    , style "line-height" "35px"
-    , style "padding" "7.5px 30px"
-    , style "background-color" Colors.frame
-    , style "width" "100%"
-    , style "box-sizing" "border-box"
-    , style "display" "flex"
-    , style "justify-content" <|
+    [ Views.style "position" "fixed"
+    , Views.style "bottom" "0"
+    , Views.style "line-height" "35px"
+    , Views.style "padding" "7.5px 30px"
+    , Views.style "background-color" Colors.frame
+    , Views.style "width" "100%"
+    , Views.style "box-sizing" "border-box"
+    , Views.style "display" "flex"
+    , Views.style "justify-content" <|
         if hideLegend then
             "flex-end"
 
@@ -329,91 +330,91 @@ infoBar { hideLegend, screenSize } =
                     []
 
                 ScreenSize.Desktop ->
-                    [ style "flex-direction" "column" ]
+                    [ Views.style "flex-direction" "column" ]
 
                 ScreenSize.BigDesktop ->
                     []
            )
 
 
-legend : List (Html.Attribute msg)
+legend : List Views.Style
 legend =
-    [ style "display" "flex"
-    , style "flex-wrap" "wrap"
+    [ Views.style "display" "flex"
+    , Views.style "flex-wrap" "wrap"
     ]
 
 
-legendItem : List (Html.Attribute msg)
+legendItem : List Views.Style
 legendItem =
-    [ style "display" "flex"
-    , style "text-transform" "uppercase"
-    , style "align-items" "center"
-    , style "color" Colors.bottomBarText
-    , style "margin-right" "20px"
+    [ Views.style "display" "flex"
+    , Views.style "text-transform" "uppercase"
+    , Views.style "align-items" "center"
+    , Views.style "color" Colors.bottomBarText
+    , Views.style "margin-right" "20px"
     ]
 
 
-legendSeparator : List (Html.Attribute msg)
+legendSeparator : List Views.Style
 legendSeparator =
-    [ style "color" Colors.bottomBarText
-    , style "margin-right" "20px"
-    , style "display" "flex"
-    , style "align-items" "center"
+    [ Views.style "color" Colors.bottomBarText
+    , Views.style "margin-right" "20px"
+    , Views.style "display" "flex"
+    , Views.style "align-items" "center"
     ]
 
 
-highDensityToggle : List (Html.Attribute msg)
+highDensityToggle : List Views.Style
 highDensityToggle =
-    [ style "color" Colors.bottomBarText
-    , style "margin-right" "20px"
-    , style "display" "flex"
-    , style "text-transform" "uppercase"
-    , style "align-items" "center"
+    [ Views.style "color" Colors.bottomBarText
+    , Views.style "margin-right" "20px"
+    , Views.style "display" "flex"
+    , Views.style "text-transform" "uppercase"
+    , Views.style "align-items" "center"
     ]
 
 
-highDensityIcon : Bool -> List (Html.Attribute msg)
+highDensityIcon : Bool -> List Views.Style
 highDensityIcon highDensity =
-    [ style "background-image" <|
+    [ Views.style "background-image" <|
         if highDensity then
             "url(/public/images/ic-hd-on.svg)"
 
         else
             "url(/public/images/ic-hd-off.svg)"
-    , style "background-size" "contain"
-    , style "height" "20px"
-    , style "width" "35px"
-    , style "flex-shrink" "0"
-    , style "margin-right" "10px"
+    , Views.style "background-size" "contain"
+    , Views.style "height" "20px"
+    , Views.style "width" "35px"
+    , Views.style "flex-shrink" "0"
+    , Views.style "margin-right" "10px"
     ]
 
 
-info : List (Html.Attribute msg)
+info : List Views.Style
 info =
-    [ style "display" "flex"
-    , style "color" Colors.bottomBarText
-    , style "font-size" "1.25em"
+    [ Views.style "display" "flex"
+    , Views.style "color" Colors.bottomBarText
+    , Views.style "font-size" "1.25em"
     ]
 
 
-infoItem : List (Html.Attribute msg)
+infoItem : List Views.Style
 infoItem =
-    [ style "margin-right" "30px"
-    , style "display" "flex"
-    , style "align-items" "center"
+    [ Views.style "margin-right" "30px"
+    , Views.style "display" "flex"
+    , Views.style "align-items" "center"
     ]
 
 
-infoCliIcon : { hovered : Bool, cli : Cli.Cli } -> List (Html.Attribute msg)
+infoCliIcon : { hovered : Bool, cli : Cli.Cli } -> List Views.Style
 infoCliIcon { hovered, cli } =
-    [ style "margin-right" "10px"
-    , style "width" "20px"
-    , style "height" "20px"
-    , style "background-image" <| Cli.iconUrl cli
-    , style "background-repeat" "no-repeat"
-    , style "background-position" "50% 50%"
-    , style "background-size" "contain"
-    , style "opacity" <|
+    [ Views.style "margin-right" "10px"
+    , Views.style "width" "20px"
+    , Views.style "height" "20px"
+    , Views.style "background-image" <| Cli.iconUrl cli
+    , Views.style "background-repeat" "no-repeat"
+    , Views.style "background-position" "50% 50%"
+    , Views.style "background-size" "contain"
+    , Views.style "opacity" <|
         if hovered then
             "1"
 
@@ -478,17 +479,17 @@ resourceErrorTriangle =
     ]
 
 
-asciiArt : List (Html.Attribute msg)
+asciiArt : List Views.Style
 asciiArt =
-    [ style "font-size" "16px"
-    , style "line-height" "8px"
-    , style "position" "absolute"
-    , style "top" "0"
-    , style "left" "23em"
-    , style "margin" "0"
-    , style "white-space" "pre"
-    , style "color" Colors.asciiArt
-    , style "z-index" "1"
+    [ Views.style "font-size" "16px"
+    , Views.style "line-height" "8px"
+    , Views.style "position" "absolute"
+    , Views.style "top" "0"
+    , Views.style "left" "23em"
+    , Views.style "margin" "0"
+    , Views.style "white-space" "pre"
+    , Views.style "color" Colors.asciiArt
+    , Views.style "z-index" "1"
     ]
         ++ Application.Styles.disableInteraction
 

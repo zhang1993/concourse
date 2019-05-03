@@ -1,18 +1,20 @@
 module Views.LoadingIndicator exposing (view)
 
 import Html exposing (Html)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class)
 import Views.Spinner as Spinner
+import Views.Views as Views exposing (style)
 
 
-view : Html x
+view : Views.View x
 view =
-    Html.div [ class "build-step" ]
-        [ Html.div
-            [ class "header"
-            , style "display" "flex"
-            ]
+    Views.div Views.Unidentified
+        []
+        [ class "build-step" ]
+        [ Views.div Views.Unidentified
+            [ style "display" "flex" ]
+            [ class "header" ]
             [ Spinner.spinner { size = "14px", margin = "7px" }
-            , Html.h3 [] [ Html.text "loading..." ]
+            , Views.h3 Views.Unidentified [] [] [ Views.text "loading..." ]
             ]
         ]

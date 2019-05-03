@@ -16,17 +16,25 @@ import Message.Message exposing (Hoverable(..), Message(..))
 import Routes
 import Url
 import Views.Styles as Styles
+import Views.Views as Views
 
 
-concourseLogo : Html Message
+concourseLogo : Views.View Message
 concourseLogo =
-    Html.a (href "/" :: Styles.concourseLogo) []
+    Views.a Views.Unidentified Styles.concourseLogo [ href "/" ] []
 
 
 breadcrumbs : Routes.Route -> Html Message
 breadcrumbs route =
-    Html.div
-        (id "breadcrumbs" :: Styles.breadcrumbContainer)
+    mybreadcrumbs route |> Views.toHtml
+
+
+mybreadcrumbs : Routes.Route -> Views.View Message
+mybreadcrumbs route =
+    Views.div
+        (Views.Id "breadcrumbs")
+        Styles.breadcrumbContainer
+        []
     <|
         case route of
             Routes.Pipeline { id } ->
@@ -67,46 +75,53 @@ breadcrumbs route =
                 []
 
 
-breadcrumbComponent : String -> String -> List (Html Message)
+breadcrumbComponent : String -> String -> List (Views.View Message)
 breadcrumbComponent componentType name =
-    [ Html.div
+    [ Views.div
+        Views.Unidentified
         (Styles.breadcrumbComponent componentType)
         []
-    , Html.text <| decodeName name
+        []
+    , Views.text <| decodeName name
     ]
 
 
-breadcrumbSeparator : Html Message
+breadcrumbSeparator : Views.View Message
 breadcrumbSeparator =
-    Html.li
-        (class "breadcrumb-separator" :: Styles.breadcrumbItem False)
-        [ Html.text "/" ]
+    Views.li
+        Views.Unidentified
+        (Styles.breadcrumbItem False)
+        []
+        [ Views.text "/" ]
 
 
-pipelineBreadcrumb : Concourse.PipelineIdentifier -> Html Message
+pipelineBreadcrumb : Concourse.PipelineIdentifier -> Views.View Message
 pipelineBreadcrumb pipelineId =
-    Html.a
-        ([ id "breadcrumb-pipeline"
-         , href <|
+    Views.a
+        (Views.Id "breadcrumb-pipeline")
+        (Styles.breadcrumbItem True)
+        [ href <|
             Routes.toString <|
                 Routes.Pipeline { id = pipelineId, groups = [] }
-         ]
-            ++ Styles.breadcrumbItem True
-        )
+        ]
         (breadcrumbComponent "pipeline" pipelineId.pipelineName)
 
 
-jobBreadcrumb : String -> Html Message
+jobBreadcrumb : String -> Views.View Message
 jobBreadcrumb jobName =
-    Html.li
-        (id "breadcrumb-job" :: Styles.breadcrumbItem False)
+    Views.li
+        (Views.Id "breadcrumb-job")
+        (Styles.breadcrumbItem False)
+        []
         (breadcrumbComponent "job" jobName)
 
 
-resourceBreadcrumb : String -> Html Message
+resourceBreadcrumb : String -> Views.View Message
 resourceBreadcrumb resourceName =
-    Html.li
-        (id "breadcrumb-resource" :: Styles.breadcrumbItem False)
+    Views.li
+        (Views.Id "breadcrumb-resource")
+        (Styles.breadcrumbItem False)
+        []
         (breadcrumbComponent "resource" resourceName)
 
 

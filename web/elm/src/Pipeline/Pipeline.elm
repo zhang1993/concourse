@@ -403,19 +403,19 @@ myView userState model =
 
               else
                 topBarOther userState model
-            , Html.div
-                ([ id "page-below-top-bar"
-                 , style "height" "100%"
-                 , style "box-sizing" "border-box"
-                 ]
-                    ++ (case model.screenSize of
-                            Phone ->
-                                [ style "padding-top" "112px" ]
+            , Views.div
+                (Views.Id "page-below-top-bar")
+                [ Views.style "height" "100%"
+                , Views.style "box-sizing" "border-box"
+                , Views.style "padding-top" <|
+                    case model.screenSize of
+                        Phone ->
+                            "112px"
 
-                            _ ->
-                                [ style "padding-top" "54px" ]
-                       )
-                )
+                        _ ->
+                            "54px"
+                ]
+                []
                 [ viewSubPage model ]
             ]
         ]
@@ -525,11 +525,13 @@ topBarPhone userState model =
                             [ onMouseEnter <| Hover <| Just PinIcon
                             , onMouseLeave <| Hover Nothing
                             ]
-                            (Html.div
+                            (Views.div
                                 (Views.Id "pin-badge")
                                 Styles.pinBadge
                                 []
-                                [ Views.div []
+                                [ Views.div Views.Unidentified
+                                    []
+                                    []
                                     [ Views.text <|
                                         String.fromInt numPinnedResources
                                     ]
@@ -543,12 +545,12 @@ topBarPhone userState model =
                             )
 
                       else
-                        Html.div Styles.pinIcon []
+                        Views.div Views.Unidentified Styles.pinIcon [] []
                     ]
-                , Html.div
-                    (id "top-bar-pause-toggle"
-                        :: (Styles.pauseToggle <| isPaused model.pipeline)
-                    )
+                , Views.div
+                    (Views.Id "top-bar-pause-toggle")
+                    (Styles.pauseToggle <| isPaused model.pipeline)
+                    []
                     [ PauseToggle.view "17px"
                         userState
                         { pipeline = model.pipelineLocator
@@ -566,32 +568,31 @@ topBarPhone userState model =
         ]
 
 
-topBarOther : UserState -> Model -> Html Message
+topBarOther : UserState -> Model -> Views.View Message
 topBarOther userState model =
-    Html.div
-        (id "top-bar-app"
-            :: (Views.Styles.topBar <|
-                    isPaused model.pipeline
-               )
-            ++ [ style "flex-direction" "row" ]
+    Views.div
+        (Views.Id "top-bar-app")
+        ((Views.Styles.topBar <| isPaused model.pipeline)
+            ++ [ Views.style "flex-direction" "row" ]
         )
+        []
         [ TopBar.concourseLogo
         , Views.div
             (Views.Id "breadcrumbs")
-            (Views.Styles.breadcrumbContainer ++ [ style "overflow" "hidden" ])
+            (Views.Styles.breadcrumbContainer ++ [ Views.style "overflow" "hidden" ])
             []
-            [ Html.a
-                ([ id "breadcrumb-pipeline"
-                 , href <|
+            [ Views.a
+                (Views.Id "breadcrumb-pipeline")
+                (Views.style "align-items" "center"
+                    :: Views.Styles.breadcrumbItem True
+                )
+                [ href <|
                     Routes.toString <|
                         Routes.Pipeline
                             { id = model.pipelineLocator
                             , groups = []
                             }
-                 , style "align-items" "center"
-                 ]
-                    ++ Views.Styles.breadcrumbItem True
-                )
+                ]
                 (TopBar.breadcrumbComponent "pipeline"
                     model.pipelineLocator.pipelineName
                 )
@@ -602,10 +603,10 @@ topBarOther userState model =
             , isPinMenuExpanded =
                 model.hovered == Just PinIcon
             }
-        , Html.div
-            (id "top-bar-pause-toggle"
-                :: (Styles.pauseToggle <| isPaused model.pipeline)
-            )
+        , Views.div
+            (Views.Id "top-bar-pause-toggle")
+            (Styles.pauseToggle <| isPaused model.pipeline)
+            []
             [ PauseToggle.view "17px"
                 userState
                 { pipeline = model.pipelineLocator
@@ -736,86 +737,110 @@ isPaused p =
     RemoteData.withDefault False (RemoteData.map .paused p)
 
 
-viewSubPage : Model -> Html Message
+viewSubPage : Model -> Views.View Message
 viewSubPage model =
-    Html.div [ class "pipeline-view" ]
+    Views.div Views.Unidentified
+        []
+        [ class "pipeline-view" ]
         [ viewGroupsBar model
-        , Html.div [ class "pipeline-content" ]
-            [ Svg.svg
+        , Views.div Views.Unidentified
+            []
+            [ class "pipeline-content" ]
+            [ Views.svg Views.Unidentified
+                []
                 [ SvgAttributes.class "pipeline-graph test" ]
                 []
-            , Html.div
+            , Views.div Views.Unidentified
+                []
                 [ if model.experiencingTurbulence then
                     class "error-message"
 
                   else
                     class "error-message hidden"
                 ]
-                [ Html.div [ class "message" ]
-                    [ Html.img [ src model.turbulenceImgSrc, class "seatbelt" ] []
-                    , Html.p [] [ Html.text "experiencing turbulence" ]
-                    , Html.p [ class "explanation" ] []
+                [ Views.div Views.Unidentified
+                    []
+                    [ class "message" ]
+                    [ Views.img Views.Unidentified [] [ src model.turbulenceImgSrc, class "seatbelt" ] []
+                    , Views.p Views.Unidentified [] [] [ Views.text "experiencing turbulence" ]
+                    , Views.p Views.Unidentified [] [ class "explanation" ] []
                     ]
                 ]
             , if model.hideLegend then
-                Html.text ""
+                Views.text ""
 
               else
-                Html.dl
-                    [ id "legend", class "legend" ]
-                    [ Html.dt [ class "succeeded" ] []
-                    , Html.dd [] [ Html.text "succeeded" ]
-                    , Html.dt [ class "errored" ] []
-                    , Html.dd [] [ Html.text "errored" ]
-                    , Html.dt [ class "aborted" ] []
-                    , Html.dd [] [ Html.text "aborted" ]
-                    , Html.dt [ class "paused" ] []
-                    , Html.dd [] [ Html.text "paused" ]
-                    , Html.dt
-                        [ Html.Attributes.style "background-color" Colors.pinned
-                        ]
+                Views.dl (Views.Id "legend")
+                    []
+                    [ class "legend" ]
+                    [ Views.dt Views.Unidentified [] [ class "succeeded" ] []
+                    , Views.dd Views.Unidentified [] [] [ Views.text "succeeded" ]
+                    , Views.dt Views.Unidentified [] [ class "errored" ] []
+                    , Views.dd Views.Unidentified [] [] [ Views.text "errored" ]
+                    , Views.dt Views.Unidentified [] [ class "aborted" ] []
+                    , Views.dd Views.Unidentified [] [] [ Views.text "aborted" ]
+                    , Views.dt Views.Unidentified [] [ class "paused" ] []
+                    , Views.dd Views.Unidentified [] [] [ Views.text "paused" ]
+                    , Views.dt Views.Unidentified
+                        [ Views.style "background-color" Colors.pinned ]
                         []
-                    , Html.dd [] [ Html.text "pinned" ]
-                    , Html.dt [ class "failed" ] []
-                    , Html.dd [] [ Html.text "failed" ]
-                    , Html.dt [ class "pending" ] []
-                    , Html.dd [] [ Html.text "pending" ]
-                    , Html.dt [ class "started" ] []
-                    , Html.dd [] [ Html.text "started" ]
-                    , Html.dt [ class "dotted" ] [ Html.text "." ]
-                    , Html.dd [] [ Html.text "dependency" ]
-                    , Html.dt [ class "solid" ] [ Html.text "-" ]
-                    , Html.dd [] [ Html.text "dependency (trigger)" ]
+                        []
+                    , Views.dd Views.Unidentified [] [] [ Views.text "pinned" ]
+                    , Views.dt Views.Unidentified [] [ class "failed" ] []
+                    , Views.dd Views.Unidentified [] [] [ Views.text "failed" ]
+                    , Views.dt Views.Unidentified [] [ class "pending" ] []
+                    , Views.dd Views.Unidentified [] [] [ Views.text "pending" ]
+                    , Views.dt Views.Unidentified [] [ class "started" ] []
+                    , Views.dd Views.Unidentified [] [] [ Views.text "started" ]
+                    , Views.dt Views.Unidentified [] [ class "dotted" ] [ Views.text "." ]
+                    , Views.dd Views.Unidentified [] [] [ Views.text "dependency" ]
+                    , Views.dt Views.Unidentified [] [ class "solid" ] [ Views.text "-" ]
+                    , Views.dd Views.Unidentified [] [] [ Views.text "dependency (trigger)" ]
                     ]
-            , Html.table [ class "lower-right-info" ]
-                [ Html.tr []
-                    [ Html.td [ class "label" ] [ Html.text "cli:" ]
-                    , Html.td []
-                        [ Html.ul [ class "cli-downloads" ] <|
+            , Views.table Views.Unidentified
+                []
+                [ class "lower-right-info" ]
+                [ Views.tr Views.Unidentified
+                    []
+                    []
+                    [ Views.td Views.Unidentified [] [ class "label" ] [ Views.text "cli:" ]
+                    , Views.td Views.Unidentified
+                        []
+                        []
+                        [ Views.ul Views.Unidentified [] [ class "cli-downloads" ] <|
                             List.map
                                 (\cli ->
-                                    Html.li []
-                                        [ Html.a
-                                            ([ href <| Cli.downloadUrl cli
-                                             , ariaLabel <| Cli.label cli
-                                             , download ""
-                                             ]
-                                                ++ Styles.cliIcon cli
-                                            )
+                                    Views.li Views.Unidentified
+                                        []
+                                        []
+                                        [ Views.a
+                                            Views.Unidentified
+                                            (Styles.cliIcon cli)
+                                            [ href <| Cli.downloadUrl cli
+                                            , ariaLabel <| Cli.label cli
+                                            , download ""
+                                            ]
                                             []
                                         ]
                                 )
                                 Cli.clis
                         ]
                     ]
-                , Html.tr []
-                    [ Html.td [ class "label" ] [ Html.text "version:" ]
-                    , Html.td []
-                        [ Html.div [ id "concourse-version" ]
-                            [ Html.text "v"
-                            , Html.span
+                , Views.tr Views.Unidentified
+                    []
+                    []
+                    [ Views.td Views.Unidentified [] [ class "label" ] [ Views.text "version:" ]
+                    , Views.td Views.Unidentified
+                        []
+                        []
+                        [ Views.div (Views.Id "concourse-version")
+                            []
+                            []
+                            [ Views.text "v"
+                            , Views.span Views.Unidentified
+                                []
                                 [ class "number" ]
-                                [ Html.text model.concourseVersion ]
+                                [ Views.text model.concourseVersion ]
                             ]
                         ]
                     ]
@@ -824,7 +849,7 @@ viewSubPage model =
         ]
 
 
-viewGroupsBar : Model -> Html Message
+viewGroupsBar : Model -> Views.View Message
 viewGroupsBar model =
     let
         groupList =
@@ -843,11 +868,13 @@ viewGroupsBar model =
                     []
     in
     if List.isEmpty groupList then
-        Html.text ""
+        Views.text ""
 
     else
-        Html.div
-            (id "groups-bar" :: Styles.groupsBar)
+        Views.div
+            (Views.Id "groups-bar")
+            Styles.groupsBar
+            []
             groupList
 
 
@@ -859,14 +886,15 @@ viewGroup :
     }
     -> Int
     -> Concourse.PipelineGroup
-    -> Html Message
+    -> Views.View Message
 viewGroup { selectedGroups, pipelineLocator, hovered } idx grp =
     let
         url =
             Routes.toString <|
                 Routes.Pipeline { id = pipelineLocator, groups = [ grp.name ] }
     in
-    Html.a
+    Views.a Views.Unidentified
+        []
         ([ Html.Attributes.href <| url
          , onLeftClickOrShiftLeftClick
             (SetGroups [ grp.name ])
@@ -879,7 +907,7 @@ viewGroup { selectedGroups, pipelineLocator, hovered } idx grp =
                 , hovered = hovered == (Just <| JobGroup idx)
                 }
         )
-        [ Html.text grp.name ]
+        [ Views.text grp.name ]
 
 
 jobAppearsInGroups : List String -> Concourse.PipelineIdentifier -> Json.Encode.Value -> Bool

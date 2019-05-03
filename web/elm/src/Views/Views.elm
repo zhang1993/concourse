@@ -5,13 +5,23 @@ module Views.Views exposing
     , View
     , a
     , childAt
+    , dd
     , div
+    , dl
+    , dt
     , find
     , getStyle
+    , h3
     , hasAttribute
+    , img
     , li
+    , logLine
     , nodeType
+    , p
+    , pre
+    , span
     , style
+    , svg
     , table
     , td
     , text
@@ -20,9 +30,11 @@ module Views.Views exposing
     , ul
     )
 
+import Ansi.Log
 import Html
 import Html.Attributes
 import List.Extra
+import Svg
 
 
 type View msg
@@ -33,10 +45,20 @@ type NodeType
     = Div
     | A
     | Ul
+    | Dl
+    | Dt
+    | Dd
     | Li
     | Table
     | Tr
     | Td
+    | H3
+    | Svg
+    | P
+    | Img
+    | Span
+    | Pre
+    | LogLine Ansi.Log.Line
     | Text String
 
 
@@ -82,6 +104,56 @@ td id styles children =
 a : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
 a id styles children =
     View id A styles children
+
+
+h3 : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+h3 id styles children =
+    View id H3 styles children
+
+
+svg : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+svg id styles children =
+    View id Svg styles children
+
+
+img : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+img id styles children =
+    View id Img styles children
+
+
+p : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+p id styles children =
+    View id P styles children
+
+
+dl : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+dl id styles children =
+    View id Dl styles children
+
+
+dt : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+dt id styles children =
+    View id Dt styles children
+
+
+dd : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+dd id styles children =
+    View id Dd styles children
+
+
+span : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+span id styles children =
+    View id Span styles children
+
+
+pre : Identifier -> List Style -> List (Html.Attribute msg) -> List (View msg) -> View msg
+pre id styles children =
+    View id Pre styles children
+
+
+logLine : Ansi.Log.Line -> View msg
+logLine line =
+    View Unidentified (LogLine line) [] [] []
 
 
 text : String -> View msg
@@ -148,18 +220,66 @@ toHtml (View identifier nt styles attributes children) =
                 (idAttrs ++ List.map toAttr styles ++ attributes)
                 (List.map toHtml children)
 
+        H3 ->
+            Html.h3
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Svg ->
+            Svg.svg
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Img ->
+            Html.img
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        P ->
+            Html.p
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Dl ->
+            Html.dl
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Dt ->
+            Html.dt
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Dd ->
+            Html.dd
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Span ->
+            Html.span
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        Pre ->
+            Html.pre
+                (idAttrs ++ List.map toAttr styles ++ attributes)
+                (List.map toHtml children)
+
+        LogLine line ->
+            Ansi.Log.viewLine line
+
         Text string ->
             Html.text string
 
 
 toAttr : Style -> Html.Attribute msg
-toAttr (Style p v) =
-    Html.Attributes.style p v
+toAttr (Style prop v) =
+    Html.Attributes.style prop v
 
 
 isProperty : String -> Style -> Bool
-isProperty property (Style p _) =
-    property == p
+isProperty property (Style prop _) =
+    property == prop
 
 
 value : Style -> String

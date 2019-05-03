@@ -11,6 +11,7 @@ import Html exposing (Html)
 import Html.Attributes exposing (style)
 import Time
 import Views.Icon as Icon
+import Views.Views as Views
 
 
 type StatusDetails
@@ -96,7 +97,7 @@ isRunning status =
             details == Running
 
 
-icon : PipelineStatus -> Html msg
+icon : PipelineStatus -> Views.View msg
 icon status =
     Icon.icon
         { sizePx = 20

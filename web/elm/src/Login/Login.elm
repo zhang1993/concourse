@@ -1,4 +1,4 @@
-module Login.Login exposing (Model, myView, update, view, viewLoginState, myViewLoginState)
+module Login.Login exposing (Model, myViewLoginState, update, view, viewLoginState)
 
 import Concourse
 import EffectTransformer exposing (ET)
@@ -6,10 +6,10 @@ import Html exposing (Html)
 import Html.Attributes exposing (attribute, href, id)
 import Html.Events exposing (onClick)
 import Login.Styles as Styles
-import Views.Views as Views exposing (View)
 import Message.Effects exposing (Effect(..))
 import Message.Message exposing (Message(..))
 import UserState exposing (UserState(..))
+import Views.Views as Views exposing (View)
 
 
 type alias Model r =
@@ -38,17 +38,8 @@ view :
     UserState
     -> Model r
     -> Bool
-    -> Html Message
-view userState model isPaused =
-    myView userState model isPaused |> Views.toHtml
-
-
-myView :
-    UserState
-    -> Model r
-    -> Bool
     -> View Message
-myView userState model isPaused =
+view userState model isPaused =
     Views.div
         (Views.Id "login-component")
         Styles.loginComponent
@@ -59,6 +50,7 @@ myView userState model isPaused =
 viewLoginState : UserState -> Bool -> Bool -> List (Html Message)
 viewLoginState userState isUserMenuExpanded isPaused =
     myViewLoginState userState isUserMenuExpanded isPaused |> List.map Views.toHtml
+
 
 myViewLoginState : UserState -> Bool -> Bool -> List (Views.View Message)
 myViewLoginState userState isUserMenuExpanded isPaused =
