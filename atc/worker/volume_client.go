@@ -459,6 +459,8 @@ func (c *volumeClient) findOrCreateVolume(
 	} else {
 		logger.Debug("creating-real-volume")
 
+		volumeCreationStartTime := time.Now()
+
 		bcVolume, err = c.baggageclaimClient.CreateVolume(
 			logger.Session("create-volume"),
 			creatingVolume.Handle(),
@@ -472,12 +474,16 @@ func (c *volumeClient) findOrCreateVolume(
 				logger.Error("failed-to-mark-volume-as-failed", failedErr)
 			}
 
-			metric.FailedVolumes.Inc()
+			metric.VolumesCreationDuration.
+				WithLabelValues(metric.StatusErrored).
+				Observe(time.Now().Sub(volumeCreationStartTime).Seconds())
 
 			return nil, err
 		}
 
-		metric.VolumesCreated.Inc()
+		metric.VolumesCreationDuration.
+			WithLabelValues(metric.StatusSucceeded).
+			Observe(time.Now().Sub(volumeCreationStartTime).Seconds())
 	}
 
 	createdVolume, err = creatingVolume.Created()

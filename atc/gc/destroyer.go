@@ -58,7 +58,10 @@ func (d *destroyer) DestroyContainers(workerName string, currentHandles []string
 		return err
 	}
 
-	metric.ContainersDeleted.IncDelta(deleted)
+	metric.
+		ContainersGCed.
+		Add(float64(deleted))
+
 	return nil
 }
 
@@ -80,7 +83,11 @@ func (d *destroyer) DestroyVolumes(workerName string, currentHandles []string) e
 		return err
 	}
 
-	metric.VolumesDeleted.IncDelta(deleted)
+	metric.
+		VolumesGCed.
+		WithLabelValues("destroying").
+		Add(float64(deleted))
+
 	return nil
 }
 
@@ -97,11 +104,12 @@ func (d *destroyer) FindDestroyingVolumesForGc(workerName string) ([]string, err
 		d.logger.Debug("found-orphaned-volumes", lager.Data{
 			"destroying": len(destroyingVolumesHandles),
 		})
-	}
 
-	metric.DestroyingVolumesToBeGarbageCollected{
-		Volumes: len(destroyingVolumesHandles),
-	}.Emit(d.logger)
+		metric.
+			VolumesToBeGCed.
+			WithLabelValues("destroying").
+			Add(float64(len(destroyingVolumesHandles)))
+	}
 
 	return destroyingVolumesHandles, nil
 }

@@ -84,10 +84,9 @@ func (runner *Runner) tick(logger lager.Logger) error {
 	start := time.Now()
 
 	defer func() {
-		metric.SchedulingFullDuration{
-			PipelineName: runner.Pipeline.Name(),
-			Duration:     time.Since(start),
-		}.Emit(logger)
+		metric.
+			SchedulingFullDuration.
+			Observe(time.Since(start).Seconds())
 	}()
 
 	versions, err := runner.Pipeline.LoadVersionsDB()
@@ -96,10 +95,9 @@ func (runner *Runner) tick(logger lager.Logger) error {
 		return err
 	}
 
-	metric.SchedulingLoadVersionsDuration{
-		PipelineName: runner.Pipeline.Name(),
-		Duration:     time.Since(start),
-	}.Emit(logger)
+	metric.
+		SchedulingLoadVersionsDuration.
+		Observe(time.Since(start).Seconds())
 
 	found, err := runner.Pipeline.Reload()
 	if err != nil {
@@ -139,12 +137,10 @@ func (runner *Runner) tick(logger lager.Logger) error {
 		resourceTypes.Deserialize(),
 	)
 
-	for jobName, duration := range schedulingTimes {
-		metric.SchedulingJobDuration{
-			PipelineName: runner.Pipeline.Name(),
-			JobName:      jobName,
-			Duration:     duration,
-		}.Emit(sLog)
+	for _, duration := range schedulingTimes {
+		metric.
+			SchedulingJobDuration.
+			Observe(duration.Seconds())
 	}
 
 	return err

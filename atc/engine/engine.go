@@ -164,7 +164,7 @@ func (b *engineBuild) Run(logger lager.Logger) {
 		return
 	}
 
-	b.trackStarted(logger)
+	b.trackStarted()
 	defer b.trackFinished(logger)
 
 	logger.Info("running")
@@ -224,14 +224,8 @@ func (b *engineBuild) saveStatus(logger lager.Logger, status atc.BuildStatus) {
 	}
 }
 
-func (b *engineBuild) trackStarted(logger lager.Logger) {
-	metric.BuildStarted{
-		PipelineName: b.build.PipelineName(),
-		JobName:      b.build.JobName(),
-		BuildName:    b.build.Name(),
-		BuildID:      b.build.ID(),
-		TeamName:     b.build.TeamName(),
-	}.Emit(logger)
+func (b *engineBuild) trackStarted() {
+	metric.BuildsStarted.Inc()
 }
 
 func (b *engineBuild) trackFinished(logger lager.Logger) {
@@ -247,15 +241,10 @@ func (b *engineBuild) trackFinished(logger lager.Logger) {
 	}
 
 	if !b.build.IsRunning() {
-		metric.BuildFinished{
-			PipelineName:  b.build.PipelineName(),
-			JobName:       b.build.JobName(),
-			BuildName:     b.build.Name(),
-			BuildID:       b.build.ID(),
-			BuildStatus:   b.build.Status(),
-			BuildDuration: b.build.EndTime().Sub(b.build.StartTime()),
-			TeamName:      b.build.TeamName(),
-		}.Emit(logger)
+		metric.
+			BuildsDuration.
+			WithLabelValues(string(b.build.Status())).
+			Observe(b.build.EndTime().Sub(b.build.StartTime()).Seconds())
 	}
 }
 

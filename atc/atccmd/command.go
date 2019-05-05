@@ -53,15 +53,13 @@ import (
 	"github.com/cppforlife/go-semi-semantic/version"
 	"github.com/hashicorp/go-multierror"
 	"github.com/jessevdk/go-flags"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/http_server"
 	"github.com/tedsuo/ifrit/sigmon"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
-
-	// dynamically registered metric emitters
-	_ "github.com/concourse/concourse/atc/metric/emitter"
 
 	// dynamically registered credential managers
 	_ "github.com/concourse/concourse/atc/creds/credhub"
@@ -125,17 +123,16 @@ type RunCommand struct {
 		Noop bool `short:"n" long:"noop"              description:"Don't actually do any automatic scheduling or checking."`
 	} `group:"Developer Options"`
 
+	Prometheus struct {
+		BindIP   flag.IP `long:"prometheus-bind-ip"   default:"0.0.0.0" description:"IP to listen on to expose Prometheus metrics."`
+		BindPort uint16  `long:"prometheus-bind-port" default:"9001"    description:"Port to listen on to expose Prometheus metrics."`
+	} `group:"Prometheus configuration"`
+
 	Worker struct {
 		GardenURL       flag.URL          `long:"garden-url"       description:"A Garden API endpoint to register as a worker."`
 		BaggageclaimURL flag.URL          `long:"baggageclaim-url" description:"A Baggageclaim API endpoint to register with the worker."`
 		ResourceTypes   map[string]string `long:"resource"         description:"A resource type to advertise for the worker. Can be specified multiple times." value-name:"TYPE:IMAGE"`
 	} `group:"Static Worker (optional)" namespace:"worker"`
-
-	Metrics struct {
-		HostName            string            `long:"metrics-host-name" description:"Host string to attach to emitted metrics."`
-		Attributes          map[string]string `long:"metrics-attribute" description:"A key-value attribute to attach to emitted metrics. Can be specified multiple times." value-name:"NAME:VALUE"`
-		CaptureErrorMetrics bool              `long:"capture-error-metrics" description:"Enable capturing of error log metrics"`
-	} `group:"Metrics & Diagnostics"`
 
 	Server struct {
 		XFrameOptions string `long:"x-frame-options" default:"deny" description:"The value to set for X-Frame-Options."`
@@ -283,7 +280,6 @@ func (cmd *ATCCommand) WireDynamicFlags(commandFlags *flags.Command) {
 }
 
 func (cmd *RunCommand) WireDynamicFlags(commandFlags *flags.Command) {
-	var metricsGroup *flags.Group
 	var credsGroup *flags.Group
 	var authGroup *flags.Group
 
@@ -295,23 +291,15 @@ func (cmd *RunCommand) WireDynamicFlags(commandFlags *flags.Command) {
 			credsGroup = group
 		}
 
-		if metricsGroup == nil && group.ShortDescription == "Metrics & Diagnostics" {
-			metricsGroup = group
-		}
-
 		if authGroup == nil && group.ShortDescription == "Authentication" {
 			authGroup = group
 		}
 
-		if metricsGroup != nil && credsGroup != nil && authGroup != nil {
+		if credsGroup != nil && authGroup != nil {
 			break
 		}
 
 		groups = append(groups, group.Groups()...)
-	}
-
-	if metricsGroup == nil {
-		panic("could not find Metrics & Diagnostics group for registering emitters")
 	}
 
 	if credsGroup == nil {
@@ -328,8 +316,6 @@ func (cmd *RunCommand) WireDynamicFlags(commandFlags *flags.Command) {
 	}
 	cmd.CredentialManagers = managerConfigs
 
-	metric.WireEmitters(metricsGroup)
-
 	skycmd.WireConnectors(authGroup)
 	skycmd.WireTeamConnectors(authGroup.Find("Authentication (Main Team)"))
 }
@@ -341,6 +327,14 @@ func (cmd *RunCommand) Execute(args []string) error {
 	}
 
 	return <-ifrit.Invoke(sigmon.New(runner)).Wait()
+}
+
+func LogLockAcquired(logger lager.Logger, lockID lock.LockID) {
+	logger.Debug("acquired")
+}
+
+func LogLockReleased(logger lager.Logger, lockID lock.LockID) {
+	logger.Debug("released")
 }
 
 func (cmd *RunCommand) Runner(positionalArguments []string) (ifrit.Runner, error) {
@@ -378,11 +372,11 @@ func (cmd *RunCommand) Runner(positionalArguments []string) (ifrit.Runner, error
 		retryingDriverName,
 	)
 
-	// Register the sink that collects error metrics
-	if cmd.Metrics.CaptureErrorMetrics {
-		errorSinkCollector := metric.NewErrorSinkCollector(logger)
-		logger.RegisterSink(&errorSinkCollector)
-	}
+	// // Register the sink that collects error metrics
+	// if cmd.Metrics.CaptureErrorMetrics {
+	// 	errorSinkCollector := metric.NewErrorSinkCollector(logger)
+	// 	logger.RegisterSink(&errorSinkCollector)
+	// }
 
 	http.HandleFunc("/debug/connections", func(w http.ResponseWriter, r *http.Request) {
 		for _, stack := range db.GlobalConnectionTracker.Current() {
@@ -390,16 +384,12 @@ func (cmd *RunCommand) Runner(positionalArguments []string) (ifrit.Runner, error
 		}
 	})
 
-	if err := cmd.configureMetrics(logger); err != nil {
-		return nil, err
-	}
-
 	lockConn, err := cmd.constructLockConn(retryingDriverName)
 	if err != nil {
 		return nil, err
 	}
 
-	lockFactory := lock.NewLockFactory(lockConn, metric.LogLockAcquired, metric.LogLockReleased)
+	lockFactory := lock.NewLockFactory(lockConn, LogLockAcquired, LogLockReleased)
 
 	apiConn, err := cmd.constructDBConn(retryingDriverName, logger, 32, "api", lockFactory)
 	if err != nil {
@@ -427,10 +417,10 @@ func (cmd *RunCommand) Runner(positionalArguments []string) (ifrit.Runner, error
 	}
 
 	members = append(members, grouper.Member{
-		Name: "periodic-metrics",
-		Runner: metric.PeriodicallyEmit(
-			logger.Session("periodic-metrics"),
-			10*time.Second,
+		Name: "metrics-handler",
+		Runner: http_server.New(
+			fmt.Sprintf("%s:%d", cmd.Prometheus.BindIP, cmd.Prometheus.BindPort),
+			promhttp.Handler(),
 		),
 	})
 
@@ -952,7 +942,7 @@ func webHandler(logger lager.Logger) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return metric.WrapHandler(logger, "web", webHandler), nil
+	return metric.WrapHandler(webHandler), nil
 }
 
 func (cmd *RunCommand) skyHttpClient() (*http.Client, error) {
@@ -1141,15 +1131,6 @@ func (cmd *RunCommand) debugBindAddr() string {
 	return fmt.Sprintf("%s:%d", cmd.DebugBindIP, cmd.DebugBindPort)
 }
 
-func (cmd *RunCommand) configureMetrics(logger lager.Logger) error {
-	host := cmd.Metrics.HostName
-	if host == "" {
-		host, _ = os.Hostname()
-	}
-
-	return metric.Initialize(logger.Session("metrics"), host, cmd.Metrics.Attributes)
-}
-
 func (cmd *RunCommand) constructDBConn(
 	driverName string,
 	logger lager.Logger,
@@ -1157,7 +1138,9 @@ func (cmd *RunCommand) constructDBConn(
 	connectionName string,
 	lockFactory lock.LockFactory,
 ) (db.Conn, error) {
-	dbConn, err := db.Open(logger.Session("db"), driverName, cmd.Postgres.ConnectionString(), cmd.newKey(), cmd.oldKey(), connectionName, lockFactory)
+	dbConn, err := db.Open(
+		logger.Session("db"), driverName, cmd.Postgres.ConnectionString(),
+		cmd.newKey(), cmd.oldKey(), connectionName, lockFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %s", err)
 	}

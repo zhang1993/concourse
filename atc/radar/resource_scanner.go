@@ -373,29 +373,43 @@ func (scanner *resourceScanner) check(
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
+	// ChecksDuration time the whole thing
+
 	res := scanner.resourceFactory.NewResourceForContainer(container)
+	checkStartTime := time.Now()
+
 	newVersions, err := res.Check(ctx, source, fromVersion)
 	if err == context.DeadlineExceeded {
 		err = fmt.Errorf("Timed out after %v while checking for new versions - perhaps increase your resource check timeout?", timeout)
 	}
 
+	checkDuration := time.Now().Sub(checkStartTime)
 	resourceConfigScope.SetCheckError(err)
-	metric.ResourceCheck{
-		PipelineName: scanner.dbPipeline.Name(),
-		ResourceName: savedResource.Name(),
-		TeamName:     scanner.dbPipeline.TeamName(),
-		Success:      err == nil,
-	}.Emit(logger)
 
 	if err != nil {
 		if rErr, ok := err.(resource.ErrResourceScriptFailed); ok {
 			logger.Info("check-failed", lager.Data{"exit-status": rErr.ExitStatus})
+			metric.
+				ResourceChecksDuration.
+				WithLabelValues("failed").
+				Observe(checkDuration.Seconds())
+
 			return rErr
 		}
 
 		logger.Error("failed-to-check", err)
+		metric.
+			ResourceChecksDuration.
+			WithLabelValues("errored").
+			Observe(checkDuration.Seconds())
+
 		return err
 	}
+
+	metric.
+		ResourceChecksDuration.
+		WithLabelValues("success").
+		Observe(checkDuration.Seconds())
 
 	if len(newVersions) == 0 || (!saveGiven && reflect.DeepEqual(newVersions, []atc.Version{fromVersion})) {
 		logger.Debug("no-new-versions")
