@@ -159,8 +159,8 @@ func (worker *gardenWorker) CertsVolume(logger lager.Logger) (Artifact, bool, er
 	return worker.volumeClient.FindOrCreateVolumeForResourceCerts(logger.Session("find-or-create"))
 }
 
-func (worker *gardenWorker) FindOrCreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, artifactID int, volumeType db.VolumeType) (Artifact, error) {
-	return worker.volumeClient.FindOrCreateVolumeForArtifact(logger.Session("find-or-create"), spec, teamID, artifactID, worker.dbWorker.Name(), volumeType)
+func (worker *gardenWorker) FindOrCreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, artifact Artifact, volumeType db.VolumeType) (Artifact, error) {
+	return worker.volumeClient.FindOrCreateVolumeForArtifact(logger.Session("find-or-create"), spec, teamID, artifact, worker.dbWorker.Name(), volumeType)
 }
 
 func (worker *gardenWorker) LookupVolume(logger lager.Logger, handle string) (Artifact, bool, error) {
@@ -415,7 +415,7 @@ func (worker *gardenWorker) createVolumes(logger lager.Logger, isPrivileged bool
 
 			destData := lager.Data{
 				"dest-artifact": inputVolume.Handle(),
-				"dest-worker": inputVolume.WorkerName(),
+				"dest-worker":   inputVolume.WorkerName(),
 			}
 			err = inputSource.Source().StreamTo(logger.Session("stream-to", destData), inputVolume)
 			if err != nil {

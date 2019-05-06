@@ -4,7 +4,6 @@ import (
 	"io"
 
 	"code.cloudfoundry.org/lager"
-	"github.com/concourse/baggageclaim"
 	"github.com/concourse/concourse/atc"
 
 	"github.com/concourse/concourse/atc/db"
@@ -15,7 +14,7 @@ import (
 type Client interface {
 	FindContainer(logger lager.Logger, teamID int, handle string) (Container, bool, error)
 	FindVolume(logger lager.Logger, teamID int, handle string) (Artifact, bool, error)
-	CreateArtifact(logger lager.Logger, name string) (atc.WorkerArtifact, error)
+	CreateArtifact(logger lager.Logger, name string) (Artifact, error)
 	Store(logger lager.Logger, teamID int, artifact atc.WorkerArtifact, volumePath string, data io.ReadCloser) error
 }
 
@@ -73,42 +72,8 @@ func (client *client) CreateArtifact(logger lager.Logger, name string) (Artifact
 		logger.Error("failed-to-create-artifact", err, lager.Data{"name": name})
 		return nil, err
 	}
-	return &artifact{dbArtifact: art}, nil
-	// return atc.WorkerArtifact{
-	// 	ID:        artifact.ID(),
-	// 	Name:      artifact.Name(),
-	// 	BuildID:   artifact.BuildID(),
-	// 	CreatedAt: artifact.CreatedAt().Unix(),
-	// }, nil
+	return &artifact{dbArtifact: art, pool: client.pool}, nil
 }
 
 func (client *client) Store(logger lager.Logger, teamID int, artifact atc.WorkerArtifact, volumePath string, data io.ReadCloser) error {
-	var (
-		worker Worker
-		err    error
-		found  bool
-	)
-
-	worker, found, err = client.workerProvider.FindWorkerForArtifact(logger, teamID, artifact.ID)
-	if err != nil {
-		logger.Error("failed-to-find-worker-for-artifact", err, lager.Data{"artifactID": artifact.ID})
-		return err
-	}
-
-	if !found {
-		worker, err = client.pool.FindOrChooseWorker(logger, WorkerSpec{TeamID: teamID})
-		if err != nil {
-			return err
-		}
-	}
-
-	spec := VolumeSpec{
-		Strategy: baggageclaim.EmptyStrategy{},
-	}
-	volume, err := worker.FindOrCreateVolume(logger, spec, teamID, artifact.ID, db.VolumeTypeArtifact)
-	if err != nil {
-		return err
-	}
-
-	return volume.StreamIn(volumePath, data)
 }

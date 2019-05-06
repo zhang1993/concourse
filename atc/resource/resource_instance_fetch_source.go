@@ -28,6 +28,7 @@ type FetchSourceFactory interface {
 		containerSpec worker.ContainerSpec,
 		session Session,
 		imageFetchingDelegate worker.ImageFetchingDelegate,
+		client worker.Client,
 	) FetchSource
 }
 
@@ -54,6 +55,7 @@ func (r *fetchSourceFactory) NewFetchSource(
 	containerSpec worker.ContainerSpec,
 	session Session,
 	imageFetchingDelegate worker.ImageFetchingDelegate,
+	client worker.Client,
 ) FetchSource {
 	return &resourceInstanceFetchSource{
 		logger:                 logger,
@@ -65,6 +67,7 @@ func (r *fetchSourceFactory) NewFetchSource(
 		imageFetchingDelegate:  imageFetchingDelegate,
 		dbResourceCacheFactory: r.resourceCacheFactory,
 		resourceFactory:        r.resourceFactory,
+		client:                 client,
 	}
 }
 
@@ -78,6 +81,7 @@ type resourceInstanceFetchSource struct {
 	imageFetchingDelegate  worker.ImageFetchingDelegate
 	dbResourceCacheFactory db.ResourceCacheFactory
 	resourceFactory        ResourceFactory
+	client                 worker.Client
 }
 
 func (s *resourceInstanceFetchSource) LockName() (string, error) {
@@ -128,6 +132,11 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 
 	s.containerSpec.BindMounts = []worker.BindMountSource{
 		&worker.CertsVolumeMount{Logger: s.logger},
+	}
+
+	getArtifact, err := s.client.CreateArtifact(s.logger, "")
+	if err != nil {
+		return nil, err
 	}
 
 	container, err := s.worker.FindOrCreateContainer(

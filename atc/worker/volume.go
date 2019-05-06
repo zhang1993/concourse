@@ -41,6 +41,7 @@ type Artifact interface {
 	WorkerName() string
 	Destroy() error
 	AttachVolume(bcVolume baggageclaim.Volume, dbVolume db.CreatedVolume, client VolumeClient)
+	Store(logger lager.Logger, teamID int, volumePath string, data io.ReadCloser) error
 }
 
 type VolumeMount struct {
@@ -52,6 +53,7 @@ type artifact struct {
 	dbArtifact   db.WorkerArtifact
 	bcVolume     baggageclaim.Volume
 	dbVolume     db.CreatedVolume
+	pool         Pool
 	volumeClient VolumeClient
 }
 
@@ -87,6 +89,24 @@ func (a *artifact) AttachVolume(bcVolume baggageclaim.Volume, dbVolume db.Create
 	a.dbVolume = dbVolume
 	a.bcVolume = bcVolume
 	a.volumeClient = client
+}
+
+func (a *artifact) Store(logger lager.Logger, teamID int, volumePath string, data io.ReadCloser) error {
+	worker, err := a.pool.FindOrChooseWorkerForArtifact(logger, WorkerSpec{TeamID: teamID}, a.ID())
+	if err != nil {
+		logger.Error("failed-to-find-worker-for-artifact", err, lager.Data{"artifactID": a.ID()})
+		return err
+	}
+
+	spec := VolumeSpec{
+		Strategy: baggageclaim.EmptyStrategy{},
+	}
+	_, err = worker.FindOrCreateVolume(logger, spec, teamID, a.ID(), db.VolumeTypeArtifact)
+	if err != nil {
+		return err
+	}
+
+	return a.StreamIn(volumePath, data)
 }
 
 func (a *artifact) DBArtifact() db.WorkerArtifact {

@@ -30,6 +30,7 @@ type Fetcher interface {
 		resourceTypes creds.VersionedResourceTypes,
 		resourceInstance ResourceInstance,
 		imageFetchingDelegate worker.ImageFetchingDelegate,
+		client worker.Client,
 	) (VersionedSource, error)
 }
 
@@ -60,12 +61,13 @@ func (f *fetcher) Fetch(
 	resourceTypes creds.VersionedResourceTypes,
 	resourceInstance ResourceInstance,
 	imageFetchingDelegate worker.ImageFetchingDelegate,
+	client worker.Client,
 ) (VersionedSource, error) {
 	containerSpec.Outputs = map[string]string{
 		"resource": ResourcesDir("get"),
 	}
 
-	source := f.fetchSourceFactory.NewFetchSource(logger, gardenWorker, resourceInstance, resourceTypes, containerSpec, session, imageFetchingDelegate)
+	source := f.fetchSourceFactory.NewFetchSource(logger, gardenWorker, resourceInstance, resourceTypes, containerSpec, session, imageFetchingDelegate, client)
 
 	ticker := f.clock.NewTicker(GetResourceLockInterval)
 	defer ticker.Stop()

@@ -72,6 +72,12 @@ type Pool interface {
 		lager.Logger,
 		WorkerSpec,
 	) (Worker, error)
+
+	FindOrChooseWorkerForArtifact(
+		logger lager.Logger,
+		workerSpec WorkerSpec,
+		artifactID int,
+	) (Worker, error)
 }
 
 type pool struct {
@@ -174,4 +180,25 @@ func (pool *pool) FindOrChooseWorker(
 	}
 
 	return workers[rand.Intn(len(workers))], nil
+}
+
+func (pool *pool) FindOrChooseWorkerForArtifact(
+	logger lager.Logger,
+	workerSpec WorkerSpec,
+	artifactID int,
+) (Worker, error) {
+
+	worker, found, err := pool.provider.FindWorkerForArtifact(logger, workerSpec.TeamID, artifactID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !found {
+		worker, err = pool.FindOrChooseWorker(logger, workerSpec)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return worker, nil
 }

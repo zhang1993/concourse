@@ -72,6 +72,7 @@ type GetStep struct {
 
 	strategy   worker.ContainerPlacementStrategy
 	workerPool worker.Pool
+	client     worker.Client
 }
 
 func NewGetStep(
@@ -99,6 +100,7 @@ func NewGetStep(
 
 	strategy worker.ContainerPlacementStrategy,
 	workerPool worker.Pool,
+	client worker.Client,
 ) Step {
 	return &GetStep{
 		build: build,
@@ -124,7 +126,8 @@ func NewGetStep(
 		resourceTypes: resourceTypes,
 
 		strategy:   strategy,
-		workerPool: workerPool,
+		workerPool: workerPool, // TODO: remove this
+		client:     client,
 	}
 }
 
@@ -228,6 +231,7 @@ func (step *GetStep) Run(ctx context.Context, state RunState) error {
 		step.resourceTypes,
 		resourceInstance,
 		step.delegate,
+		step.client,
 	)
 	if err != nil {
 		logger.Error("failed-to-fetch-resource", err)
