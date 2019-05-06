@@ -45,7 +45,12 @@ type Artifact interface {
 }
 
 type VolumeMount struct {
-	Volume    Artifact
+	Volume    baggageclaim.Volume
+	MountPath string
+}
+
+type ArtifactMount struct {
+	Artifact  Artifact
 	MountPath string
 }
 
@@ -101,7 +106,7 @@ func (a *artifact) Store(logger lager.Logger, teamID int, volumePath string, dat
 	spec := VolumeSpec{
 		Strategy: baggageclaim.EmptyStrategy{},
 	}
-	_, err = worker.FindOrCreateVolume(logger, spec, teamID, a.ID(), db.VolumeTypeArtifact)
+	err = worker.FindOrCreateVolume(logger, spec, teamID, a.ID(), db.VolumeTypeArtifact)
 	if err != nil {
 		return err
 	}

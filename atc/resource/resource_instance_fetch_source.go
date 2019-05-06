@@ -139,6 +139,10 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 		return nil, err
 	}
 
+	artifactMount := worker.VolumeMount{getArtifact, ResourcesDir("get")}
+
+	s.containerSpec.Artifacts = []worker.VolumeMount{artifactMount}
+
 	container, err := s.worker.FindOrCreateContainer(
 		ctx,
 		s.logger,
@@ -157,19 +161,19 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 		return nil, err
 	}
 
-	mountPath := ResourcesDir("get")
-	var volume worker.Artifact
-	for _, mount := range container.VolumeMounts() {
-		if mount.MountPath == mountPath {
-			volume = mount.Volume
-			break
-		}
-	}
+	// mountPath := ResourcesDir("get")
+	// var artifact worker.Artifact
+	// for _, mount := range container.VolumeMounts() {
+	// 	if mount.MountPath == mountPath {
+	// 		artifact = mount.Volume
+	// 		break
+	// 	}
+	// }
 
 	resource := s.resourceFactory.NewResourceForContainer(container)
 	versionedSource, err = resource.Get(
 		ctx,
-		volume,
+		getArtifact,
 		IOConfig{
 			Stdout: s.imageFetchingDelegate.Stdout(),
 			Stderr: s.imageFetchingDelegate.Stderr(),
@@ -183,13 +187,13 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 		return nil, err
 	}
 
-	err = volume.SetPrivileged(false)
+	err = getArtifact.SetPrivileged(false)
 	if err != nil {
 		sLog.Error("failed-to-set-artifact-unprivileged", err)
 		return nil, err
 	}
 
-	err = volume.InitializeResourceCache(s.resourceInstance.ResourceCache())
+	err = getArtifact.InitializeResourceCache(s.resourceInstance.ResourceCache())
 	if err != nil {
 		sLog.Error("failed-to-initialize-cache", err)
 		return nil, err

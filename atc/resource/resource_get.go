@@ -15,7 +15,7 @@ type getRequest struct {
 
 func (resource *resource) Get(
 	ctx context.Context,
-	volume worker.Artifact,
+	artifact worker.Artifact,
 	ioConfig IOConfig,
 	source atc.Source,
 	params atc.Params,
@@ -36,5 +36,5 @@ func (resource *resource) Get(
 		return nil, err
 	}
 
-	return NewGetVersionedSource(volume, vr.Version, vr.Metadata), nil
+	return NewGetVersionedSource(artifact, vr.Version, vr.Metadata), nil
 }

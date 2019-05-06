@@ -54,7 +54,7 @@ type Worker interface {
 
 	CertsVolume(lager.Logger) (volume Artifact, found bool, err error)
 	LookupVolume(lager.Logger, string) (Artifact, bool, error)
-	FindOrCreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, artifactID int, volumeType db.VolumeType) (Artifact, error)
+	FindOrCreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, artifact Artifact, volumeType db.VolumeType) error
 
 	GardenClient() garden.Client
 }
@@ -159,7 +159,7 @@ func (worker *gardenWorker) CertsVolume(logger lager.Logger) (Artifact, bool, er
 	return worker.volumeClient.FindOrCreateVolumeForResourceCerts(logger.Session("find-or-create"))
 }
 
-func (worker *gardenWorker) FindOrCreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, artifact Artifact, volumeType db.VolumeType) (Artifact, error) {
+func (worker *gardenWorker) FindOrCreateVolume(logger lager.Logger, spec VolumeSpec, teamID int, artifact Artifact, volumeType db.VolumeType) error {
 	return worker.volumeClient.FindOrCreateVolumeForArtifact(logger.Session("find-or-create"), spec, teamID, artifact, worker.dbWorker.Name(), volumeType)
 }
 
