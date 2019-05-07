@@ -339,6 +339,7 @@ func (scanner *resourceScanner) check(
 		containerMetadata,
 		containerSpec,
 		resourceTypes,
+		nil,
 	)
 	if err != nil {
 		logger.Error("failed-to-create-or-find-container", err)

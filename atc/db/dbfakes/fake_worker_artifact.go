@@ -282,7 +282,7 @@ func (fake *FakeWorkerArtifact) Volume(arg1 int) (db.CreatedVolume, bool, error)
 	fake.volumeArgsForCall = append(fake.volumeArgsForCall, struct {
 		arg1 int
 	}{arg1})
-	fake.recordInvocation("Artifact", []interface{}{arg1})
+	fake.recordInvocation("Volume", []interface{}{arg1})
 	fake.volumeMutex.Unlock()
 	if fake.VolumeStub != nil {
 		return fake.VolumeStub(arg1)

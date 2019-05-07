@@ -137,6 +137,7 @@ func (factory *stepFactory) PutStep(
 
 		factory.strategy,
 		factory.resourceFactory,
+		factory.client,
 	)
 
 	return exec.LogError(putStep, delegate)

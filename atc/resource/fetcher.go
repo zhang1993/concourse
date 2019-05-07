@@ -63,10 +63,6 @@ func (f *fetcher) Fetch(
 	imageFetchingDelegate worker.ImageFetchingDelegate,
 	client worker.Client,
 ) (VersionedSource, error) {
-	containerSpec.Outputs = map[string]string{
-		"resource": ResourcesDir("get"),
-	}
-
 	source := f.fetchSourceFactory.NewFetchSource(logger, gardenWorker, resourceInstance, resourceTypes, containerSpec, session, imageFetchingDelegate, client)
 
 	ticker := f.clock.NewTicker(GetResourceLockInterval)

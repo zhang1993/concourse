@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/concourse/baggageclaim"
+	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/metric"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
-	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db"
 	"github.com/cppforlife/go-semi-semantic/version"
@@ -47,6 +47,7 @@ type Worker interface {
 		db.ContainerMetadata,
 		ContainerSpec,
 		creds.VersionedResourceTypes,
+		Client,
 	) (Container, error)
 
 	FindVolumeForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (Artifact, bool, error)
@@ -167,6 +168,7 @@ func (worker *gardenWorker) LookupVolume(logger lager.Logger, handle string) (Ar
 	return worker.volumeClient.LookupVolume(logger, handle)
 }
 
+// imageArtifact
 func (worker *gardenWorker) FindOrCreateContainer(
 	ctx context.Context,
 	logger lager.Logger,
@@ -175,6 +177,7 @@ func (worker *gardenWorker) FindOrCreateContainer(
 	metadata db.ContainerMetadata,
 	containerSpec ContainerSpec,
 	resourceTypes creds.VersionedResourceTypes,
+	client Client,
 ) (Container, error) {
 
 	var (
@@ -215,7 +218,7 @@ func (worker *gardenWorker) FindOrCreateContainer(
 
 	if gardenContainer == nil {
 
-		fetchedImage, err := worker.fetchImageForContainer(ctx, logger, containerSpec.ImageSpec, containerSpec.TeamID, delegate, resourceTypes, creatingContainer)
+		fetchedImage, err := worker.fetchImageForContainer(ctx, logger, containerSpec.ImageSpec, containerSpec.TeamID, delegate, resourceTypes, creatingContainer, client)
 		if err != nil {
 			creatingContainer.Failed()
 			logger.Error("failed-to-fetch-image-for-container", err)
@@ -304,6 +307,7 @@ func (worker *gardenWorker) fetchImageForContainer(
 	delegate ImageFetchingDelegate,
 	resourceTypes creds.VersionedResourceTypes,
 	creatingContainer db.CreatingContainer,
+	client Client,
 ) (FetchedImage, error) {
 	image, err := worker.imageFactory.GetImage(
 		logger,
@@ -313,6 +317,7 @@ func (worker *gardenWorker) fetchImageForContainer(
 		teamID,
 		delegate,
 		resourceTypes,
+		client,
 	)
 	if err != nil {
 		return FetchedImage{}, err

@@ -49,6 +49,7 @@ type PutStep struct {
 
 	strategy        worker.ContainerPlacementStrategy
 	resourceFactory resource.ResourceFactory
+	client          worker.Client
 }
 
 func NewPutStep(
@@ -69,6 +70,7 @@ func NewPutStep(
 	resourceTypes creds.VersionedResourceTypes,
 	strategy worker.ContainerPlacementStrategy,
 	resourceFactory resource.ResourceFactory,
+	client worker.Client,
 ) *PutStep {
 	return &PutStep{
 		build: build,
@@ -89,6 +91,7 @@ func NewPutStep(
 		resourceTypes:         resourceTypes,
 		strategy:              strategy,
 		resourceFactory:       resourceFactory,
+		client:                client,
 	}
 }
 
@@ -149,6 +152,7 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 		step.containerMetadata,
 		containerSpec,
 		step.resourceTypes,
+		step.client,
 	)
 	if err != nil {
 		return err

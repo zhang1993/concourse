@@ -11,6 +11,16 @@ import (
 )
 
 type FakeContainer struct {
+	ArtifactMountsStub        func() []worker.ArtifactMount
+	artifactMountsMutex       sync.RWMutex
+	artifactMountsArgsForCall []struct {
+	}
+	artifactMountsReturns struct {
+		result1 []worker.ArtifactMount
+	}
+	artifactMountsReturnsOnCall map[int]struct {
+		result1 []worker.ArtifactMount
+	}
 	AttachStub        func(string, garden.ProcessIO) (garden.Process, error)
 	attachMutex       sync.RWMutex
 	attachArgsForCall []struct {
@@ -273,16 +283,6 @@ type FakeContainer struct {
 		result1 io.ReadCloser
 		result2 error
 	}
-	VolumeMountsStub        func() []worker.VolumeMount
-	volumeMountsMutex       sync.RWMutex
-	volumeMountsArgsForCall []struct {
-	}
-	volumeMountsReturns struct {
-		result1 []worker.VolumeMount
-	}
-	volumeMountsReturnsOnCall map[int]struct {
-		result1 []worker.VolumeMount
-	}
 	WorkerNameStub        func() string
 	workerNameMutex       sync.RWMutex
 	workerNameArgsForCall []struct {
@@ -295,6 +295,58 @@ type FakeContainer struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeContainer) ArtifactMounts() []worker.ArtifactMount {
+	fake.artifactMountsMutex.Lock()
+	ret, specificReturn := fake.artifactMountsReturnsOnCall[len(fake.artifactMountsArgsForCall)]
+	fake.artifactMountsArgsForCall = append(fake.artifactMountsArgsForCall, struct {
+	}{})
+	fake.recordInvocation("ArtifactMounts", []interface{}{})
+	fake.artifactMountsMutex.Unlock()
+	if fake.ArtifactMountsStub != nil {
+		return fake.ArtifactMountsStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.artifactMountsReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeContainer) ArtifactMountsCallCount() int {
+	fake.artifactMountsMutex.RLock()
+	defer fake.artifactMountsMutex.RUnlock()
+	return len(fake.artifactMountsArgsForCall)
+}
+
+func (fake *FakeContainer) ArtifactMountsCalls(stub func() []worker.ArtifactMount) {
+	fake.artifactMountsMutex.Lock()
+	defer fake.artifactMountsMutex.Unlock()
+	fake.ArtifactMountsStub = stub
+}
+
+func (fake *FakeContainer) ArtifactMountsReturns(result1 []worker.ArtifactMount) {
+	fake.artifactMountsMutex.Lock()
+	defer fake.artifactMountsMutex.Unlock()
+	fake.ArtifactMountsStub = nil
+	fake.artifactMountsReturns = struct {
+		result1 []worker.ArtifactMount
+	}{result1}
+}
+
+func (fake *FakeContainer) ArtifactMountsReturnsOnCall(i int, result1 []worker.ArtifactMount) {
+	fake.artifactMountsMutex.Lock()
+	defer fake.artifactMountsMutex.Unlock()
+	fake.ArtifactMountsStub = nil
+	if fake.artifactMountsReturnsOnCall == nil {
+		fake.artifactMountsReturnsOnCall = make(map[int]struct {
+			result1 []worker.ArtifactMount
+		})
+	}
+	fake.artifactMountsReturnsOnCall[i] = struct {
+		result1 []worker.ArtifactMount
+	}{result1}
 }
 
 func (fake *FakeContainer) Attach(arg1 string, arg2 garden.ProcessIO) (garden.Process, error) {
@@ -1585,58 +1637,6 @@ func (fake *FakeContainer) StreamOutReturnsOnCall(i int, result1 io.ReadCloser, 
 	}{result1, result2}
 }
 
-func (fake *FakeContainer) VolumeMounts() []worker.VolumeMount {
-	fake.volumeMountsMutex.Lock()
-	ret, specificReturn := fake.volumeMountsReturnsOnCall[len(fake.volumeMountsArgsForCall)]
-	fake.volumeMountsArgsForCall = append(fake.volumeMountsArgsForCall, struct {
-	}{})
-	fake.recordInvocation("VolumeMounts", []interface{}{})
-	fake.volumeMountsMutex.Unlock()
-	if fake.VolumeMountsStub != nil {
-		return fake.VolumeMountsStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.volumeMountsReturns
-	return fakeReturns.result1
-}
-
-func (fake *FakeContainer) VolumeMountsCallCount() int {
-	fake.volumeMountsMutex.RLock()
-	defer fake.volumeMountsMutex.RUnlock()
-	return len(fake.volumeMountsArgsForCall)
-}
-
-func (fake *FakeContainer) VolumeMountsCalls(stub func() []worker.VolumeMount) {
-	fake.volumeMountsMutex.Lock()
-	defer fake.volumeMountsMutex.Unlock()
-	fake.VolumeMountsStub = stub
-}
-
-func (fake *FakeContainer) VolumeMountsReturns(result1 []worker.VolumeMount) {
-	fake.volumeMountsMutex.Lock()
-	defer fake.volumeMountsMutex.Unlock()
-	fake.VolumeMountsStub = nil
-	fake.volumeMountsReturns = struct {
-		result1 []worker.VolumeMount
-	}{result1}
-}
-
-func (fake *FakeContainer) VolumeMountsReturnsOnCall(i int, result1 []worker.VolumeMount) {
-	fake.volumeMountsMutex.Lock()
-	defer fake.volumeMountsMutex.Unlock()
-	fake.VolumeMountsStub = nil
-	if fake.volumeMountsReturnsOnCall == nil {
-		fake.volumeMountsReturnsOnCall = make(map[int]struct {
-			result1 []worker.VolumeMount
-		})
-	}
-	fake.volumeMountsReturnsOnCall[i] = struct {
-		result1 []worker.VolumeMount
-	}{result1}
-}
-
 func (fake *FakeContainer) WorkerName() string {
 	fake.workerNameMutex.Lock()
 	ret, specificReturn := fake.workerNameReturnsOnCall[len(fake.workerNameArgsForCall)]
@@ -1692,6 +1692,8 @@ func (fake *FakeContainer) WorkerNameReturnsOnCall(i int, result1 string) {
 func (fake *FakeContainer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.artifactMountsMutex.RLock()
+	defer fake.artifactMountsMutex.RUnlock()
 	fake.attachMutex.RLock()
 	defer fake.attachMutex.RUnlock()
 	fake.bulkNetOutMutex.RLock()
@@ -1736,8 +1738,6 @@ func (fake *FakeContainer) Invocations() map[string][][]interface{} {
 	defer fake.streamInMutex.RUnlock()
 	fake.streamOutMutex.RLock()
 	defer fake.streamOutMutex.RUnlock()
-	fake.volumeMountsMutex.RLock()
-	defer fake.volumeMountsMutex.RUnlock()
 	fake.workerNameMutex.RLock()
 	defer fake.workerNameMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

@@ -11,6 +11,16 @@ import (
 )
 
 type FakeVersionedSource struct {
+	ArtifactStub        func() worker.Artifact
+	artifactMutex       sync.RWMutex
+	artifactArgsForCall []struct {
+	}
+	artifactReturns struct {
+		result1 worker.Artifact
+	}
+	artifactReturnsOnCall map[int]struct {
+		result1 worker.Artifact
+	}
 	MetadataStub        func() []atc.MetadataField
 	metadataMutex       sync.RWMutex
 	metadataArgsForCall []struct {
@@ -56,18 +66,60 @@ type FakeVersionedSource struct {
 	versionReturnsOnCall map[int]struct {
 		result1 atc.Version
 	}
-	VolumeStub        func() worker.Artifact
-	volumeMutex       sync.RWMutex
-	volumeArgsForCall []struct {
-	}
-	volumeReturns struct {
-		result1 worker.Artifact
-	}
-	volumeReturnsOnCall map[int]struct {
-		result1 worker.Artifact
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeVersionedSource) Artifact() worker.Artifact {
+	fake.artifactMutex.Lock()
+	ret, specificReturn := fake.artifactReturnsOnCall[len(fake.artifactArgsForCall)]
+	fake.artifactArgsForCall = append(fake.artifactArgsForCall, struct {
+	}{})
+	fake.recordInvocation("Artifact", []interface{}{})
+	fake.artifactMutex.Unlock()
+	if fake.ArtifactStub != nil {
+		return fake.ArtifactStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.artifactReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeVersionedSource) ArtifactCallCount() int {
+	fake.artifactMutex.RLock()
+	defer fake.artifactMutex.RUnlock()
+	return len(fake.artifactArgsForCall)
+}
+
+func (fake *FakeVersionedSource) ArtifactCalls(stub func() worker.Artifact) {
+	fake.artifactMutex.Lock()
+	defer fake.artifactMutex.Unlock()
+	fake.ArtifactStub = stub
+}
+
+func (fake *FakeVersionedSource) ArtifactReturns(result1 worker.Artifact) {
+	fake.artifactMutex.Lock()
+	defer fake.artifactMutex.Unlock()
+	fake.ArtifactStub = nil
+	fake.artifactReturns = struct {
+		result1 worker.Artifact
+	}{result1}
+}
+
+func (fake *FakeVersionedSource) ArtifactReturnsOnCall(i int, result1 worker.Artifact) {
+	fake.artifactMutex.Lock()
+	defer fake.artifactMutex.Unlock()
+	fake.ArtifactStub = nil
+	if fake.artifactReturnsOnCall == nil {
+		fake.artifactReturnsOnCall = make(map[int]struct {
+			result1 worker.Artifact
+		})
+	}
+	fake.artifactReturnsOnCall[i] = struct {
+		result1 worker.Artifact
+	}{result1}
 }
 
 func (fake *FakeVersionedSource) Metadata() []atc.MetadataField {
@@ -298,61 +350,11 @@ func (fake *FakeVersionedSource) VersionReturnsOnCall(i int, result1 atc.Version
 	}{result1}
 }
 
-func (fake *FakeVersionedSource) Artifact() worker.Artifact {
-	fake.volumeMutex.Lock()
-	ret, specificReturn := fake.volumeReturnsOnCall[len(fake.volumeArgsForCall)]
-	fake.volumeArgsForCall = append(fake.volumeArgsForCall, struct {
-	}{})
-	fake.recordInvocation("Artifact", []interface{}{})
-	fake.volumeMutex.Unlock()
-	if fake.VolumeStub != nil {
-		return fake.VolumeStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.volumeReturns
-	return fakeReturns.result1
-}
-
-func (fake *FakeVersionedSource) VolumeCallCount() int {
-	fake.volumeMutex.RLock()
-	defer fake.volumeMutex.RUnlock()
-	return len(fake.volumeArgsForCall)
-}
-
-func (fake *FakeVersionedSource) VolumeCalls(stub func() worker.Artifact) {
-	fake.volumeMutex.Lock()
-	defer fake.volumeMutex.Unlock()
-	fake.VolumeStub = stub
-}
-
-func (fake *FakeVersionedSource) VolumeReturns(result1 worker.Artifact) {
-	fake.volumeMutex.Lock()
-	defer fake.volumeMutex.Unlock()
-	fake.VolumeStub = nil
-	fake.volumeReturns = struct {
-		result1 worker.Artifact
-	}{result1}
-}
-
-func (fake *FakeVersionedSource) VolumeReturnsOnCall(i int, result1 worker.Artifact) {
-	fake.volumeMutex.Lock()
-	defer fake.volumeMutex.Unlock()
-	fake.VolumeStub = nil
-	if fake.volumeReturnsOnCall == nil {
-		fake.volumeReturnsOnCall = make(map[int]struct {
-			result1 worker.Artifact
-		})
-	}
-	fake.volumeReturnsOnCall[i] = struct {
-		result1 worker.Artifact
-	}{result1}
-}
-
 func (fake *FakeVersionedSource) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.artifactMutex.RLock()
+	defer fake.artifactMutex.RUnlock()
 	fake.metadataMutex.RLock()
 	defer fake.metadataMutex.RUnlock()
 	fake.streamInMutex.RLock()
@@ -361,8 +363,6 @@ func (fake *FakeVersionedSource) Invocations() map[string][][]interface{} {
 	defer fake.streamOutMutex.RUnlock()
 	fake.versionMutex.RLock()
 	defer fake.versionMutex.RUnlock()
-	fake.volumeMutex.RLock()
-	defer fake.volumeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

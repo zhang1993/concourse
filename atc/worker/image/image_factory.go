@@ -32,6 +32,7 @@ func (f *imageFactory) GetImage(
 	teamID int,
 	delegate worker.ImageFetchingDelegate,
 	resourceTypes creds.VersionedResourceTypes,
+	client worker.Client,
 ) (worker.Image, error) {
 	if imageSpec.ImageArtifactSource != nil {
 		artifactVolume, existsOnWorker, err := imageSpec.ImageArtifactSource.VolumeOn(logger, worker)
@@ -70,6 +71,7 @@ func (f *imageFactory) GetImage(
 			teamID,
 			resourceTypes.Without(imageSpec.ResourceType),
 			delegate,
+			client,
 		)
 
 		return &imageFromResource{
@@ -94,6 +96,7 @@ func (f *imageFactory) GetImage(
 			teamID,
 			resourceTypes,
 			delegate,
+			client,
 		)
 
 		return &imageFromResource{

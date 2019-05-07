@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/concourse/concourse/atc/api/present"
 	"github.com/concourse/concourse/atc/db"
 )
 
@@ -23,7 +24,7 @@ func (s *Server) CreateArtifact(team db.Team) http.Handler {
 			return
 		}
 
-		err = s.workerClient.Store(hLog, team.ID(), artifact, "/", r.Body)
+		err = artifact.Store(hLog, team.ID(), "/", r.Body)
 		if err != nil {
 			hLog.Error("failed-to-stream-artifact-contents", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -32,6 +33,6 @@ func (s *Server) CreateArtifact(team db.Team) http.Handler {
 
 		w.WriteHeader(http.StatusCreated)
 
-		json.NewEncoder(w).Encode(artifact)
+		json.NewEncoder(w).Encode(present.WorkerArtifact(artifact.DBArtifact()))
 	})
 }

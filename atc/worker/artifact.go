@@ -42,6 +42,15 @@ type Artifact interface {
 	Destroy() error
 	AttachVolume(bcVolume baggageclaim.Volume, dbVolume db.CreatedVolume, client VolumeClient)
 	Store(logger lager.Logger, teamID int, volumePath string, data io.ReadCloser) error
+
+	// create a volume on another worker or cow if same worker, streamIn the data and return the newly created artifact
+	// Clone() baggageclaim.Volume
+	//	 if self on Same worker:
+	//		 newVol := self.VolumeClient.FindOrCreateCOW
+	//	 else:
+	//		 newVol := self.VolumeClient.FindOrCreate(EmptyStrategy)
+	//		 newVol.StreamIn(self.StreamOut("/"))
+	// 	return newVol
 }
 
 type VolumeMount struct {
@@ -52,6 +61,12 @@ type VolumeMount struct {
 type ArtifactMount struct {
 	Artifact  Artifact
 	MountPath string
+}
+
+type mounts []ArtifactMount
+
+func (m mounts) Order() {
+
 }
 
 type artifact struct {
@@ -76,7 +91,7 @@ func (p byMountPath) Less(i, j int) bool {
 	return path1 < path2
 }
 
-func NewArtifactForVolume(
+func NewArtifact(
 	dbArtifact db.WorkerArtifact,
 	bcVolume baggageclaim.Volume,
 	dbVolume db.CreatedVolume,
@@ -106,7 +121,7 @@ func (a *artifact) Store(logger lager.Logger, teamID int, volumePath string, dat
 	spec := VolumeSpec{
 		Strategy: baggageclaim.EmptyStrategy{},
 	}
-	err = worker.FindOrCreateVolume(logger, spec, teamID, a.ID(), db.VolumeTypeArtifact)
+	err = worker.FindOrCreateVolume(logger, spec, teamID, a, db.VolumeTypeArtifact)
 	if err != nil {
 		return err
 	}

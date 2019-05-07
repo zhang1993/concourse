@@ -139,9 +139,9 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 		return nil, err
 	}
 
-	artifactMount := worker.VolumeMount{getArtifact, ResourcesDir("get")}
+	artifactMount := worker.ArtifactMount{getArtifact, ResourcesDir("get")}
 
-	s.containerSpec.Artifacts = []worker.VolumeMount{artifactMount}
+	s.containerSpec.Artifacts = []worker.ArtifactMount{artifactMount}
 
 	container, err := s.worker.FindOrCreateContainer(
 		ctx,
@@ -151,6 +151,7 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 		s.session.Metadata,
 		s.containerSpec,
 		s.resourceTypes,
+		s.client,
 	)
 	if err != nil {
 		return nil, err
@@ -163,7 +164,7 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 
 	// mountPath := ResourcesDir("get")
 	// var artifact worker.Artifact
-	// for _, mount := range container.VolumeMounts() {
+	// for _, mount := range container.ArtifactMounts() {
 	// 	if mount.MountPath == mountPath {
 	// 		artifact = mount.Volume
 	// 		break

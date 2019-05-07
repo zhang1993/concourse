@@ -28,7 +28,7 @@ type ContainerSpec struct {
 	Dir string
 
 	// The artifacts which will be attached to the container.
-	Artifacts []VolumeMount
+	Artifacts []ArtifactMount
 
 	// Inputs to provide to the container. Inputs with a artifact local to the
 	// selected worker will be made available via a COW artifact; others will be
@@ -36,7 +36,7 @@ type ContainerSpec struct {
 	Inputs []InputSource
 
 	// Outputs for which volumes should be created and mounted into the container.
-	Outputs []InputSource
+	Outputs OutputPaths
 
 	// Resource limits to be set on the container when creating in garden.
 	Limits ContainerLimits

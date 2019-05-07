@@ -202,6 +202,7 @@ func (action *TaskStep) Run(ctx context.Context, state RunState) error {
 		action.containerMetadata,
 		containerSpec,
 		action.resourceTypes,
+		action.client,
 	)
 	if err != nil {
 		return err
@@ -441,7 +442,7 @@ func (action *TaskStep) workerSpec(logger lager.Logger, resourceTypes creds.Vers
 }
 
 func (action *TaskStep) registerOutputs(logger lager.Logger, repository *artifact.Repository, config atc.TaskConfig, container worker.Container) error {
-	volumeMounts := container.VolumeMounts()
+	artifactMounts := container.ArtifactMounts()
 
 	logger.Debug("registering-outputs", lager.Data{"outputs": config.Outputs})
 
@@ -453,9 +454,9 @@ func (action *TaskStep) registerOutputs(logger lager.Logger, repository *artifac
 
 		outputPath := artifactsPath(output, action.artifactsRoot)
 
-		for _, mount := range volumeMounts {
+		for _, mount := range artifactMounts {
 			if filepath.Clean(mount.MountPath) == filepath.Clean(outputPath) {
-				source := NewTaskArtifactSource(mount.Volume)
+				source := NewTaskArtifactSource(mount.Artifact)
 				repository.RegisterSource(artifact.Name(outputName), source)
 			}
 		}
@@ -466,11 +467,11 @@ func (action *TaskStep) registerOutputs(logger lager.Logger, repository *artifac
 		logger.Debug("initializing-caches", lager.Data{"caches": config.Caches})
 
 		for _, cacheConfig := range config.Caches {
-			for _, volumeMount := range volumeMounts {
+			for _, volumeMount := range artifactMounts {
 				if volumeMount.MountPath == filepath.Join(action.artifactsRoot, cacheConfig.Path) {
 					logger.Debug("initializing-cache", lager.Data{"path": volumeMount.MountPath})
 
-					err := volumeMount.Volume.InitializeTaskCache(logger, action.jobID, action.stepName, cacheConfig.Path, bool(action.privileged))
+					err := volumeMount.Artifact.InitializeTaskCache(logger, action.jobID, action.stepName, cacheConfig.Path, bool(action.privileged))
 					if err != nil {
 						return err
 					}
@@ -495,7 +496,6 @@ func (TaskStep) envForParams(params map[string]string) []string {
 }
 
 type taskArtifactSource struct {
-	worker.Client
 	worker.Artifact
 }
 

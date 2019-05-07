@@ -17,7 +17,7 @@ type Container interface {
 
 	Destroy() error
 
-	VolumeMounts() []VolumeMount
+	ArtifactMounts() []ArtifactMount
 
 	WorkerName() string
 
@@ -31,7 +31,7 @@ type gardenWorkerContainer struct {
 
 	gardenClient garden.Client
 
-	volumeMounts []VolumeMount
+	artifactMounts []ArtifactMount
 
 	user       string
 	workerName string
@@ -94,8 +94,8 @@ func (container *gardenWorkerContainer) Run(spec garden.ProcessSpec, io garden.P
 	return container.Container.Run(spec, io)
 }
 
-func (container *gardenWorkerContainer) VolumeMounts() []VolumeMount {
-	return container.volumeMounts
+func (container *gardenWorkerContainer) ArtifactMounts() []ArtifactMount {
+	return container.artifactMounts
 }
 
 func (container *gardenWorkerContainer) initializeVolumes(
@@ -103,7 +103,7 @@ func (container *gardenWorkerContainer) initializeVolumes(
 	volumeClient VolumeClient,
 ) error {
 
-	volumeMounts := []VolumeMount{}
+	artifactMounts := []ArtifactMount{}
 
 	for _, dbVolume := range container.dbVolumes {
 		volumeLogger := logger.Session("artifact", lager.Data{
@@ -121,13 +121,13 @@ func (container *gardenWorkerContainer) initializeVolumes(
 			return errors.New("artifact mounted to container is missing " + dbVolume.Handle() + " from worker " + container.workerName)
 		}
 
-		volumeMounts = append(volumeMounts, VolumeMount{
-			Volume:    volume,
+		artifactMounts = append(artifactMounts, ArtifactMount{
+			Artifact:  volume,
 			MountPath: dbVolume.Path(),
 		})
 	}
 
-	container.volumeMounts = volumeMounts
+	container.artifactMounts = artifactMounts
 
 	return nil
 }

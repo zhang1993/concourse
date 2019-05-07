@@ -2,12 +2,8 @@ package worker_test
 
 import (
 	"errors"
-	"io"
-	"io/ioutil"
-	"strings"
 
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/db/dbfakes"
 	"github.com/concourse/concourse/atc/worker"
 	"github.com/concourse/concourse/atc/worker/workerfakes"
@@ -130,14 +126,14 @@ var _ = Describe("Client", func() {
 
 		Context("when a worker is found with the artifact", func() {
 			var fakeWorker *workerfakes.FakeWorker
-			var fakeVolume *workerfakes.FakeVolume
+			var fakeArtifact *workerfakes.FakeArtifact
 
 			BeforeEach(func() {
 				fakeWorker = new(workerfakes.FakeWorker)
 				fakeWorkerProvider.FindWorkerForVolumeReturns(fakeWorker, true, nil)
 
-				fakeVolume = new(workerfakes.FakeVolume)
-				fakeWorker.LookupVolumeReturns(fakeVolume, true, nil)
+				fakeArtifact = new(workerfakes.FakeArtifact)
+				fakeWorker.LookupVolumeReturns(fakeArtifact, true, nil)
 			})
 
 			It("succeeds", func() {
@@ -146,7 +142,7 @@ var _ = Describe("Client", func() {
 			})
 
 			It("returns the artifact", func() {
-				Expect(foundVolume).To(Equal(fakeVolume))
+				Expect(foundVolume).To(Equal(fakeArtifact))
 			})
 		})
 	})
@@ -161,57 +157,6 @@ var _ = Describe("Client", func() {
 			Expect(fakeArtifactProvider.CreateArtifactCallCount()).To(Equal(1))
 			nameArg := fakeArtifactProvider.CreateArtifactArgsForCall(0)
 			Expect(nameArg).To(Equal("some-artifact"))
-		})
-	})
-
-	Describe("Store", func() {
-		var (
-			artifact   atc.WorkerArtifact
-			readCloser io.ReadCloser
-			fakeWorker *workerfakes.FakeWorker
-			fakeVolume *workerfakes.FakeVolume
-		)
-
-		BeforeEach(func() {
-			artifact = atc.WorkerArtifact{
-				ID:   1,
-				Name: "some-name",
-			}
-			readCloser = ioutil.NopCloser(strings.NewReader(
-				`hi there`,
-			))
-			fakeWorker = new(workerfakes.FakeWorker)
-			fakeVolume = new(workerfakes.FakeVolume)
-			fakeWorker.FindOrCreateVolumeForArtifactReturns(fakeVolume, nil)
-		})
-
-		Context("artifact associated with artifact does not exist", func() {
-			BeforeEach(func() {
-				fakeWorkerProvider.FindWorkerForArtifactReturns(nil, false, nil)
-				fakePool.FindOrChooseWorkerReturns(fakeWorker, nil)
-			})
-
-			It("selects a worker and creates an associated artifact on it", func() {
-				err := client.Store(logger, 123, artifact, "/", readCloser)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(fakePool.FindOrChooseWorkerCallCount()).To(Equal(1))
-				Expect(fakeWorker.FindOrCreateVolumeForArtifactCallCount()).To(Equal(1))
-			})
-		})
-
-		It("puts data into the artifact", func() {
-			fakeWorkerProvider.FindWorkerForArtifactReturns(fakeWorker, true, nil)
-
-			err := client.Store(logger, 123, artifact, "/", readCloser)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(fakeWorkerProvider.FindWorkerForArtifactCallCount()).To(Equal(1))
-
-			l, tID, aID := fakeWorkerProvider.FindWorkerForArtifactArgsForCall(0)
-			Expect(l).To(Equal(logger))
-			Expect(tID).To(Equal(123))
-			Expect(aID).To(Equal(artifact.ID))
-
-			Expect(fakeVolume.StreamInCallCount()).To(Equal(1))
 		})
 	})
 })

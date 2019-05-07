@@ -24,7 +24,7 @@ type VolumeClient interface {
 		db.CreatingContainer,
 		int,
 		string,
-	) (baggageclaim.Volume, error)
+	) (Artifact, error)
 	FindOrCreateCOWVolumeForContainer(
 		lager.Logger,
 		VolumeSpec,
@@ -71,6 +71,12 @@ type VolumeClient interface {
 	) (volume Artifact, found bool, err error)
 
 	LookupVolume(lager.Logger, string) (Artifact, bool, error)
+
+	EnsureLocalCopyOfArtifact(
+		lager.Logger,
+		Artifact,
+		db.CreatedContainer,
+	) error
 }
 
 type VolumeSpec struct {
@@ -138,9 +144,9 @@ func (c *volumeClient) FindOrCreateVolumeForContainer(
 	container db.CreatingContainer,
 	teamID int,
 	mountPath string,
-) (baggageclaim.Volume, error) {
+) (Artifact, error) {
 	//TODO: validate db volume?
-	bcVolume, _, err := c.findOrCreateVolume(
+	bcVolume, dbVolume, err := c.findOrCreateVolume(
 		logger.Session("find-or-create-volume-for-container"),
 		volumeSpec,
 		func() (db.CreatingVolume, db.CreatedVolume, error) {
@@ -154,7 +160,7 @@ func (c *volumeClient) FindOrCreateVolumeForContainer(
 		return nil, err
 	}
 
-	return bcVolume, nil
+	return NewArtifact(nil, bcVolume, dbVolume, c), nil
 }
 
 func (c *volumeClient) FindOrCreateCOWVolumeForContainer(
@@ -179,7 +185,7 @@ func (c *volumeClient) FindOrCreateCOWVolumeForContainer(
 		return nil, err
 	}
 
-	return NewArtifactForVolume(nil, bcVolume, dbVolume, c), nil
+	return NewArtifact(nil, bcVolume, dbVolume, c), nil
 }
 
 func (c *volumeClient) FindOrCreateVolumeForArtifact(
@@ -238,7 +244,7 @@ func (c *volumeClient) FindOrCreateVolumeForBaseResourceType(
 		return nil, err
 	}
 
-	return NewArtifactForVolume(nil, bcVolume, dbVolume, c), nil
+	return NewArtifact(nil, bcVolume, dbVolume, c), nil
 }
 
 func (c *volumeClient) FindVolumeForResourceCache(
@@ -265,7 +271,7 @@ func (c *volumeClient) FindVolumeForResourceCache(
 		return nil, false, nil
 	}
 
-	return NewArtifactForVolume(nil, bcVolume, dbVolume, c), true, nil
+	return NewArtifact(nil, bcVolume, dbVolume, c), true, nil
 }
 
 func (c *volumeClient) CreateVolumeForTaskCache(
@@ -296,7 +302,7 @@ func (c *volumeClient) CreateVolumeForTaskCache(
 		return nil, err
 	}
 
-	return NewArtifactForVolume(nil, bcVolume, dbVolume, c), nil
+	return NewArtifact(nil, bcVolume, dbVolume, c), nil
 }
 
 func (c *volumeClient) FindOrCreateVolumeForResourceCerts(logger lager.Logger) (Artifact, bool, error) {
@@ -338,7 +344,7 @@ func (c *volumeClient) FindOrCreateVolumeForResourceCerts(logger lager.Logger) (
 		return nil, false, err
 	}
 
-	return NewArtifactForVolume(nil, bcVolume, dbVolume, c), true, nil
+	return NewArtifact(nil, bcVolume, dbVolume, c), true, nil
 }
 
 func (c *volumeClient) FindVolumeForTaskCache(
@@ -378,7 +384,7 @@ func (c *volumeClient) FindVolumeForTaskCache(
 		return nil, false, nil
 	}
 
-	return NewArtifactForVolume(nil, bcVolume, dbVolume, c), true, nil
+	return NewArtifact(nil, bcVolume, dbVolume, c), true, nil
 }
 
 func (c *volumeClient) LookupVolume(logger lager.Logger, handle string) (Artifact, bool, error) {
@@ -402,7 +408,7 @@ func (c *volumeClient) LookupVolume(logger lager.Logger, handle string) (Artifac
 		return nil, false, nil
 	}
 
-	return NewArtifactForVolume(nil, bcVolume, dbVolume, c), true, nil
+	return NewArtifact(nil, bcVolume, dbVolume, c), true, nil
 }
 
 func (c *volumeClient) findOrCreateVolume(
@@ -511,4 +517,8 @@ func (c *volumeClient) findOrCreateVolume(
 	logger.Debug("created")
 
 	return bcVolume, createdVolume, nil
+}
+
+func (c *volumeClient) EnsureLocalCopyOfArtifact(lager.Logger, Artifact, db.CreatedContainer) error {
+	return nil
 }

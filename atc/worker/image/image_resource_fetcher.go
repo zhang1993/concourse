@@ -34,6 +34,7 @@ type ImageResourceFetcherFactory interface {
 		int,
 		creds.VersionedResourceTypes,
 		worker.ImageFetchingDelegate,
+		worker.Client,
 	) ImageResourceFetcher
 }
 
@@ -76,6 +77,7 @@ func (f *imageResourceFetcherFactory) NewImageResourceFetcher(
 	teamID int,
 	customTypes creds.VersionedResourceTypes,
 	imageFetchingDelegate worker.ImageFetchingDelegate,
+	client worker.Client,
 ) ImageResourceFetcher {
 	return &imageResourceFetcher{
 		worker:                  worker,
@@ -89,6 +91,7 @@ func (f *imageResourceFetcherFactory) NewImageResourceFetcher(
 		teamID:                teamID,
 		customTypes:           customTypes,
 		imageFetchingDelegate: imageFetchingDelegate,
+		client:                client,
 	}
 }
 
@@ -104,6 +107,7 @@ type imageResourceFetcher struct {
 	teamID                int
 	customTypes           creds.VersionedResourceTypes
 	imageFetchingDelegate worker.ImageFetchingDelegate
+	client                worker.Client
 }
 
 func (i *imageResourceFetcher) Fetch(
@@ -185,6 +189,7 @@ func (i *imageResourceFetcher) Fetch(
 		i.customTypes,
 		resourceInstance,
 		i.imageFetchingDelegate,
+		i.client,
 	)
 	if err != nil {
 		logger.Error("failed-to-fetch-image", err)
@@ -247,6 +252,7 @@ func (i *imageResourceFetcher) ensureVersionOfType(
 		},
 		containerSpec,
 		i.customTypes,
+		i.client,
 	)
 	if err != nil {
 		return err
@@ -313,6 +319,7 @@ func (i *imageResourceFetcher) getLatestVersion(
 		},
 		resourceSpec,
 		i.customTypes,
+		i.client,
 	)
 	if err != nil {
 		return nil, err

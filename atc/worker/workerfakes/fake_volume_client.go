@@ -28,6 +28,19 @@ type FakeVolumeClient struct {
 		result1 worker.Artifact
 		result2 error
 	}
+	EnsureLocalCopyOfArtifactStub        func(lager.Logger, worker.Artifact, db.CreatedContainer) error
+	ensureLocalCopyOfArtifactMutex       sync.RWMutex
+	ensureLocalCopyOfArtifactArgsForCall []struct {
+		arg1 lager.Logger
+		arg2 worker.Artifact
+		arg3 db.CreatedContainer
+	}
+	ensureLocalCopyOfArtifactReturns struct {
+		result1 error
+	}
+	ensureLocalCopyOfArtifactReturnsOnCall map[int]struct {
+		result1 error
+	}
 	FindOrCreateCOWVolumeForContainerStub        func(lager.Logger, worker.VolumeSpec, db.CreatingContainer, worker.Artifact, int, string) (worker.Artifact, error)
 	findOrCreateCOWVolumeForContainerMutex       sync.RWMutex
 	findOrCreateCOWVolumeForContainerArgsForCall []struct {
@@ -46,23 +59,21 @@ type FakeVolumeClient struct {
 		result1 worker.Artifact
 		result2 error
 	}
-	FindOrCreateVolumeForArtifactStub        func(lager.Logger, worker.VolumeSpec, int, int, string, db.VolumeType) (worker.Artifact, error)
+	FindOrCreateVolumeForArtifactStub        func(lager.Logger, worker.VolumeSpec, int, worker.Artifact, string, db.VolumeType) error
 	findOrCreateVolumeForArtifactMutex       sync.RWMutex
 	findOrCreateVolumeForArtifactArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 worker.VolumeSpec
 		arg3 int
-		arg4 int
+		arg4 worker.Artifact
 		arg5 string
 		arg6 db.VolumeType
 	}
 	findOrCreateVolumeForArtifactReturns struct {
-		result1 worker.Artifact
-		result2 error
+		result1 error
 	}
 	findOrCreateVolumeForArtifactReturnsOnCall map[int]struct {
-		result1 worker.Artifact
-		result2 error
+		result1 error
 	}
 	FindOrCreateVolumeForBaseResourceTypeStub        func(lager.Logger, worker.VolumeSpec, int, string) (worker.Artifact, error)
 	findOrCreateVolumeForBaseResourceTypeMutex       sync.RWMutex
@@ -235,6 +246,68 @@ func (fake *FakeVolumeClient) CreateVolumeForTaskCacheReturnsOnCall(i int, resul
 	}{result1, result2}
 }
 
+func (fake *FakeVolumeClient) EnsureLocalCopyOfArtifact(arg1 lager.Logger, arg2 worker.Artifact, arg3 db.CreatedContainer) error {
+	fake.ensureLocalCopyOfArtifactMutex.Lock()
+	ret, specificReturn := fake.ensureLocalCopyOfArtifactReturnsOnCall[len(fake.ensureLocalCopyOfArtifactArgsForCall)]
+	fake.ensureLocalCopyOfArtifactArgsForCall = append(fake.ensureLocalCopyOfArtifactArgsForCall, struct {
+		arg1 lager.Logger
+		arg2 worker.Artifact
+		arg3 db.CreatedContainer
+	}{arg1, arg2, arg3})
+	fake.recordInvocation("EnsureLocalCopyOfArtifact", []interface{}{arg1, arg2, arg3})
+	fake.ensureLocalCopyOfArtifactMutex.Unlock()
+	if fake.EnsureLocalCopyOfArtifactStub != nil {
+		return fake.EnsureLocalCopyOfArtifactStub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.ensureLocalCopyOfArtifactReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeVolumeClient) EnsureLocalCopyOfArtifactCallCount() int {
+	fake.ensureLocalCopyOfArtifactMutex.RLock()
+	defer fake.ensureLocalCopyOfArtifactMutex.RUnlock()
+	return len(fake.ensureLocalCopyOfArtifactArgsForCall)
+}
+
+func (fake *FakeVolumeClient) EnsureLocalCopyOfArtifactCalls(stub func(lager.Logger, worker.Artifact, db.CreatedContainer) error) {
+	fake.ensureLocalCopyOfArtifactMutex.Lock()
+	defer fake.ensureLocalCopyOfArtifactMutex.Unlock()
+	fake.EnsureLocalCopyOfArtifactStub = stub
+}
+
+func (fake *FakeVolumeClient) EnsureLocalCopyOfArtifactArgsForCall(i int) (lager.Logger, worker.Artifact, db.CreatedContainer) {
+	fake.ensureLocalCopyOfArtifactMutex.RLock()
+	defer fake.ensureLocalCopyOfArtifactMutex.RUnlock()
+	argsForCall := fake.ensureLocalCopyOfArtifactArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeVolumeClient) EnsureLocalCopyOfArtifactReturns(result1 error) {
+	fake.ensureLocalCopyOfArtifactMutex.Lock()
+	defer fake.ensureLocalCopyOfArtifactMutex.Unlock()
+	fake.EnsureLocalCopyOfArtifactStub = nil
+	fake.ensureLocalCopyOfArtifactReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeClient) EnsureLocalCopyOfArtifactReturnsOnCall(i int, result1 error) {
+	fake.ensureLocalCopyOfArtifactMutex.Lock()
+	defer fake.ensureLocalCopyOfArtifactMutex.Unlock()
+	fake.EnsureLocalCopyOfArtifactStub = nil
+	if fake.ensureLocalCopyOfArtifactReturnsOnCall == nil {
+		fake.ensureLocalCopyOfArtifactReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.ensureLocalCopyOfArtifactReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeVolumeClient) FindOrCreateCOWVolumeForContainer(arg1 lager.Logger, arg2 worker.VolumeSpec, arg3 db.CreatingContainer, arg4 worker.Artifact, arg5 int, arg6 string) (worker.Artifact, error) {
 	fake.findOrCreateCOWVolumeForContainerMutex.Lock()
 	ret, specificReturn := fake.findOrCreateCOWVolumeForContainerReturnsOnCall[len(fake.findOrCreateCOWVolumeForContainerArgsForCall)]
@@ -303,14 +376,14 @@ func (fake *FakeVolumeClient) FindOrCreateCOWVolumeForContainerReturnsOnCall(i i
 	}{result1, result2}
 }
 
-func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifact(arg1 lager.Logger, arg2 worker.VolumeSpec, arg3 int, arg4 int, arg5 string, arg6 db.VolumeType) (worker.Artifact, error) {
+func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifact(arg1 lager.Logger, arg2 worker.VolumeSpec, arg3 int, arg4 worker.Artifact, arg5 string, arg6 db.VolumeType) error {
 	fake.findOrCreateVolumeForArtifactMutex.Lock()
 	ret, specificReturn := fake.findOrCreateVolumeForArtifactReturnsOnCall[len(fake.findOrCreateVolumeForArtifactArgsForCall)]
 	fake.findOrCreateVolumeForArtifactArgsForCall = append(fake.findOrCreateVolumeForArtifactArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 worker.VolumeSpec
 		arg3 int
-		arg4 int
+		arg4 worker.Artifact
 		arg5 string
 		arg6 db.VolumeType
 	}{arg1, arg2, arg3, arg4, arg5, arg6})
@@ -320,10 +393,10 @@ func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifact(arg1 lager.Logger, a
 		return fake.FindOrCreateVolumeForArtifactStub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1
 	}
 	fakeReturns := fake.findOrCreateVolumeForArtifactReturns
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1
 }
 
 func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifactCallCount() int {
@@ -332,43 +405,40 @@ func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifactCallCount() int {
 	return len(fake.findOrCreateVolumeForArtifactArgsForCall)
 }
 
-func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifactCalls(stub func(lager.Logger, worker.VolumeSpec, int, int, string, db.VolumeType) (worker.Artifact, error)) {
+func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifactCalls(stub func(lager.Logger, worker.VolumeSpec, int, worker.Artifact, string, db.VolumeType) error) {
 	fake.findOrCreateVolumeForArtifactMutex.Lock()
 	defer fake.findOrCreateVolumeForArtifactMutex.Unlock()
 	fake.FindOrCreateVolumeForArtifactStub = stub
 }
 
-func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifactArgsForCall(i int) (lager.Logger, worker.VolumeSpec, int, int, string, db.VolumeType) {
+func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifactArgsForCall(i int) (lager.Logger, worker.VolumeSpec, int, worker.Artifact, string, db.VolumeType) {
 	fake.findOrCreateVolumeForArtifactMutex.RLock()
 	defer fake.findOrCreateVolumeForArtifactMutex.RUnlock()
 	argsForCall := fake.findOrCreateVolumeForArtifactArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
-func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifactReturns(result1 worker.Artifact, result2 error) {
+func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifactReturns(result1 error) {
 	fake.findOrCreateVolumeForArtifactMutex.Lock()
 	defer fake.findOrCreateVolumeForArtifactMutex.Unlock()
 	fake.FindOrCreateVolumeForArtifactStub = nil
 	fake.findOrCreateVolumeForArtifactReturns = struct {
-		result1 worker.Artifact
-		result2 error
-	}{result1, result2}
+		result1 error
+	}{result1}
 }
 
-func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifactReturnsOnCall(i int, result1 worker.Artifact, result2 error) {
+func (fake *FakeVolumeClient) FindOrCreateVolumeForArtifactReturnsOnCall(i int, result1 error) {
 	fake.findOrCreateVolumeForArtifactMutex.Lock()
 	defer fake.findOrCreateVolumeForArtifactMutex.Unlock()
 	fake.FindOrCreateVolumeForArtifactStub = nil
 	if fake.findOrCreateVolumeForArtifactReturnsOnCall == nil {
 		fake.findOrCreateVolumeForArtifactReturnsOnCall = make(map[int]struct {
-			result1 worker.Artifact
-			result2 error
+			result1 error
 		})
 	}
 	fake.findOrCreateVolumeForArtifactReturnsOnCall[i] = struct {
-		result1 worker.Artifact
-		result2 error
-	}{result1, result2}
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeVolumeClient) FindOrCreateVolumeForBaseResourceType(arg1 lager.Logger, arg2 worker.VolumeSpec, arg3 int, arg4 string) (worker.Artifact, error) {
@@ -779,6 +849,8 @@ func (fake *FakeVolumeClient) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.createVolumeForTaskCacheMutex.RLock()
 	defer fake.createVolumeForTaskCacheMutex.RUnlock()
+	fake.ensureLocalCopyOfArtifactMutex.RLock()
+	defer fake.ensureLocalCopyOfArtifactMutex.RUnlock()
 	fake.findOrCreateCOWVolumeForContainerMutex.RLock()
 	defer fake.findOrCreateCOWVolumeForContainerMutex.RUnlock()
 	fake.findOrCreateVolumeForArtifactMutex.RLock()

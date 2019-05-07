@@ -553,7 +553,7 @@ func (cmd *RunCommand) constructAPIMembers(
 	)
 
 	pool := worker.NewPool(workerProvider)
-	workerClient := worker.NewClient(pool, workerProvider)
+	workerClient := worker.NewClient(pool, workerProvider, dbArtifactLifecycle)
 
 	checkContainerStrategy := worker.NewRandomPlacementStrategy()
 
@@ -732,7 +732,7 @@ func (cmd *RunCommand) constructBackendMembers(
 	)
 
 	pool := worker.NewPool(workerProvider)
-	workerClient := worker.NewClient(pool, workerProvider)
+	workerClient := worker.NewClient(pool, workerProvider, dbArtifactLifecycle)
 
 	defaultLimits, err := cmd.parseDefaultLimits()
 	if err != nil {

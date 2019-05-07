@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("VolumeClient", func() {
+var _ = XDescribe("VolumeClient", func() {
 	var (
 		fakeLock   *lockfakes.FakeLock
 		testLogger *lagertest.TestLogger
@@ -826,6 +826,87 @@ var _ = Describe("VolumeClient", func() {
 
 			It("returns the error", func() {
 				Expect(lookupErr).To(Equal(disaster))
+			})
+		})
+	})
+
+	Describe("EnsureLocalCopyOfArtifact", func() {
+		var (
+			fakeDbArtifact *dbfakes.FakeWorkerArtifact
+			fakeDbVolume   *dbfakes.FakeCreatedVolume
+			fakeBcVolume   *baggageclaimfakes.FakeVolume
+			artifact       *workerfakes.FakeArtifact
+
+			fakeCreatingContainer *dbfakes.FakeCreatingContainer
+			err                   error
+		)
+
+		BeforeEach(func() {
+			fakeDbArtifact = new(dbfakes.FakeWorkerArtifact)
+			fakeDbVolume = new(dbfakes.FakeCreatedVolume)
+			fakeBcVolume = new(baggageclaimfakes.FakeVolume)
+
+			fakeCreatingContainer = new(dbfakes.FakeCreatingContainer)
+			fakeCreatingContainer.IDReturns(123)
+
+			artifact = new(workerfakes.FakeArtifact)
+		})
+		JustBeforeEach(func() {
+			err = volumeClient.EnsureLocalCopyOfArtifact(testLogger, artifact, fakeCreatingContainer)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Context("artifact volume available on current worker", func() {
+			BeforeEach(func() {
+				fakeDbVolume.WorkerNameReturns(dbWorker.Name())
+				// artifact volume should exist, container-specific volume should not exist
+				fakeDBVolumeRepository.FindArtifactVolumeReturns(nil, fakeDbVolume, nil)
+				fakeDBVolumeRepository.FindContainerVolumeReturns(nil, nil, nil)
+			})
+			It("creates a COW volume of the artifact for the container", func() {
+				Expect(artifact.CreateChildForContainerCallCount()).To(Equal(1))
+				creatingContainer, _ := artifact.CreateChildForContainerArgsForCall(0)
+				Expect(creatingContainer).To(Equal(fakeCreatingContainer))
+
+				Expect(fakeBaggageclaimClient.CreateVolumeCallCount()).To(Equal(1))
+				_, _, strategy := fakeBaggageclaimClient.CreateVolumeArgsForCall(0)
+				Expect(strategy).To(Equal(baggageclaim.COWStrategy{}))
+			})
+		})
+		Context("artifact volume available on other worker", func() {
+			BeforeEach(func() {
+				fakeDbVolume.WorkerNameReturns("other-worker")
+				// artifact volume should exist, container-specific volume should not exist
+				fakeDBVolumeRepository.FindArtifactVolumeReturns(nil, fakeDbVolume, nil)
+				fakeDBVolumeRepository.FindContainerVolumeReturns(nil, nil, nil)
+			})
+			It("create a new empty volume for the container", func() {
+				Expect(fakeDBVolumeRepository.CreateContainerVolumeCallCount()).To(Equal(1))
+				// TODO: CreateContainerVolume also takes a mountpath. Should we test it?
+				_, workerName, creatingContainer, _ := fakeDBVolumeRepository.CreateContainerVolumeArgsForCall(0)
+				Expect(workerName).To(Equal(dbWorker.Name()))
+				Expect(creatingContainer).To(Equal(fakeCreatingContainer))
+
+				Expect(fakeBaggageclaimClient.CreateVolumeCallCount()).To(Equal(1))
+				_, _, strategy := fakeBaggageclaimClient.CreateVolumeArgsForCall(0)
+				Expect(strategy).To(Equal(baggageclaim.EmptyStrategy{}))
+			})
+
+			It("streams in the artifact contents into the new volume", func() {
+				Expect(artifact.StreamOutCallCount()).To(Equal(1))
+
+			})
+
+			It("does not attach the new volume to the artifact", func() {
+
+			})
+		})
+		Context("artifact volume not available on any worker", func() {
+			It("creates a new blank volume for the artifact", func() {
+
+			})
+			It("attaches the new volume to the artifact", func() {
+
 			})
 		})
 	})

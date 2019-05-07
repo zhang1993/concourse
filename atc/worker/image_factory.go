@@ -22,6 +22,7 @@ type ImageFactory interface {
 		teamID int,
 		delegate ImageFetchingDelegate,
 		resourceTypes creds.VersionedResourceTypes,
+		client Client,
 	) (Image, error)
 }
 

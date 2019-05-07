@@ -273,6 +273,7 @@ func (scanner *resourceTypeScanner) check(
 		},
 		containerSpec,
 		versionedResourceTypes.Without(savedResourceType.Name()),
+		nil,
 	)
 	if err != nil {
 		chkErr := resourceConfigScope.SetCheckError(err)
