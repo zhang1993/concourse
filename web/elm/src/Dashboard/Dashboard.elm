@@ -521,7 +521,6 @@ topBar session model =
                 , hovered = session.hovered
                 , isSideBarOpen = session.isSideBarOpen
                 , screenSize = session.screenSize
-                , isPaused = False
                 }
             , Html.a (href "/" :: Views.Styles.concourseLogo) []
             , clusterName model

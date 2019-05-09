@@ -84,6 +84,12 @@ teamHeader { hovered, isExpanded, teamName, currentPipeline } =
     let
         isHovered =
             hovered == Just (SideBarTeam teamName)
+
+        isCurrent =
+            (currentPipeline
+                |> Maybe.map .teamName
+            )
+                == Just teamName
     in
     Html.div
         (Styles.teamHeader
@@ -92,24 +98,16 @@ teamHeader { hovered, isExpanded, teamName, currentPipeline } =
                , onMouseLeave <| Hover Nothing
                ]
         )
-        [ Html.div
-            Styles.iconGroup
-            [ Styles.teamIcon isHovered
-            , Styles.arrow
-                { isHovered = isHovered
-                , isExpanded = isExpanded
-                }
-            ]
+        [ Styles.teamIcon { isCurrent = isCurrent, isHovered = isHovered }
+        , Styles.arrow
+            { isHovered = isHovered
+            , isExpanded = isExpanded
+            }
         , Html.div
             (title teamName
                 :: Styles.teamName
                     { isHovered = isHovered
-                    , isExpanded = isExpanded
-                    , isCurrent =
-                        (currentPipeline
-                            |> Maybe.map .teamName
-                        )
-                            == Just teamName
+                    , isCurrent = isCurrent
                     }
             )
             [ Html.text teamName ]
@@ -130,13 +128,25 @@ pipeline { hovered, teamName, currentPipeline } p =
             { pipelineName = p.name
             , teamName = teamName
             }
+
+        isCurrent =
+            currentPipeline == Just pipelineId
+
+        isHovered =
+            hovered == Just (SideBarPipeline pipelineId)
     in
     Html.div Styles.pipeline
-        [ Html.div Styles.pipelineIcon []
+        [ Html.div
+            (Styles.pipelineIcon
+                { isCurrent = isCurrent
+                , isHovered = isHovered
+                }
+            )
+            []
         , Html.a
             (Styles.pipelineLink
-                { isHovered = hovered == Just (SideBarPipeline pipelineId)
-                , isCurrent = currentPipeline == Just pipelineId
+                { isHovered = isHovered
+                , isCurrent = isCurrent
                 }
                 ++ [ href <|
                         Routes.toString <|
@@ -156,7 +166,6 @@ hamburgerMenu :
         , pipelines : List Concourse.Pipeline
         , isSideBarOpen : Bool
         , hovered : Maybe DomID
-        , isPaused : Bool
     }
     -> Html Message
 hamburgerMenu model =
@@ -172,7 +181,6 @@ hamburgerMenu model =
             (id "hamburger-menu"
                 :: Styles.hamburgerMenu
                     { isSideBarOpen = model.isSideBarOpen
-                    , isPaused = model.isPaused
                     , isClickable = isHamburgerClickable
                     }
                 ++ [ onMouseEnter <| Hover <| Just HamburgerMenu
@@ -189,7 +197,10 @@ hamburgerMenu model =
                 { sizePx = 54, image = "baseline-menu-24px.svg" }
               <|
                 (Styles.hamburgerIcon <|
-                    isHamburgerClickable
-                        && (model.hovered == Just HamburgerMenu)
+                    { isHovered =
+                        isHamburgerClickable
+                            && (model.hovered == Just HamburgerMenu)
+                    , isActive = model.isSideBarOpen
+                    }
                 )
             ]

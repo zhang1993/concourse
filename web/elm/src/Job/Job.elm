@@ -427,7 +427,6 @@ view session model =
                 , hovered = session.hovered
                 , isSideBarOpen = session.isSideBarOpen
                 , pipelines = session.pipelines
-                , isPaused = False
                 }
             , TopBar.concourseLogo
             , TopBar.breadcrumbs route

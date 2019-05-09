@@ -32,6 +32,7 @@ import Html.Attributes
         , href
         , id
         , style
+        , tabindex
         , title
         )
 import Html.Events exposing (onBlur, onFocus, onMouseEnter, onMouseLeave)
@@ -387,10 +388,11 @@ handleDelivery session delivery ( model, effects ) =
                                     ++ [ Effects.Scroll
                                             Effects.ToBottom
                                             bodyId
+                                       , Effects.Focus bodyId
                                        ]
 
                             NoScroll ->
-                                effects
+                                Focus bodyId :: effects
                         )
 
                 _ ->
@@ -876,7 +878,6 @@ view session model =
                 , hovered = session.hovered
                 , isSideBarOpen = session.isSideBarOpen
                 , screenSize = session.screenSize
-                , isPaused = False
                 }
             , TopBar.concourseLogo
             , breadcrumbs model
@@ -961,6 +962,7 @@ body { currentBuild, authorized, showHelp, timeZone } =
     Html.div
         ([ class "scrollable-body build-body"
          , id bodyId
+         , tabindex 0
          ]
             ++ Styles.body
         )
