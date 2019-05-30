@@ -40,6 +40,10 @@ type Image interface {
 		logger lager.Logger,
 		container db.CreatingContainer,
 	) (FetchedImage, error)
+	FetchForEphemeralContainer(
+		ctx context.Context,
+		logger lager.Logger,
+	) (FetchedImage, error)
 }
 
 //go:generate counterfeiter . ImageFetchingDelegate

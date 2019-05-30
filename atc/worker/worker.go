@@ -10,6 +10,7 @@ import (
 
 	"github.com/concourse/baggageclaim"
 	"github.com/concourse/concourse/atc/metric"
+	uuid "github.com/nu7hatch/gouuid"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
@@ -43,6 +44,13 @@ type Worker interface {
 		ImageFetchingDelegate,
 		db.ContainerOwner,
 		db.ContainerMetadata,
+		ContainerSpec,
+		creds.VersionedResourceTypes,
+	) (Container, error)
+
+	CreateEphemeralContainer(
+		context.Context,
+		lager.Logger,
 		ContainerSpec,
 		creds.VersionedResourceTypes,
 	) (Container, error)
@@ -271,6 +279,59 @@ func (worker *gardenWorker) FindOrCreateContainer(
 	)
 }
 
+func (worker * gardenWorker) CreateEphemeralContainer(
+	ctx context.Context,
+	logger lager.Logger,
+	containerSpec ContainerSpec,
+	resourceTypes creds.VersionedResourceTypes,
+) (Container, error) {
+	handle, err := uuid.NewV4()
+	if err != nil  {
+		return nil, err
+	}
+
+	fetchedImage, err := worker.fetchImageForEphemeralContainer(
+		ctx,
+		logger,
+		containerSpec.ImageSpec,
+		containerSpec.TeamID,
+		resourceTypes,
+		nil,
+	)
+	if err != nil {
+		logger.Error("something bad failed-to-fetch-image-for-eph-container", err)
+		return nil, err
+	}
+
+	// VolumeMounts may include cache mounts in the future
+	bindMounts, err := worker.getBindMounts([]VolumeMount{}, containerSpec.BindMounts)
+	if err != nil {
+		logger.Error("something bad failed-to-create-bind-mounts-for-container", err)
+		return nil, err
+	}
+
+	gardenContainer, err := worker.helper.createSelfDestructingGardenContainer(
+		containerSpec,
+		fetchedImage,
+		handle.String(),
+		bindMounts, // empty bind mounts for now, later a cache
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return newGardenWorkerContainer(
+		logger,
+		gardenContainer,
+		nil,
+		nil,
+		worker.gardenClient,
+		worker.volumeClient,
+		worker.dbWorker.Name(),
+	)
+}
+
 func (worker *gardenWorker) getBindMounts(volumeMounts []VolumeMount, bindMountSources []BindMountSource) ([]garden.BindMount, error) {
 	bindMounts := []garden.BindMount{}
 
@@ -318,6 +379,31 @@ func (worker *gardenWorker) fetchImageForContainer(
 
 	logger.Debug("fetching-image")
 	return image.FetchForContainer(ctx, logger, creatingContainer)
+}
+
+func (worker *gardenWorker) fetchImageForEphemeralContainer(
+	ctx context.Context,
+	logger lager.Logger,
+	spec ImageSpec,
+	teamID int,
+	resourceTypes creds.VersionedResourceTypes,
+	creatingContainer db.CreatingContainer,
+) (FetchedImage, error) {
+	image, err := worker.imageFactory.GetImage(
+		logger,
+		worker,
+		worker.volumeClient,
+		spec,
+		teamID,
+		NoopImageFetchingDelegate{},
+		resourceTypes,
+	)
+	if err != nil {
+		return FetchedImage{}, err
+	}
+
+	logger.Debug("fetching-image")
+	return image.FetchForEphemeralContainer(ctx, logger)
 }
 
 func (worker *gardenWorker) createVolumes(logger lager.Logger, isPrivileged bool, creatingContainer db.CreatingContainer, spec ContainerSpec) ([]VolumeMount, error) {

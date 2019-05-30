@@ -16,6 +16,11 @@ RUN go build -gcflags=all="-N -l" -o /usr/local/concourse/bin/concourse \
       ./cmd/concourse
 VOLUME /src
 
+WORKDIR /src/baggageclaim/cmd/plugin
+RUN go build -o /usr/local/bin/plugin
+WORKDIR /src
+VOLUME /src
+
 # generate keys (with 1024 bits just so they generate faster)
 RUN mkdir -p /concourse-keys
 RUN concourse generate-key -t rsa -b 1024 -f /concourse-keys/session_signing_key

@@ -263,14 +263,9 @@ func (scanner *resourceTypeScanner) check(
 		return err
 	}
 
-	container, err := chosenWorker.FindOrCreateContainer(
+	container, err := chosenWorker.CreateEphemeralContainer(
 		context.Background(),
 		logger,
-		worker.NoopImageFetchingDelegate{},
-		db.NewResourceConfigCheckSessionContainerOwner(resourceConfigScope.ResourceConfig(), ContainerExpiries),
-		db.ContainerMetadata{
-			Type: db.ContainerTypeCheck,
-		},
 		containerSpec,
 		versionedResourceTypes.Without(savedResourceType.Name()),
 	)

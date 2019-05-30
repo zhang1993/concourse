@@ -76,9 +76,11 @@ func (f *resourceCacheFactory) FindOrCreateResourceCache(
 		return nil, err
 	}
 
-	err = resourceCache.use(logger, tx, usedResourceCache, resourceCacheUser)
-	if err != nil {
-		return nil, err
+	if resourceCacheUser != nil {
+		err = resourceCache.use(logger, tx, usedResourceCache, resourceCacheUser)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err = tx.Commit()

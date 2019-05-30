@@ -317,9 +317,6 @@ func (scanner *resourceScanner) check(
 	}
 
 	owner := db.NewResourceConfigCheckSessionContainerOwner(resourceConfigScope.ResourceConfig(), ContainerExpiries)
-	containerMetadata := db.ContainerMetadata{
-		Type: db.ContainerTypeCheck,
-	}
 
 	chosenWorker, err := scanner.pool.FindOrChooseWorkerForContainer(logger, owner, containerSpec, workerSpec, scanner.strategy)
 	if err != nil {
@@ -331,15 +328,13 @@ func (scanner *resourceScanner) check(
 		return err
 	}
 
-	container, err := chosenWorker.FindOrCreateContainer(
+	container, err := chosenWorker.CreateEphemeralContainer(
 		context.Background(),
 		logger,
-		worker.NoopImageFetchingDelegate{},
-		owner,
-		containerMetadata,
 		containerSpec,
 		resourceTypes,
 	)
+
 	if err != nil {
 		logger.Error("failed-to-create-or-find-container", err)
 		chkErr := resourceConfigScope.SetCheckError(err)
