@@ -45,10 +45,32 @@ type Worker interface {
 		db.ContainerMetadata,
 		ContainerSpec,
 		creds.VersionedResourceTypes,
+		Image,
 	) (Container, error)
 
 	FindVolumeForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (Volume, bool, error)
 	FindVolumeForTaskCache(lager.Logger, int, int, string, string) (Volume, bool, error)
+	FindOrCreateVolumeForContainer(
+		lager.Logger,
+		VolumeSpec,
+		db.CreatingContainer,
+		int,
+		string,
+	) (Volume, error)
+	FindOrCreateCOWVolumeForContainer(
+		lager.Logger,
+		VolumeSpec,
+		db.CreatingContainer,
+		Volume,
+		int,
+		string,
+	) (Volume, error)
+	FindOrCreateVolumeForBaseResourceType(
+		lager.Logger,
+		VolumeSpec,
+		int,
+		string,
+	) (Volume, error)
 
 	CertsVolume(lager.Logger) (volume Volume, found bool, err error)
 	LookupVolume(lager.Logger, string) (Volume, bool, error)
@@ -153,6 +175,36 @@ func (worker *gardenWorker) FindVolumeForTaskCache(logger lager.Logger, teamID i
 	return worker.volumeClient.FindVolumeForTaskCache(logger, teamID, jobID, stepName, path)
 }
 
+func (worker *gardenWorker) FindOrCreateVolumeForContainer(
+	logger lager.Logger,
+	volumeSpec VolumeSpec,
+	container db.CreatingContainer,
+	teamID int,
+	mountPath string,
+) (Volume, error) {
+	return nil, nil
+}
+
+func (worker *gardenWorker) FindOrCreateCOWVolumeForContainer(
+	logger lager.Logger,
+	volumeSpec VolumeSpec,
+	container db.CreatingContainer,
+	parent Volume,
+	teamID int,
+	mountPath string,
+) (Volume, error) {
+	return nil, nil
+}
+
+func (worker *gardenWorker) FindOrCreateVolumeForBaseResourceType(
+	logger lager.Logger,
+	volumeSpec VolumeSpec,
+	teamID int,
+	resourceTypeName string,
+) (Volume, error) {
+	return nil, nil
+}
+
 func (worker *gardenWorker) CertsVolume(logger lager.Logger) (Volume, bool, error) {
 	return worker.volumeClient.FindOrCreateVolumeForResourceCerts(logger.Session("find-or-create"))
 }
@@ -173,6 +225,7 @@ func (worker *gardenWorker) FindOrCreateContainer(
 	metadata db.ContainerMetadata,
 	containerSpec ContainerSpec,
 	resourceTypes creds.VersionedResourceTypes,
+	image Image,
 ) (Container, error) {
 
 	var (
@@ -212,8 +265,8 @@ func (worker *gardenWorker) FindOrCreateContainer(
 	}
 
 	if gardenContainer == nil {
-
-		fetchedImage, err := worker.fetchImageForContainer(ctx, logger, containerSpec.ImageSpec, containerSpec.TeamID, delegate, resourceTypes, creatingContainer)
+		fetchedImage, err := image.FetchForContainer(ctx, logger, creatingContainer)
+		// fetchedImage, err := worker.fetchImageForContainer(ctx, logger, containerSpec.ImageSpec, containerSpec.TeamID, delegate, resourceTypes, creatingContainer)
 		if err != nil {
 			creatingContainer.Failed()
 			logger.Error("failed-to-fetch-image-for-container", err)
@@ -306,7 +359,6 @@ func (worker *gardenWorker) fetchImageForContainer(
 	image, err := worker.imageFactory.GetImage(
 		logger,
 		worker,
-		worker.volumeClient,
 		spec,
 		teamID,
 		delegate,

@@ -226,6 +226,7 @@ func (i *imageResourceFetcher) ensureVersionOfType(
 	logger lager.Logger,
 	container db.CreatingContainer,
 	resourceType creds.VersionedResourceType,
+	image worker.Image,
 ) error {
 	containerSpec := worker.ContainerSpec{
 		ImageSpec: worker.ImageSpec{
@@ -247,6 +248,7 @@ func (i *imageResourceFetcher) ensureVersionOfType(
 		},
 		containerSpec,
 		i.customTypes,
+		image,
 	)
 	if err != nil {
 		return err
@@ -278,11 +280,12 @@ func (i *imageResourceFetcher) getLatestVersion(
 	ctx context.Context,
 	logger lager.Logger,
 	container db.CreatingContainer,
+	image worker.Image,
 ) (atc.Version, error) {
 
 	resourceType, found := i.customTypes.Lookup(i.imageResource.Type)
 	if found && resourceType.Version == nil {
-		err := i.ensureVersionOfType(ctx, logger, container, resourceType)
+		err := i.ensureVersionOfType(ctx, logger, container, resourceType, image)
 		if err != nil {
 			return nil, err
 		}
@@ -313,6 +316,7 @@ func (i *imageResourceFetcher) getLatestVersion(
 		},
 		resourceSpec,
 		i.customTypes,
+		image,
 	)
 	if err != nil {
 		return nil, err

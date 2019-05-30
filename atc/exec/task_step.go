@@ -91,7 +91,8 @@ type TaskStep struct {
 
 	succeeded bool
 
-	strategy worker.ContainerPlacementStrategy
+	strategy     worker.ContainerPlacementStrategy
+	imageFactory worker.ImageFactory
 }
 
 func NewTaskStep(
@@ -113,6 +114,7 @@ func NewTaskStep(
 	resourceTypes creds.VersionedResourceTypes,
 	defaultLimits atc.ContainerLimits,
 	strategy worker.ContainerPlacementStrategy,
+	imageFactory worker.ImageFactory,
 ) Step {
 	return &TaskStep{
 		privileged:        privileged,
@@ -133,6 +135,7 @@ func NewTaskStep(
 		resourceTypes:     resourceTypes,
 		defaultLimits:     defaultLimits,
 		strategy:          strategy,
+		imageFactory:      imageFactory,
 	}
 }
 
@@ -194,6 +197,18 @@ func (action *TaskStep) Run(ctx context.Context, state RunState) error {
 		return err
 	}
 
+	image, err := action.imageFactory.GetImage(
+		logger,
+		chosenWorker,
+		containerSpec.ImageSpec,
+		containerSpec.TeamID,
+		action.delegate,
+		action.resourceTypes,
+	)
+	if err != nil {
+		return err
+	}
+
 	container, err := chosenWorker.FindOrCreateContainer(
 		ctx,
 		logger,
@@ -202,6 +217,7 @@ func (action *TaskStep) Run(ctx context.Context, state RunState) error {
 		action.containerMetadata,
 		containerSpec,
 		action.resourceTypes,
+		image,
 	)
 	if err != nil {
 		return err

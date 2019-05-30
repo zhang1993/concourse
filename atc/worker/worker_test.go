@@ -2,15 +2,16 @@ package worker_test
 
 import (
 	"bytes"
-	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/lager"
-	"fmt"
-	"github.com/concourse/baggageclaim"
-	"github.com/concourse/baggageclaim/baggageclaimfakes"
-	"io/ioutil"
-	"time"
 	"context"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"time"
+
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/lager"
+	"github.com/concourse/baggageclaim"
+	"github.com/concourse/baggageclaim/baggageclaimfakes"
 
 	"code.cloudfoundry.org/garden/gardenfakes"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -28,7 +29,7 @@ import (
 
 var _ = Describe("Worker", func() {
 	var (
-		logger *lagertest.TestLogger
+		logger                    *lagertest.TestLogger
 		fakeVolumeClient          *workerfakes.FakeVolumeClient
 		activeContainers          int
 		resourceTypes             []atc.WorkerResourceType
@@ -108,7 +109,6 @@ var _ = Describe("Worker", func() {
 		fakeCreatedContainer.HandleReturns("some-handle")
 
 		fakeDBVolumeRepository = new(dbfakes.FakeVolumeRepository)
-
 
 		fakeDBTeamFactory = new(dbfakes.FakeTeamFactory)
 		fakeDBTeam = new(dbfakes.FakeTeam)
@@ -910,6 +910,7 @@ var _ = Describe("Worker", func() {
 				containerMetadata,
 				containerSpec,
 				credsResourceTypes,
+				fakeImage,
 			)
 		})
 		disasterErr := errors.New("disaster")

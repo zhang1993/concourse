@@ -27,32 +27,16 @@ func NewImageFactory(
 func (f *imageFactory) GetImage(
 	logger lager.Logger,
 	worker worker.Worker,
-	volumeClient worker.VolumeClient,
 	imageSpec worker.ImageSpec,
 	teamID int,
 	delegate worker.ImageFetchingDelegate,
 	resourceTypes creds.VersionedResourceTypes,
 ) (worker.Image, error) {
 	if imageSpec.ImageArtifactSource != nil {
-		artifactVolume, existsOnWorker, err := imageSpec.ImageArtifactSource.VolumeOn(logger, worker)
-		if err != nil {
-			logger.Error("failed-to-check-if-volume-exists-on-worker", err)
-			return nil, err
-		}
-
-		if existsOnWorker {
-			return &imageProvidedByPreviousStepOnSameWorker{
-				artifactVolume: artifactVolume,
-				imageSpec:      imageSpec,
-				teamID:         teamID,
-				volumeClient:   volumeClient,
-			}, nil
-		}
-
-		return &imageProvidedByPreviousStepOnDifferentWorker{
-			imageSpec:    imageSpec,
-			teamID:       teamID,
-			volumeClient: volumeClient,
+		return &imageProvidedByWorker{
+			imageSpec: imageSpec,
+			teamID:    teamID,
+			worker:    worker,
 		}, nil
 	}
 
@@ -75,9 +59,9 @@ func (f *imageFactory) GetImage(
 		return &imageFromResource{
 			imageResourceFetcher: imageResourceFetcher,
 
-			privileged:   resourceType.Privileged,
-			teamID:       teamID,
-			volumeClient: volumeClient,
+			privileged: resourceType.Privileged,
+			teamID:     teamID,
+			worker:     worker,
 		}, nil
 	}
 
@@ -99,9 +83,9 @@ func (f *imageFactory) GetImage(
 		return &imageFromResource{
 			imageResourceFetcher: imageResourceFetcher,
 
-			privileged:   imageSpec.Privileged,
-			teamID:       teamID,
-			volumeClient: volumeClient,
+			privileged: imageSpec.Privileged,
+			teamID:     teamID,
+			worker:     worker,
 		}, nil
 	}
 
@@ -110,7 +94,6 @@ func (f *imageFactory) GetImage(
 			worker:           worker,
 			resourceTypeName: imageSpec.ResourceType,
 			teamID:           teamID,
-			volumeClient:     volumeClient,
 		}, nil
 	}
 

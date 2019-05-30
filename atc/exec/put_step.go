@@ -49,6 +49,7 @@ type PutStep struct {
 
 	strategy        worker.ContainerPlacementStrategy
 	resourceFactory resource.ResourceFactory
+	imageFactory    worker.ImageFactory
 }
 
 func NewPutStep(
@@ -69,6 +70,7 @@ func NewPutStep(
 	resourceTypes creds.VersionedResourceTypes,
 	strategy worker.ContainerPlacementStrategy,
 	resourceFactory resource.ResourceFactory,
+	imageFactory worker.ImageFactory,
 ) *PutStep {
 	return &PutStep{
 		build: build,
@@ -89,6 +91,7 @@ func NewPutStep(
 		resourceTypes:         resourceTypes,
 		strategy:              strategy,
 		resourceFactory:       resourceFactory,
+		imageFactory:          imageFactory,
 	}
 }
 
@@ -145,6 +148,18 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 		&worker.CertsVolumeMount{Logger: logger},
 	}
 
+	image, err := step.imageFactory.GetImage(
+		logger,
+		chosenWorker,
+		containerSpec.ImageSpec,
+		containerSpec.TeamID,
+		step.delegate,
+		step.resourceTypes,
+	)
+	if err != nil {
+		return err
+	}
+
 	container, err := chosenWorker.FindOrCreateContainer(
 		ctx,
 		logger,
@@ -153,6 +168,7 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 		step.containerMetadata,
 		containerSpec,
 		step.resourceTypes,
+		image,
 	)
 	if err != nil {
 		return err

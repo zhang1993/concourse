@@ -34,15 +34,18 @@ type FetchSourceFactory interface {
 type fetchSourceFactory struct {
 	resourceCacheFactory db.ResourceCacheFactory
 	resourceFactory      ResourceFactory
+	imageFactory         worker.ImageFactory
 }
 
 func NewFetchSourceFactory(
 	resourceCacheFactory db.ResourceCacheFactory,
 	resourceFactory ResourceFactory,
+	imageFactory worker.ImageFactory,
 ) FetchSourceFactory {
 	return &fetchSourceFactory{
 		resourceCacheFactory: resourceCacheFactory,
 		resourceFactory:      resourceFactory,
+		imageFactory:         imageFactory,
 	}
 }
 
@@ -65,6 +68,7 @@ func (r *fetchSourceFactory) NewFetchSource(
 		imageFetchingDelegate:  imageFetchingDelegate,
 		dbResourceCacheFactory: r.resourceCacheFactory,
 		resourceFactory:        r.resourceFactory,
+		imageFactory:           r.imageFactory,
 	}
 }
 
@@ -78,6 +82,7 @@ type resourceInstanceFetchSource struct {
 	imageFetchingDelegate  worker.ImageFetchingDelegate
 	dbResourceCacheFactory db.ResourceCacheFactory
 	resourceFactory        ResourceFactory
+	imageFactory           worker.ImageFactory
 }
 
 func (s *resourceInstanceFetchSource) LockName() (string, error) {
@@ -130,6 +135,18 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 		&worker.CertsVolumeMount{Logger: s.logger},
 	}
 
+	image, err := s.imageFactory.GetImage(
+		sLog,
+		s.worker,
+		s.containerSpec.ImageSpec,
+		s.containerSpec.TeamID,
+		s.imageFetchingDelegate,
+		s.resourceTypes,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	container, err := s.worker.FindOrCreateContainer(
 		ctx,
 		s.logger,
@@ -138,6 +155,7 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 		s.session.Metadata,
 		s.containerSpec,
 		s.resourceTypes,
+		image,
 	)
 	if err != nil {
 		return nil, err

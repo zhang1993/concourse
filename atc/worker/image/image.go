@@ -15,91 +15,69 @@ import (
 
 const RawRootFSScheme = "raw"
 
-type imageProvidedByPreviousStepOnSameWorker struct {
-	artifactVolume worker.Volume
-	imageSpec      worker.ImageSpec
-	teamID         int
-	volumeClient   worker.VolumeClient
+type imageProvidedByWorker struct {
+	imageSpec worker.ImageSpec
+	teamID    int
+	worker    worker.Worker
 }
 
-func (i *imageProvidedByPreviousStepOnSameWorker) FetchForContainer(
+func (i *imageProvidedByWorker) FetchForContainer(
 	ctx context.Context,
 	logger lager.Logger,
 	container db.CreatingContainer,
 ) (worker.FetchedImage, error) {
-	imageVolume, err := i.volumeClient.FindOrCreateCOWVolumeForContainer(
-		logger,
-		worker.VolumeSpec{
-			Strategy:   i.artifactVolume.COWStrategy(),
-			Privileged: i.imageSpec.Privileged,
-		},
-		container,
-		i.artifactVolume,
-		i.teamID,
-		"/",
-	)
+
+	artifactVolume, existsOnWorker, err := i.imageSpec.ImageArtifactSource.VolumeOn(logger, i.worker)
 	if err != nil {
-		logger.Error("failed-to-create-image-artifact-cow-volume", err)
+		logger.Error("failed-to-check-if-volume-exists-on-worker", err)
 		return worker.FetchedImage{}, err
 	}
 
-	imageMetadataReader, err := i.imageSpec.ImageArtifactSource.StreamFile(logger, ImageMetadataFile)
-	if err != nil {
-		logger.Error("failed-to-stream-metadata-file", err)
-		return worker.FetchedImage{}, err
-	}
+	var imageVolume worker.Volume
+	if existsOnWorker {
+		imageVolume, err := i.worker.FindOrCreateCOWVolumeForContainer(
+			logger,
+			worker.VolumeSpec{
+				Strategy:   artifactVolume.COWStrategy(),
+				Privileged: i.imageSpec.Privileged,
+			},
+			container,
+			artifactVolume,
+			i.teamID,
+			"/",
+		)
+		if err != nil {
+			logger.Error("failed-to-create-image-artifact-cow-volume", err)
+			return worker.FetchedImage{}, err
+		}
 
-	metadata, err := loadMetadata(imageMetadataReader)
-	if err != nil {
-		return worker.FetchedImage{}, err
-	}
+	} else {
 
-	imageURL := url.URL{
-		Scheme: RawRootFSScheme,
-		Path:   path.Join(imageVolume.Path(), "rootfs"),
-	}
+		imageVolume, err := i.worker.FindOrCreateVolumeForContainer(
+			logger,
+			worker.VolumeSpec{
+				Strategy:   baggageclaim.EmptyStrategy{},
+				Privileged: i.imageSpec.Privileged,
+			},
+			container,
+			i.teamID,
+			"/",
+		)
+		if err != nil {
+			logger.Error("failed-to-create-image-artifact-replicated-volume", err)
+			return worker.FetchedImage{}, nil
+		}
 
-	return worker.FetchedImage{
-		Metadata:   metadata,
-		URL:        imageURL.String(),
-		Privileged: i.imageSpec.Privileged,
-	}, nil
-}
+		dest := artifactDestination{
+			destination: imageVolume,
+		}
 
-type imageProvidedByPreviousStepOnDifferentWorker struct {
-	imageSpec    worker.ImageSpec
-	teamID       int
-	volumeClient worker.VolumeClient
-}
+		err = i.imageSpec.ImageArtifactSource.StreamTo(logger, &dest)
+		if err != nil {
+			logger.Error("failed-to-stream-image-artifact-source", err)
+			return worker.FetchedImage{}, nil
+		}
 
-func (i *imageProvidedByPreviousStepOnDifferentWorker) FetchForContainer(
-	ctx context.Context,
-	logger lager.Logger,
-	container db.CreatingContainer,
-) (worker.FetchedImage, error) {
-	imageVolume, err := i.volumeClient.FindOrCreateVolumeForContainer(
-		logger,
-		worker.VolumeSpec{
-			Strategy:   baggageclaim.EmptyStrategy{},
-			Privileged: i.imageSpec.Privileged,
-		},
-		container,
-		i.teamID,
-		"/",
-	)
-	if err != nil {
-		logger.Error("failed-to-create-image-artifact-replicated-volume", err)
-		return worker.FetchedImage{}, nil
-	}
-
-	dest := artifactDestination{
-		destination: imageVolume,
-	}
-
-	err = i.imageSpec.ImageArtifactSource.StreamTo(logger, &dest)
-	if err != nil {
-		logger.Error("failed-to-stream-image-artifact-source", err)
-		return worker.FetchedImage{}, nil
 	}
 
 	imageMetadataReader, err := i.imageSpec.ImageArtifactSource.StreamFile(logger, ImageMetadataFile)
@@ -126,9 +104,9 @@ func (i *imageProvidedByPreviousStepOnDifferentWorker) FetchForContainer(
 }
 
 type imageFromResource struct {
-	privileged   bool
-	teamID       int
-	volumeClient worker.VolumeClient
+	privileged bool
+	teamID     int
+	worker     worker.Worker
 
 	imageResourceFetcher ImageResourceFetcher
 }
@@ -149,7 +127,7 @@ func (i *imageFromResource) FetchForContainer(
 		return worker.FetchedImage{}, err
 	}
 
-	imageVolume, err := i.volumeClient.FindOrCreateCOWVolumeForContainer(
+	imageVolume, err := i.worker.FindOrCreateCOWVolumeForContainer(
 		logger.Session("create-cow-volume"),
 		worker.VolumeSpec{
 			Strategy:   imageParentVolume.COWStrategy(),
@@ -187,7 +165,6 @@ type imageFromBaseResourceType struct {
 	worker           worker.Worker
 	resourceTypeName string
 	teamID           int
-	volumeClient     worker.VolumeClient
 }
 
 func (i *imageFromBaseResourceType) FetchForContainer(
@@ -197,7 +174,7 @@ func (i *imageFromBaseResourceType) FetchForContainer(
 ) (worker.FetchedImage, error) {
 	for _, t := range i.worker.ResourceTypes() {
 		if t.Type == i.resourceTypeName {
-			importVolume, err := i.volumeClient.FindOrCreateVolumeForBaseResourceType(
+			importVolume, err := i.worker.FindOrCreateVolumeForBaseResourceType(
 				logger,
 				worker.VolumeSpec{
 					Strategy:   baggageclaim.ImportStrategy{Path: t.Image},
@@ -210,7 +187,7 @@ func (i *imageFromBaseResourceType) FetchForContainer(
 				return worker.FetchedImage{}, err
 			}
 
-			cowVolume, err := i.volumeClient.FindOrCreateCOWVolumeForContainer(
+			cowVolume, err := i.worker.FindOrCreateCOWVolumeForContainer(
 				logger,
 				worker.VolumeSpec{
 					Strategy:   importVolume.COWStrategy(),

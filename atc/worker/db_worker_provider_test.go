@@ -44,6 +44,7 @@ var _ = Describe("DBProvider", func() {
 		provider                          WorkerProvider
 		baggageclaimResponseHeaderTimeout time.Duration
 
+		fakeImage                           *workerfakes.FakeImage
 		fakeImageFactory                    *workerfakes.FakeImageFactory
 		fakeImageFetchingDelegate           *workerfakes.FakeImageFetchingDelegate
 		fakeDBVolumeRepository              *dbfakes.FakeVolumeRepository
@@ -134,7 +135,7 @@ var _ = Describe("DBProvider", func() {
 		fakeWorker2.VersionReturns(&worker2Version)
 
 		fakeImageFactory = new(workerfakes.FakeImageFactory)
-		fakeImage := new(workerfakes.FakeImage)
+		fakeImage = new(workerfakes.FakeImage)
 		fakeImage.FetchForContainerReturns(FetchedImage{}, nil)
 		fakeImageFactory.GetImageReturns(fakeImage, nil)
 		fakeImageFetchingDelegate = new(workerfakes.FakeImageFetchingDelegate)
@@ -424,7 +425,7 @@ var _ = Describe("DBProvider", func() {
 
 					By("connecting to the worker")
 					fakeDBWorkerFactory.GetWorkerReturns(fakeWorker1, true, nil)
-					container, err := workers[0].FindOrCreateContainer(context.TODO(), logger, fakeImageFetchingDelegate, db.NewBuildStepContainerOwner(42, atc.PlanID("some-plan-id"), 1), db.ContainerMetadata{}, containerSpec, nil)
+					container, err := workers[0].FindOrCreateContainer(context.TODO(), logger, fakeImageFetchingDelegate, db.NewBuildStepContainerOwner(42, atc.PlanID("some-plan-id"), 1), db.ContainerMetadata{}, containerSpec, nil, fakeImage)
 					Expect(err).NotTo(HaveOccurred())
 
 					err = container.Destroy()
@@ -481,7 +482,7 @@ var _ = Describe("DBProvider", func() {
 					fakeGardenBackend.CreateReturns(fakeContainer, nil)
 					fakeGardenBackend.LookupReturns(fakeContainer, nil)
 
-					container, err := workers[0].FindOrCreateContainer(context.TODO(), logger, fakeImageFetchingDelegate, db.NewBuildStepContainerOwner(42, atc.PlanID("some-plan-id"), 1), db.ContainerMetadata{}, containerSpec, nil)
+					container, err := workers[0].FindOrCreateContainer(context.TODO(), logger, fakeImageFetchingDelegate, db.NewBuildStepContainerOwner(42, atc.PlanID("some-plan-id"), 1), db.ContainerMetadata{}, containerSpec, nil, fakeImage)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(container.Handle()).To(Equal("created-handle"))

@@ -17,7 +17,6 @@ type ImageFactory interface {
 	GetImage(
 		logger lager.Logger,
 		worker Worker,
-		volumeClient VolumeClient,
 		imageSpec ImageSpec,
 		teamID int,
 		delegate ImageFetchingDelegate,
