@@ -194,7 +194,6 @@ func (step *GetStep) Run(ctx context.Context, state RunState) error {
 		version,
 		source,
 		params,
-		step.resourceTypes,
 		resourceCache,
 		db.NewBuildStepContainerOwner(step.buildID, step.planID, step.teamID),
 	)
@@ -208,10 +207,9 @@ func (step *GetStep) Run(ctx context.Context, state RunState) error {
 	}
 
 	workerSpec := worker.WorkerSpec{
-		ResourceType:  step.resourceType,
-		Tags:          step.tags,
-		TeamID:        step.teamID,
-		ResourceTypes: step.resourceTypes,
+		BaseResourceType: resourceCache.BaseResourceType().Name,
+		Tags:             step.tags,
+		TeamID:           step.teamID,
 	}
 
 	chosenWorker, err := step.workerPool.FindOrChooseWorkerForContainer(logger, resourceInstance.ContainerOwner(), containerSpec, workerSpec, step.strategy)

@@ -521,12 +521,10 @@ func (worker *gardenWorker) Satisfies(logger lager.Logger, spec WorkerSpec) bool
 		return false
 	}
 
-	if spec.ResourceType != "" {
-		underlyingType := determineUnderlyingTypeName(spec.ResourceType, spec.ResourceTypes)
-
+	if spec.BaseResourceType != "" {
 		matchedType := false
 		for _, t := range workerResourceTypes {
-			if t.Type == underlyingType {
+			if t.Type == spec.BaseResourceType {
 				matchedType = true
 				break
 			}
@@ -548,21 +546,6 @@ func (worker *gardenWorker) Satisfies(logger lager.Logger, spec WorkerSpec) bool
 	}
 
 	return true
-}
-
-func determineUnderlyingTypeName(typeName string, resourceTypes creds.VersionedResourceTypes) string {
-	resourceTypesMap := make(map[string]creds.VersionedResourceType)
-	for _, resourceType := range resourceTypes {
-		resourceTypesMap[resourceType.Name] = resourceType
-	}
-	underlyingTypeName := typeName
-	underlyingType, ok := resourceTypesMap[underlyingTypeName]
-	for ok {
-		underlyingTypeName = underlyingType.Type
-		underlyingType, ok = resourceTypesMap[underlyingTypeName]
-		delete(resourceTypesMap, underlyingTypeName)
-	}
-	return underlyingTypeName
 }
 
 func (worker *gardenWorker) Description() string {

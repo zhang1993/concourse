@@ -151,7 +151,6 @@ func (i *imageResourceFetcher) Fetch(
 		version,
 		source,
 		params,
-		i.customTypes,
 		resourceCache,
 		db.NewImageGetContainerOwner(container, i.teamID),
 	)

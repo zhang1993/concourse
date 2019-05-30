@@ -5,9 +5,7 @@ import (
 
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry/bosh-cli/director/template"
 	"github.com/concourse/concourse/atc"
-	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db/dbfakes"
 	. "github.com/concourse/concourse/atc/worker"
 	"github.com/concourse/concourse/atc/worker/workerfakes"
@@ -31,10 +29,9 @@ var _ = Describe("Pool", func() {
 
 	Describe("FindOrChooseWorkerForContainer", func() {
 		var (
-			spec          ContainerSpec
-			workerSpec    WorkerSpec
-			resourceTypes creds.VersionedResourceTypes
-			fakeOwner     *dbfakes.FakeContainerOwner
+			spec       ContainerSpec
+			workerSpec WorkerSpec
+			fakeOwner  *dbfakes.FakeContainerOwner
 
 			chosenWorker Worker
 			chooseErr    error
@@ -84,26 +81,10 @@ var _ = Describe("Pool", func() {
 				},
 			}
 
-			variables := template.StaticVariables{
-				"secret-source": "super-secret-source",
-			}
-
-			resourceTypes = creds.NewVersionedResourceTypes(variables, atc.VersionedResourceTypes{
-				{
-					ResourceType: atc.ResourceType{
-						Name:   "custom-type-b",
-						Type:   "custom-type-a",
-						Source: atc.Source{"some": "((secret-source))"},
-					},
-					Version: atc.Version{"some": "version"},
-				},
-			})
-
 			workerSpec = WorkerSpec{
-				ResourceType:  "some-type",
-				TeamID:        4567,
-				Tags:          atc.Tags{"some-tag"},
-				ResourceTypes: resourceTypes,
+				BaseResourceType: "some-type",
+				TeamID:           4567,
+				Tags:             atc.Tags{"some-tag"},
 			}
 
 			incompatibleWorker = new(workerfakes.FakeWorker)

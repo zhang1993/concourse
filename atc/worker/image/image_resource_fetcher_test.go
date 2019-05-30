@@ -366,7 +366,6 @@ var _ = Describe("Image", func() {
 									atc.Version{"v": "1"},
 									atc.Source{"some": "super-secret-sauce"},
 									atc.Params{"some": "params"},
-									customTypes,
 									fakeUsedResourceCache,
 									db.NewImageGetContainerOwner(fakeCreatingContainer, teamID),
 								)))
@@ -585,7 +584,6 @@ var _ = Describe("Image", func() {
 							atc.Version{"some": "version"},
 							atc.Source{"some": "super-secret-sauce"},
 							atc.Params{"some": "params"},
-							customTypes,
 							fakeUsedResourceCache,
 							db.NewImageGetContainerOwner(fakeCreatingContainer, teamID),
 						)))

@@ -129,10 +129,9 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 	}
 
 	workerSpec := worker.WorkerSpec{
-		ResourceType:  step.resourceType,
-		Tags:          step.tags,
-		TeamID:        step.build.TeamID(),
-		ResourceTypes: step.resourceTypes,
+		BaseResourceType: step.resourceTypes.DetermineUnderlyingTypeName(step.resourceType),
+		Tags:             step.tags,
+		TeamID:           step.build.TeamID(),
 	}
 
 	owner := db.NewBuildStepContainerOwner(step.build.ID(), step.planID, step.build.TeamID())

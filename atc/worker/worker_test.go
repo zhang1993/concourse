@@ -2,15 +2,16 @@ package worker_test
 
 import (
 	"bytes"
-	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/lager"
-	"fmt"
-	"github.com/concourse/baggageclaim"
-	"github.com/concourse/baggageclaim/baggageclaimfakes"
-	"io/ioutil"
-	"time"
 	"context"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"time"
+
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/lager"
+	"github.com/concourse/baggageclaim"
+	"github.com/concourse/baggageclaim/baggageclaimfakes"
 
 	"code.cloudfoundry.org/garden/gardenfakes"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -28,7 +29,7 @@ import (
 
 var _ = Describe("Worker", func() {
 	var (
-		logger *lagertest.TestLogger
+		logger                    *lagertest.TestLogger
 		fakeVolumeClient          *workerfakes.FakeVolumeClient
 		activeContainers          int
 		resourceTypes             []atc.WorkerResourceType
@@ -108,7 +109,6 @@ var _ = Describe("Worker", func() {
 		fakeCreatedContainer.HandleReturns("some-handle")
 
 		fakeDBVolumeRepository = new(dbfakes.FakeVolumeRepository)
-
 
 		fakeDBTeamFactory = new(dbfakes.FakeTeamFactory)
 		fakeDBTeam = new(dbfakes.FakeTeam)
@@ -589,60 +589,12 @@ var _ = Describe("Worker", func() {
 			spec WorkerSpec
 
 			satisfies bool
-
-			customTypes creds.VersionedResourceTypes
 		)
 
 		BeforeEach(func() {
-			variables := template.StaticVariables{}
-
-			customTypes = creds.NewVersionedResourceTypes(variables, atc.VersionedResourceTypes{
-				{
-					ResourceType: atc.ResourceType{
-						Name:   "custom-type-b",
-						Type:   "custom-type-a",
-						Source: atc.Source{"some": "source"},
-					},
-					Version: atc.Version{"some": "version"},
-				},
-				{
-					ResourceType: atc.ResourceType{
-						Name:   "custom-type-a",
-						Type:   "some-resource",
-						Source: atc.Source{"some": "source"},
-					},
-					Version: atc.Version{"some": "version"},
-				},
-				{
-					ResourceType: atc.ResourceType{
-						Name:   "custom-type-c",
-						Type:   "custom-type-b",
-						Source: atc.Source{"some": "source"},
-					},
-					Version: atc.Version{"some": "version"},
-				},
-				{
-					ResourceType: atc.ResourceType{
-						Name:   "custom-type-d",
-						Type:   "custom-type-b",
-						Source: atc.Source{"some": "source"},
-					},
-					Version: atc.Version{"some": "version"},
-				},
-				{
-					ResourceType: atc.ResourceType{
-						Name:   "unknown-custom-type",
-						Type:   "unknown-base-type",
-						Source: atc.Source{"some": "source"},
-					},
-					Version: atc.Version{"some": "version"},
-				},
-			})
-
 			spec = WorkerSpec{
-				Tags:          []string{"some", "tags"},
-				TeamID:        teamID,
-				ResourceTypes: customTypes,
+				Tags:   []string{"some", "tags"},
+				TeamID: teamID,
 			}
 		})
 
@@ -719,7 +671,7 @@ var _ = Describe("Worker", func() {
 
 		Context("when the resource type is supported by the worker", func() {
 			BeforeEach(func() {
-				spec.ResourceType = "some-resource"
+				spec.BaseResourceType = "some-resource"
 			})
 
 			Context("when all of the requested tags are present", func() {
@@ -753,89 +705,9 @@ var _ = Describe("Worker", func() {
 			})
 		})
 
-		Context("when the resource type is a custom type supported by the worker", func() {
-			BeforeEach(func() {
-				spec.ResourceType = "custom-type-c"
-			})
-
-			It("returns true", func() {
-				Expect(satisfies).To(BeTrue())
-			})
-		})
-
-		Context("when the resource type is a custom type that overrides one supported by the worker", func() {
-			BeforeEach(func() {
-				variables := template.StaticVariables{}
-
-				customTypes = creds.NewVersionedResourceTypes(variables, atc.VersionedResourceTypes{
-					{
-						ResourceType: atc.ResourceType{
-							Name:   "some-resource",
-							Type:   "some-resource",
-							Source: atc.Source{"some": "source"},
-						},
-						Version: atc.Version{"some": "version"},
-					},
-				})
-
-				spec.ResourceType = "some-resource"
-			})
-
-			It("returns true", func() {
-				Expect(satisfies).To(BeTrue())
-			})
-		})
-
-		Context("when the resource type is a custom type that results in a circular dependency", func() {
-			BeforeEach(func() {
-				variables := template.StaticVariables{}
-
-				customTypes = creds.NewVersionedResourceTypes(variables, atc.VersionedResourceTypes{
-					atc.VersionedResourceType{
-						ResourceType: atc.ResourceType{
-							Name:   "circle-a",
-							Type:   "circle-b",
-							Source: atc.Source{"some": "source"},
-						},
-						Version: atc.Version{"some": "version"},
-					}, atc.VersionedResourceType{
-						ResourceType: atc.ResourceType{
-							Name:   "circle-b",
-							Type:   "circle-c",
-							Source: atc.Source{"some": "source"},
-						},
-						Version: atc.Version{"some": "version"},
-					}, atc.VersionedResourceType{
-						ResourceType: atc.ResourceType{
-							Name:   "circle-c",
-							Type:   "circle-a",
-							Source: atc.Source{"some": "source"},
-						},
-						Version: atc.Version{"some": "version"},
-					},
-				})
-
-				spec.ResourceType = "circle-a"
-			})
-
-			It("returns false", func() {
-				Expect(satisfies).To(BeFalse())
-			})
-		})
-
-		Context("when the resource type is a custom type not supported by the worker", func() {
-			BeforeEach(func() {
-				spec.ResourceType = "unknown-custom-type"
-			})
-
-			It("returns false", func() {
-				Expect(satisfies).To(BeFalse())
-			})
-		})
-
 		Context("when the type is not supported by the worker", func() {
 			BeforeEach(func() {
-				spec.ResourceType = "some-other-resource"
+				spec.BaseResourceType = "some-other-resource"
 			})
 
 			It("returns false", func() {

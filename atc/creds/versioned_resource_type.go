@@ -1,6 +1,9 @@
 package creds
 
-import "github.com/concourse/concourse/atc"
+import (
+	"github.com/concourse/concourse/atc"
+	"github.com/concourse/concourse/atc/creds"
+)
 
 type VersionedResourceType struct {
 	atc.VersionedResourceType
@@ -42,4 +45,19 @@ func (types VersionedResourceTypes) Without(name string) VersionedResourceTypes 
 	}
 
 	return newTypes
+}
+
+func (types VersionedResourceTypes) DetermineUnderlyingTypeName(typeName string) string {
+	resourceTypesMap := make(map[string]creds.VersionedResourceType)
+	for _, resourceType := range types {
+		resourceTypesMap[resourceType.Name] = resourceType
+	}
+	underlyingTypeName := typeName
+	underlyingType, ok := resourceTypesMap[underlyingTypeName]
+	for ok {
+		underlyingTypeName = underlyingType.Type
+		underlyingType, ok = resourceTypesMap[underlyingTypeName]
+		delete(resourceTypesMap, underlyingTypeName)
+	}
+	return underlyingTypeName
 }
