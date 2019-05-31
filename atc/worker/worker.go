@@ -255,7 +255,7 @@ func (worker *gardenWorker) FindOrCreateContainer(
 		logger.Debug("found-created-container-in-db")
 
 		if gardenContainer == nil {
-			return nil, garden.ContainerNotFoundError{containerHandle}
+			return nil, garden.ContainerNotFoundError{Handle: containerHandle}
 		}
 		return worker.helper.constructGardenWorkerContainer(
 			logger,
@@ -266,7 +266,6 @@ func (worker *gardenWorker) FindOrCreateContainer(
 
 	if gardenContainer == nil {
 		fetchedImage, err := image.FetchForContainer(ctx, logger, creatingContainer)
-		// fetchedImage, err := worker.fetchImageForContainer(ctx, logger, containerSpec.ImageSpec, containerSpec.TeamID, delegate, resourceTypes, creatingContainer)
 		if err != nil {
 			creatingContainer.Failed()
 			logger.Error("failed-to-fetch-image-for-container", err)

@@ -53,6 +53,7 @@ type imageResourceFetcherFactory struct {
 	dbResourceConfigFactory db.ResourceConfigFactory
 	resourceFetcher         resource.Fetcher
 	resourceFactory         resource.ResourceFactory
+	imageFactory            worker.ImageFactory
 }
 
 func NewImageResourceFetcherFactory(
@@ -60,12 +61,14 @@ func NewImageResourceFetcherFactory(
 	dbResourceConfigFactory db.ResourceConfigFactory,
 	resourceFetcher resource.Fetcher,
 	resourceFactory resource.ResourceFactory,
+	imageFactory worker.ImageFactory,
 ) ImageResourceFetcherFactory {
 	return &imageResourceFetcherFactory{
 		dbResourceCacheFactory:  dbResourceCacheFactory,
 		dbResourceConfigFactory: dbResourceConfigFactory,
 		resourceFetcher:         resourceFetcher,
 		resourceFactory:         resourceFactory,
+		imageFactory:            imageFactory,
 	}
 }
 
@@ -80,6 +83,7 @@ func (f *imageResourceFetcherFactory) NewImageResourceFetcher(
 	return &imageResourceFetcher{
 		worker:                  worker,
 		resourceFactory:         f.resourceFactory,
+		imageFactory:            f.imageFactory,
 		resourceFetcher:         f.resourceFetcher,
 		dbResourceCacheFactory:  f.dbResourceCacheFactory,
 		dbResourceConfigFactory: f.dbResourceConfigFactory,
@@ -95,6 +99,7 @@ func (f *imageResourceFetcherFactory) NewImageResourceFetcher(
 type imageResourceFetcher struct {
 	worker                  worker.Worker
 	resourceFactory         resource.ResourceFactory
+	imageFactory            worker.ImageFactory
 	resourceFetcher         resource.Fetcher
 	dbResourceCacheFactory  db.ResourceCacheFactory
 	dbResourceConfigFactory db.ResourceConfigFactory
@@ -226,7 +231,6 @@ func (i *imageResourceFetcher) ensureVersionOfType(
 	logger lager.Logger,
 	container db.CreatingContainer,
 	resourceType creds.VersionedResourceType,
-	image worker.Image,
 ) error {
 	containerSpec := worker.ContainerSpec{
 		ImageSpec: worker.ImageSpec{
@@ -236,6 +240,18 @@ func (i *imageResourceFetcher) ensureVersionOfType(
 		BindMounts: []worker.BindMountSource{
 			&worker.CertsVolumeMount{Logger: logger},
 		},
+	}
+
+	image, err := i.imageFactory.GetImage(
+		logger,
+		i.worker,
+		containerSpec.ImageSpec,
+		containerSpec.TeamID,
+		i.imageFetchingDelegate,
+		i.customTypes,
+	)
+	if err != nil {
+		return err
 	}
 
 	resourceTypeContainer, err := i.worker.FindOrCreateContainer(
@@ -280,12 +296,11 @@ func (i *imageResourceFetcher) getLatestVersion(
 	ctx context.Context,
 	logger lager.Logger,
 	container db.CreatingContainer,
-	image worker.Image,
 ) (atc.Version, error) {
 
 	resourceType, found := i.customTypes.Lookup(i.imageResource.Type)
 	if found && resourceType.Version == nil {
-		err := i.ensureVersionOfType(ctx, logger, container, resourceType, image)
+		err := i.ensureVersionOfType(ctx, logger, container, resourceType)
 		if err != nil {
 			return nil, err
 		}
@@ -302,6 +317,18 @@ func (i *imageResourceFetcher) getLatestVersion(
 	}
 
 	source, err := i.imageResource.Source.Evaluate()
+	if err != nil {
+		return nil, err
+	}
+
+	image, err := i.imageFactory.GetImage(
+		logger,
+		i.worker,
+		resourceSpec.ImageSpec,
+		resourceSpec.TeamID,
+		i.imageFetchingDelegate,
+		i.customTypes,
+	)
 	if err != nil {
 		return nil, err
 	}
