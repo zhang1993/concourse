@@ -16,26 +16,6 @@ import (
 )
 
 type FakeWorker struct {
-	ActiveContainersStub        func() int
-	activeContainersMutex       sync.RWMutex
-	activeContainersArgsForCall []struct {
-	}
-	activeContainersReturns struct {
-		result1 int
-	}
-	activeContainersReturnsOnCall map[int]struct {
-		result1 int
-	}
-	ActiveVolumesStub        func() int
-	activeVolumesMutex       sync.RWMutex
-	activeVolumesArgsForCall []struct {
-	}
-	activeVolumesReturns struct {
-		result1 int
-	}
-	activeVolumesReturnsOnCall map[int]struct {
-		result1 int
-	}
 	BuildContainersStub        func() int
 	buildContainersMutex       sync.RWMutex
 	buildContainersArgsForCall []struct {
@@ -60,6 +40,22 @@ type FakeWorker struct {
 		result1 worker.Volume
 		result2 bool
 		result3 error
+	}
+	CreateEphemeralContainerStub        func(context.Context, lager.Logger, worker.ContainerSpec, creds.VersionedResourceTypes) (worker.Container, error)
+	createEphemeralContainerMutex       sync.RWMutex
+	createEphemeralContainerArgsForCall []struct {
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 worker.ContainerSpec
+		arg4 creds.VersionedResourceTypes
+	}
+	createEphemeralContainerReturns struct {
+		result1 worker.Container
+		result2 error
+	}
+	createEphemeralContainerReturnsOnCall map[int]struct {
+		result1 worker.Container
+		result2 error
 	}
 	CreateVolumeStub        func(lager.Logger, worker.VolumeSpec, int, db.VolumeType) (worker.Volume, error)
 	createVolumeMutex       sync.RWMutex
@@ -272,110 +268,6 @@ type FakeWorker struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeWorker) ActiveContainers() int {
-	fake.activeContainersMutex.Lock()
-	ret, specificReturn := fake.activeContainersReturnsOnCall[len(fake.activeContainersArgsForCall)]
-	fake.activeContainersArgsForCall = append(fake.activeContainersArgsForCall, struct {
-	}{})
-	fake.recordInvocation("ActiveContainers", []interface{}{})
-	fake.activeContainersMutex.Unlock()
-	if fake.ActiveContainersStub != nil {
-		return fake.ActiveContainersStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.activeContainersReturns
-	return fakeReturns.result1
-}
-
-func (fake *FakeWorker) ActiveContainersCallCount() int {
-	fake.activeContainersMutex.RLock()
-	defer fake.activeContainersMutex.RUnlock()
-	return len(fake.activeContainersArgsForCall)
-}
-
-func (fake *FakeWorker) ActiveContainersCalls(stub func() int) {
-	fake.activeContainersMutex.Lock()
-	defer fake.activeContainersMutex.Unlock()
-	fake.ActiveContainersStub = stub
-}
-
-func (fake *FakeWorker) ActiveContainersReturns(result1 int) {
-	fake.activeContainersMutex.Lock()
-	defer fake.activeContainersMutex.Unlock()
-	fake.ActiveContainersStub = nil
-	fake.activeContainersReturns = struct {
-		result1 int
-	}{result1}
-}
-
-func (fake *FakeWorker) ActiveContainersReturnsOnCall(i int, result1 int) {
-	fake.activeContainersMutex.Lock()
-	defer fake.activeContainersMutex.Unlock()
-	fake.ActiveContainersStub = nil
-	if fake.activeContainersReturnsOnCall == nil {
-		fake.activeContainersReturnsOnCall = make(map[int]struct {
-			result1 int
-		})
-	}
-	fake.activeContainersReturnsOnCall[i] = struct {
-		result1 int
-	}{result1}
-}
-
-func (fake *FakeWorker) ActiveVolumes() int {
-	fake.activeVolumesMutex.Lock()
-	ret, specificReturn := fake.activeVolumesReturnsOnCall[len(fake.activeVolumesArgsForCall)]
-	fake.activeVolumesArgsForCall = append(fake.activeVolumesArgsForCall, struct {
-	}{})
-	fake.recordInvocation("ActiveVolumes", []interface{}{})
-	fake.activeVolumesMutex.Unlock()
-	if fake.ActiveVolumesStub != nil {
-		return fake.ActiveVolumesStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.activeVolumesReturns
-	return fakeReturns.result1
-}
-
-func (fake *FakeWorker) ActiveVolumesCallCount() int {
-	fake.activeVolumesMutex.RLock()
-	defer fake.activeVolumesMutex.RUnlock()
-	return len(fake.activeVolumesArgsForCall)
-}
-
-func (fake *FakeWorker) ActiveVolumesCalls(stub func() int) {
-	fake.activeVolumesMutex.Lock()
-	defer fake.activeVolumesMutex.Unlock()
-	fake.ActiveVolumesStub = stub
-}
-
-func (fake *FakeWorker) ActiveVolumesReturns(result1 int) {
-	fake.activeVolumesMutex.Lock()
-	defer fake.activeVolumesMutex.Unlock()
-	fake.ActiveVolumesStub = nil
-	fake.activeVolumesReturns = struct {
-		result1 int
-	}{result1}
-}
-
-func (fake *FakeWorker) ActiveVolumesReturnsOnCall(i int, result1 int) {
-	fake.activeVolumesMutex.Lock()
-	defer fake.activeVolumesMutex.Unlock()
-	fake.ActiveVolumesStub = nil
-	if fake.activeVolumesReturnsOnCall == nil {
-		fake.activeVolumesReturnsOnCall = make(map[int]struct {
-			result1 int
-		})
-	}
-	fake.activeVolumesReturnsOnCall[i] = struct {
-		result1 int
-	}{result1}
-}
-
 func (fake *FakeWorker) BuildContainers() int {
 	fake.buildContainersMutex.Lock()
 	ret, specificReturn := fake.buildContainersReturnsOnCall[len(fake.buildContainersArgsForCall)]
@@ -492,6 +384,72 @@ func (fake *FakeWorker) CertsVolumeReturnsOnCall(i int, result1 worker.Volume, r
 		result2 bool
 		result3 error
 	}{result1, result2, result3}
+}
+
+func (fake *FakeWorker) CreateEphemeralContainer(arg1 context.Context, arg2 lager.Logger, arg3 worker.ContainerSpec, arg4 creds.VersionedResourceTypes) (worker.Container, error) {
+	fake.createEphemeralContainerMutex.Lock()
+	ret, specificReturn := fake.createEphemeralContainerReturnsOnCall[len(fake.createEphemeralContainerArgsForCall)]
+	fake.createEphemeralContainerArgsForCall = append(fake.createEphemeralContainerArgsForCall, struct {
+		arg1 context.Context
+		arg2 lager.Logger
+		arg3 worker.ContainerSpec
+		arg4 creds.VersionedResourceTypes
+	}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("CreateEphemeralContainer", []interface{}{arg1, arg2, arg3, arg4})
+	fake.createEphemeralContainerMutex.Unlock()
+	if fake.CreateEphemeralContainerStub != nil {
+		return fake.CreateEphemeralContainerStub(arg1, arg2, arg3, arg4)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.createEphemeralContainerReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeWorker) CreateEphemeralContainerCallCount() int {
+	fake.createEphemeralContainerMutex.RLock()
+	defer fake.createEphemeralContainerMutex.RUnlock()
+	return len(fake.createEphemeralContainerArgsForCall)
+}
+
+func (fake *FakeWorker) CreateEphemeralContainerCalls(stub func(context.Context, lager.Logger, worker.ContainerSpec, creds.VersionedResourceTypes) (worker.Container, error)) {
+	fake.createEphemeralContainerMutex.Lock()
+	defer fake.createEphemeralContainerMutex.Unlock()
+	fake.CreateEphemeralContainerStub = stub
+}
+
+func (fake *FakeWorker) CreateEphemeralContainerArgsForCall(i int) (context.Context, lager.Logger, worker.ContainerSpec, creds.VersionedResourceTypes) {
+	fake.createEphemeralContainerMutex.RLock()
+	defer fake.createEphemeralContainerMutex.RUnlock()
+	argsForCall := fake.createEphemeralContainerArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+}
+
+func (fake *FakeWorker) CreateEphemeralContainerReturns(result1 worker.Container, result2 error) {
+	fake.createEphemeralContainerMutex.Lock()
+	defer fake.createEphemeralContainerMutex.Unlock()
+	fake.CreateEphemeralContainerStub = nil
+	fake.createEphemeralContainerReturns = struct {
+		result1 worker.Container
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeWorker) CreateEphemeralContainerReturnsOnCall(i int, result1 worker.Container, result2 error) {
+	fake.createEphemeralContainerMutex.Lock()
+	defer fake.createEphemeralContainerMutex.Unlock()
+	fake.CreateEphemeralContainerStub = nil
+	if fake.createEphemeralContainerReturnsOnCall == nil {
+		fake.createEphemeralContainerReturnsOnCall = make(map[int]struct {
+			result1 worker.Container
+			result2 error
+		})
+	}
+	fake.createEphemeralContainerReturnsOnCall[i] = struct {
+		result1 worker.Container
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeWorker) CreateVolume(arg1 lager.Logger, arg2 worker.VolumeSpec, arg3 int, arg4 db.VolumeType) (worker.Volume, error) {
@@ -1442,14 +1400,12 @@ func (fake *FakeWorker) UptimeReturnsOnCall(i int, result1 time.Duration) {
 func (fake *FakeWorker) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.activeContainersMutex.RLock()
-	defer fake.activeContainersMutex.RUnlock()
-	fake.activeVolumesMutex.RLock()
-	defer fake.activeVolumesMutex.RUnlock()
 	fake.buildContainersMutex.RLock()
 	defer fake.buildContainersMutex.RUnlock()
 	fake.certsVolumeMutex.RLock()
 	defer fake.certsVolumeMutex.RUnlock()
+	fake.createEphemeralContainerMutex.RLock()
+	defer fake.createEphemeralContainerMutex.RUnlock()
 	fake.createVolumeMutex.RLock()
 	defer fake.createVolumeMutex.RUnlock()
 	fake.descriptionMutex.RLock()

@@ -26,6 +26,20 @@ type FakeImage struct {
 		result1 worker.FetchedImage
 		result2 error
 	}
+	FetchForEphemeralContainerStub        func(context.Context, lager.Logger) (worker.FetchedImage, error)
+	fetchForEphemeralContainerMutex       sync.RWMutex
+	fetchForEphemeralContainerArgsForCall []struct {
+		arg1 context.Context
+		arg2 lager.Logger
+	}
+	fetchForEphemeralContainerReturns struct {
+		result1 worker.FetchedImage
+		result2 error
+	}
+	fetchForEphemeralContainerReturnsOnCall map[int]struct {
+		result1 worker.FetchedImage
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -95,11 +109,77 @@ func (fake *FakeImage) FetchForContainerReturnsOnCall(i int, result1 worker.Fetc
 	}{result1, result2}
 }
 
+func (fake *FakeImage) FetchForEphemeralContainer(arg1 context.Context, arg2 lager.Logger) (worker.FetchedImage, error) {
+	fake.fetchForEphemeralContainerMutex.Lock()
+	ret, specificReturn := fake.fetchForEphemeralContainerReturnsOnCall[len(fake.fetchForEphemeralContainerArgsForCall)]
+	fake.fetchForEphemeralContainerArgsForCall = append(fake.fetchForEphemeralContainerArgsForCall, struct {
+		arg1 context.Context
+		arg2 lager.Logger
+	}{arg1, arg2})
+	fake.recordInvocation("FetchForEphemeralContainer", []interface{}{arg1, arg2})
+	fake.fetchForEphemeralContainerMutex.Unlock()
+	if fake.FetchForEphemeralContainerStub != nil {
+		return fake.FetchForEphemeralContainerStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.fetchForEphemeralContainerReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeImage) FetchForEphemeralContainerCallCount() int {
+	fake.fetchForEphemeralContainerMutex.RLock()
+	defer fake.fetchForEphemeralContainerMutex.RUnlock()
+	return len(fake.fetchForEphemeralContainerArgsForCall)
+}
+
+func (fake *FakeImage) FetchForEphemeralContainerCalls(stub func(context.Context, lager.Logger) (worker.FetchedImage, error)) {
+	fake.fetchForEphemeralContainerMutex.Lock()
+	defer fake.fetchForEphemeralContainerMutex.Unlock()
+	fake.FetchForEphemeralContainerStub = stub
+}
+
+func (fake *FakeImage) FetchForEphemeralContainerArgsForCall(i int) (context.Context, lager.Logger) {
+	fake.fetchForEphemeralContainerMutex.RLock()
+	defer fake.fetchForEphemeralContainerMutex.RUnlock()
+	argsForCall := fake.fetchForEphemeralContainerArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeImage) FetchForEphemeralContainerReturns(result1 worker.FetchedImage, result2 error) {
+	fake.fetchForEphemeralContainerMutex.Lock()
+	defer fake.fetchForEphemeralContainerMutex.Unlock()
+	fake.FetchForEphemeralContainerStub = nil
+	fake.fetchForEphemeralContainerReturns = struct {
+		result1 worker.FetchedImage
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeImage) FetchForEphemeralContainerReturnsOnCall(i int, result1 worker.FetchedImage, result2 error) {
+	fake.fetchForEphemeralContainerMutex.Lock()
+	defer fake.fetchForEphemeralContainerMutex.Unlock()
+	fake.FetchForEphemeralContainerStub = nil
+	if fake.fetchForEphemeralContainerReturnsOnCall == nil {
+		fake.fetchForEphemeralContainerReturnsOnCall = make(map[int]struct {
+			result1 worker.FetchedImage
+			result2 error
+		})
+	}
+	fake.fetchForEphemeralContainerReturnsOnCall[i] = struct {
+		result1 worker.FetchedImage
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeImage) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.fetchForContainerMutex.RLock()
 	defer fake.fetchForContainerMutex.RUnlock()
+	fake.fetchForEphemeralContainerMutex.RLock()
+	defer fake.fetchForEphemeralContainerMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
