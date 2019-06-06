@@ -28,6 +28,12 @@ pushd concourse
   go install github.com/gobuffalo/packr/packr
   packr build -o concourse -ldflags "$ldflags" ./cmd/concourse
   test "$(./concourse --version)" = "$final_version"
+
+  pushd atc/worker/garden_plugin
+    go build . -o plugin
+  popd
+
+  mv atc/worker/garden_plugin/plugin .
 popd
 
 output=concourse-${platform}
@@ -37,6 +43,7 @@ mkdir $output/concourse
 bin=$output/concourse/bin
 mkdir $bin
 mv concourse/concourse $bin
+mv concourse/plugin $bin
 [ -d gdn ] && cp gdn/gdn $bin
 
 [ -d resource-types ] && cp -a resource-types $output/concourse
