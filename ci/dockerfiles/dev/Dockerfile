@@ -59,6 +59,7 @@ RUN cd /src && \
       go install github.com/gobuffalo/packr/packr && \
       packr build -gcflags=all="-N -l" -o /usr/local/concourse/bin/concourse \
         ./cmd/concourse && \
+      cd atc/worker/garden_plugin && go build . -o plugin && mv plugin /usr/local/concourse/bin/plugin \
       rm -rf /src
 
 # volume for non-aufs/etc. mount for baggageclaim's driver
