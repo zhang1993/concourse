@@ -76,8 +76,10 @@ func (cmd *WorkerCommand) gardenRunner(logger lager.Logger) (atc.Worker, ifrit.R
 }
 
 func (cmd *WorkerCommand) gdnRunner(logger lager.Logger) (ifrit.Runner, error) {
-	if binDir := discoverAsset("bin"); binDir != "" {
+	var binDir string
+	if binDir = discoverAsset("bin"); binDir != "" {
 		// ensure packaged 'gdn' executable is available in $PATH
+		logger.Info("could not discover gdn dir, setting default path", lager.Data{"binDir": binDir})
 		err := os.Setenv("PATH", binDir+":"+os.Getenv("PATH"))
 		if err != nil {
 			return nil, err
@@ -101,6 +103,13 @@ func (cmd *WorkerCommand) gdnRunner(logger lager.Logger) (ifrit.Runner, error) {
 		gdnFlags = append(gdnFlags, "--config", cmd.Garden.GardenConfig.Path())
 	}
 
+	var pluginPath string
+	if pluginPath = discoverAsset("plugin"); pluginPath == "" {
+		logger.Info("could not discover plugin, setting default path")
+		logger.Info("bin path is set to ", lager.Data{"binDir": binDir})
+		pluginPath = "/usr/local/bin/plugin"
+	}
+
 	gdnServerFlags := []string{
 		"--bind-ip", cmd.BindIP.IP.String(),
 		"--bind-port", fmt.Sprintf("%d", cmd.BindPort),
@@ -112,9 +121,9 @@ func (cmd *WorkerCommand) gdnRunner(logger lager.Logger) (ifrit.Runner, error) {
 
 		// disable graph and grootfs setup; all images passed to Concourse
 		// containers are raw://
-		"--image-plugin", "/usr/local/bin/plugin",
+		"--image-plugin", "/var/vcap/packages/concourse/bin/plugin",
 		"--image-plugin-extra-arg", "\"--baggageclaimURL=http://localhost:7788\"",
-		"--privileged-image-plugin", "/usr/local/bin/plugin",
+		"--privileged-image-plugin", "/var/vcap/packages/concourse/bin/plugin",
 		"--privileged-image-plugin-extra-arg", "\"--baggageclaimURL=http://localhost:7788\"",
 	}
 
