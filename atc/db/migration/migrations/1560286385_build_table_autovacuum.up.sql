@@ -1,20 +1,15 @@
 BEGIN;
-  -- First set the vacuum for tables that already exist
   DO
   $$
-  DECLARE
+    DECLARE
       row record
-  BEGIN
-  for row in select * from pg_tables where tablename like '%build_events%'
-  loop
-        EXECUTE format('ALTER TABLE %s SET (autovacuum_vacuum_scale_factor = 0.0,
-        autovacuum_vacuum_threshold = 1000,
-        autovacuum_analyze_scale_factor = 0.0,
-        autovacuum_analyze_threshold = 1000)
-        ', row.tablename);
-  end loop;
-  END;
-  $$;
+    BEGIN
+    FOR row in SELECT * FROM pg_tables WHERE tablename LIKE '%build_events%'
+    LOOP
+      EXECUTE format('ALTER TABLE %s SET (autovacuum_vacuum_scale_factor = 0.0, autovacuum_vacuum_threshold = 1000, autovacuum_analyze_scale_factor = 0.0, autovacuum_analyze_threshold = 1000)', row.tablename)
+    END LOOP
+    END
+  $$ LANGUAGE plpgsql;
 
   -- Next, use the autovacuum params for tables that will get created later
 
@@ -25,10 +20,10 @@ BEGIN;
                 autovacuum_vacuum_threshold = 1000,
                 autovacuum_analyze_scale_factor = 0.0,
                 autovacuum_analyze_threshold = 1000
-              )', NEW.id);
+              )', NEW.id)
 
-            RETURN NULL;
-    END;
+            RETURN NULL
+    END
     $$ LANGUAGE plpgsql;
 
     CREATE OR REPLACE FUNCTION on_pipeline_insert() RETURNS TRIGGER AS $$
@@ -38,11 +33,11 @@ BEGIN;
                 autovacuum_vacuum_threshold = 1000,
                 autovacuum_analyze_scale_factor = 0.0,
                 autovacuum_analyze_threshold = 1000`
-              )', NEW.id);
-            EXECUTE format('CREATE INDEX IF NOT EXISTS pipeline_build_events_%s_build_id ON pipeline_build_events_%s (build_id)', NEW.id, NEW.id);
-            EXECUTE format('CREATE UNIQUE INDEX IF NOT EXISTS pipeline_build_events_%s_build_id_event_id ON pipeline_build_events_%s (build_id, event_id)', NEW.id, NEW.id);
-            RETURN NULL;
-    END;
+              )', NEW.id)
+            EXECUTE format('CREATE INDEX IF NOT EXISTS pipeline_build_events_%s_build_id ON pipeline_build_events_%s (build_id)', NEW.id, NEW.id)
+            EXECUTE format('CREATE UNIQUE INDEX IF NOT EXISTS pipeline_build_events_%s_build_id_event_id ON pipeline_build_events_%s (build_id, event_id)', NEW.id, NEW.id)
+            RETURN NULL
+    END
     $$ LANGUAGE plpgsql;
 
 COMMIT;
