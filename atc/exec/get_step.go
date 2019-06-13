@@ -41,6 +41,7 @@ type GetDelegate interface {
 	Initializing(lager.Logger)
 	Starting(lager.Logger)
 	Finished(lager.Logger, ExitStatus, VersionInfo)
+	SaveVersion(lager.Logger, string, VersionInfo)
 }
 
 // GetStep will fetch a version of a resource on a worker that supports the
@@ -214,36 +215,11 @@ func (step *GetStep) Run(ctx context.Context, state RunState) error {
 	})
 
 	if step.plan.Resource != "" {
-		pipeline, found, err := step.build.Pipeline()
-		if err != nil {
-			logger.Error("failed-to-find-pipeline", err, lager.Data{"name": step.plan.Name, "pipeline-name": step.build.PipelineName(), "pipeline-id": step.build.PipelineID()})
-			return err
-		}
+		step.delegate.SaveVersion(logger, step.plan.Resource, VersionInfo{
+			Version:  versionedSource.Version(),
+			Metadata: versionedSource.Metadata(),
+		})
 
-		if !found {
-			logger.Debug("pipeline-not-found", lager.Data{"name": step.plan.Name, "pipeline-name": step.build.PipelineName(), "pipeline-id": step.build.PipelineID()})
-			return ErrPipelineNotFound{step.build.PipelineName()}
-		}
-
-		resource, found, err := pipeline.Resource(step.plan.Resource)
-		if err != nil {
-			logger.Error("failed-to-find-resource", err, lager.Data{"name": step.plan.Name, "pipeline-name": step.build.PipelineName(), "resource": step.plan.Resource})
-			return err
-		}
-
-		if !found {
-			logger.Debug("resource-not-found", lager.Data{"name": step.plan.Name, "pipeline-name": step.build.PipelineName(), "resource": step.plan.Resource})
-			return ErrResourceNotFound{step.plan.Resource}
-		}
-
-		// Find or Save* the version used in the get step, and update the Metadata
-		// *saving will occur when the resource's config has changed, but it hasn't
-		// checked yet, so the resource config versions don't exist
-		_, err = resource.SaveUncheckedVersion(versionedSource.Version(), db.NewResourceConfigMetadataFields(versionedSource.Metadata()), resourceCache.ResourceConfig(), resourceTypes)
-		if err != nil {
-			logger.Error("failed-to-save-resource-config-version", err, lager.Data{"name": step.plan.Name, "resource": step.plan.Resource, "version": versionedSource.Version()})
-			return err
-		}
 	}
 
 	step.succeeded = true

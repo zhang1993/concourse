@@ -48,6 +48,7 @@ type Resource interface {
 	ResourceConfigVersionID(atc.Version) (int, bool, error)
 	Versions(page Page) ([]atc.ResourceVersion, Pagination, bool, error)
 	SaveUncheckedVersion(atc.Version, ResourceConfigMetadataFields, ResourceConfig, creds.VersionedResourceTypes) (bool, error)
+	UpdateMetadata(atc.Version, ResourceConfigMetadataFields) (bool, error)
 
 	EnableVersion(rcvID int) error
 	DisableVersion(rcvID int) error
@@ -294,6 +295,10 @@ func (r *resource) SaveUncheckedVersion(version atc.Version, metadata ResourceCo
 	}
 
 	return newVersion, tx.Commit()
+}
+
+func (r *resource) UpdateMetadata(version atc.Version, metadata ResourceConfigMetadataFields) (bool, error) {
+	return false, nil
 }
 
 func (r *resource) ResourceConfigVersionID(version atc.Version) (int, bool, error) {

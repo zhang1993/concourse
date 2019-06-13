@@ -95,6 +95,42 @@ func (d *getDelegate) Finished(logger lager.Logger, exitStatus exec.ExitStatus, 
 	logger.Info("finished", lager.Data{"exit-status": exitStatus})
 }
 
+func (d *getDelegate) SaveVersion(log lager.Logger, resourceName string, info exec.VersionInfo) {
+	logger := log.WithData(lager.Data{
+		"pipeline-name": d.build.PipelineName(),
+		"pipeline-id":   d.build.PipelineID()},
+	)
+
+	pipeline, found, err := d.build.Pipeline()
+	if err != nil {
+		logger.Error("failed-to-find-pipeline", err)
+	}
+
+	if !found {
+		logger.Debug("pipeline-not-found")
+	}
+
+	resource, found, err := pipeline.Resource(resourceName)
+	if err != nil {
+		logger.Error("failed-to-find-resource", err)
+	}
+
+	if !found {
+		logger.Debug("resource-not-found")
+	}
+
+	// Find or Save* the version used in the get step, and update the Metadata
+	// *saving will occur when the resource's config has changed, but it hasn't
+	// checked yet, so the resource config versions don't exist
+	_, err = resource.UpdateMetadata(
+		info.Version,
+		db.NewResourceConfigMetadataFields(info.Metadata),
+	)
+	if err != nil {
+		logger.Error("failed-to-save-resource-config-version", err)
+	}
+}
+
 func NewPutDelegate(build db.Build, planID atc.PlanID, clock clock.Clock) exec.PutDelegate {
 	return &putDelegate{
 		BuildStepDelegate: NewBuildStepDelegate(build, planID, clock),

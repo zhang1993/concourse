@@ -216,7 +216,7 @@ var _ = Describe("GetStep", func() {
 		Context("when fetching resource succeeds", func() {
 			BeforeEach(func() {
 				fakeVersionedSource.VersionReturns(atc.Version{"some": "version"})
-				fakeVersionedSource.MetadataReturns([]atc.MetadataField{{"some", "metadata"}})
+				fakeVersionedSource.MetadataReturns([]atc.MetadataField{{Name: "some", Value: "metadata"}})
 			})
 
 			It("returns nil", func() {
@@ -232,7 +232,7 @@ var _ = Describe("GetStep", func() {
 				_, status, info := fakeDelegate.FinishedArgsForCall(0)
 				Expect(status).To(Equal(exec.ExitStatus(0)))
 				Expect(info.Version).To(Equal(atc.Version{"some": "version"}))
-				Expect(info.Metadata).To(Equal([]atc.MetadataField{{"some", "metadata"}}))
+				Expect(info.Metadata).To(Equal([]atc.MetadataField{{Name: "some", Value: "metadata"}}))
 			})
 
 			Context("when getting a pipeline resource", func() {
@@ -279,7 +279,7 @@ var _ = Describe("GetStep", func() {
 
 							version, metadata, resourceConfig, actualResourceTypes := fakeResource.SaveUncheckedVersionArgsForCall(0)
 							Expect(version).To(Equal(atc.Version{"some": "version"}))
-							Expect(metadata).To(Equal(db.NewResourceConfigMetadataFields([]atc.MetadataField{{"some", "metadata"}})))
+							Expect(metadata).To(Equal(db.NewResourceConfigMetadataFields([]atc.MetadataField{{Name: "some", Value: "metadata"}})))
 							Expect(resourceConfig).To(Equal(fakeResourceConfig))
 							Expect(actualResourceTypes).To(Equal(creds.NewVersionedResourceTypes(variables, resourceTypes)))
 						})
