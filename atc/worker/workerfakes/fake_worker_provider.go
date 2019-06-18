@@ -299,7 +299,7 @@ func (fake *FakeWorkerProvider) NewGardenWorker(arg1 lager.Logger, arg2 clock.Cl
 		arg3 db.Worker
 		arg4 int
 	}{arg1, arg2, arg3, arg4})
-	fake.recordInvocation("NewGardenWorker", []interface{}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("NewK8sWorker", []interface{}{arg1, arg2, arg3, arg4})
 	fake.newGardenWorkerMutex.Unlock()
 	if fake.NewGardenWorkerStub != nil {
 		return fake.NewGardenWorkerStub(arg1, arg2, arg3, arg4)

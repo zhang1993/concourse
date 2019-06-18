@@ -12,6 +12,11 @@ var ErrMissingVolume = errors.New("volume mounted to container is missing")
 
 //go:generate counterfeiter . Container
 
+type Runnable interface {
+	Run()
+	Attach()
+}
+
 type Container interface {
 	garden.Container
 
@@ -23,6 +28,7 @@ type Container interface {
 
 	MarkAsHijacked() error
 }
+
 
 type gardenWorkerContainer struct {
 	garden.Container

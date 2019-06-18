@@ -110,15 +110,14 @@ func (factory *stepFactory) TaskStep(
 	sum := sha1.Sum([]byte(plan.Task.Name))
 	containerMetadata.WorkingDirectory = filepath.Join("/tmp", "build", fmt.Sprintf("%x", sum[:4]))
 
-	taskStep := exec.NewTaskStep(
+	// TODO here we will create a taskstep for K8s or for classic garden implementation
+	taskStep := exec.NewK8sTaskStep(
 		plan.ID,
 		*plan.Task,
 		build,
 		factory.defaultLimits,
 		containerMetadata,
 		factory.secretManager,
-		factory.strategy,
-		factory.pool,
 		delegate,
 	)
 

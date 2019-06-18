@@ -17,6 +17,28 @@ type FetchSource interface {
 	Create(context.Context) (VersionedSource, error)
 }
 
+type resourceInstanceK8sFetchSource struct {
+	logger                 lager.Logger
+	worker                 worker.Worker
+	resourceInstance       ResourceInstance
+	resourceTypes          creds.VersionedResourceTypes
+	containerSpec          worker.ContainerSpec
+	session                Session
+	imageFetchingDelegate  worker.ImageFetchingDelegate
+}
+
+func (resourceInstanceK8sFetchSource) LockName() (string, error) {
+	panic("implement me")
+}
+
+func (resourceInstanceK8sFetchSource) Find() (VersionedSource, bool, error) {
+	panic("implement me")
+}
+
+func (resourceInstanceK8sFetchSource) Create(context.Context) (VersionedSource, error) {
+	panic("implement me")
+}
+
 //go:generate counterfeiter . FetchSourceFactory
 
 type FetchSourceFactory interface {
@@ -55,7 +77,7 @@ func (r *fetchSourceFactory) NewFetchSource(
 	session Session,
 	imageFetchingDelegate worker.ImageFetchingDelegate,
 ) FetchSource {
-	return &resourceInstanceFetchSource{
+	return &resourceInstanceK8sFetchSource{
 		logger:                 logger,
 		worker:                 worker,
 		resourceInstance:       resourceInstance,
@@ -63,8 +85,8 @@ func (r *fetchSourceFactory) NewFetchSource(
 		containerSpec:          containerSpec,
 		session:                session,
 		imageFetchingDelegate:  imageFetchingDelegate,
-		dbResourceCacheFactory: r.resourceCacheFactory,
-		resourceFactory:        r.resourceFactory,
+		//dbResourceCacheFactory: r.resourceCacheFactory,
+		//resourceFactory:        r.resourceFactory,
 	}
 }
 

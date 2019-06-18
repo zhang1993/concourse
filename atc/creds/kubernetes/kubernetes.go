@@ -79,7 +79,7 @@ func (k Kubernetes) findSecret(namespace, name string) (*v1.Secret, bool, error)
 	var secret *v1.Secret
 	var err error
 
-	secret, err = k.Clientset.Core().Secrets(namespace).Get(name, meta_v1.GetOptions{})
+	secret, err = k.Clientset.CoreV1().Secrets(namespace).Get(name, meta_v1.GetOptions{})
 
 	if err != nil && k8s_errors.IsNotFound(err) {
 		return nil, false, nil

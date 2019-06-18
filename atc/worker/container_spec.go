@@ -43,6 +43,10 @@ type ContainerSpec struct {
 
 	// Optional user to run processes as. Overwrites the one specified in the docker image.
 	User string
+
+	Path string
+
+	Args []string
 }
 
 //go:generate counterfeiter . InputSource
