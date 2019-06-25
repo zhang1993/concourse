@@ -12,7 +12,7 @@ services:
 
   web:
     build: .
-    image: concourse/concourse:local
+    image: gcr.io/pivotal-knative/nader/concourse:local
     volumes:
     - .:/src
     command: web

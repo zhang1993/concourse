@@ -51,7 +51,7 @@ var (
 		Name: "gcpsecret",
 		VolumeSource: v1.VolumeSource{
 			Secret: &v1.SecretVolumeSource{
-				SecretName: "gcpsecret",
+				SecretName: "k8s-blobstore-key-secret",
 			},
 		},
 	}}
@@ -110,6 +110,7 @@ func MakePod(config atc.TaskConfig) *v1.Pod {
 	regularContainers := []v1.Container{}
 	volumes := implicitVolumes
 	volumeMounts := implicitVolumeMounts
+	podname := fmt.Sprintf("hello-pod-trial-%s", time.Now().Format("150405"))
 
 	for _, input := range config.Inputs {
 		newVolume := v1.Volume{
@@ -153,19 +154,16 @@ func MakePod(config atc.TaskConfig) *v1.Pod {
 
 		d := v1.Container{
 			Name:         fmt.Sprintf("upload-output-%s", output.Name),
-			Image:        "google/cloud-sdk",
-			Command:      []string{"/bin/sh"},
-			Args:         []string{"-c",
-									"sleep 60",
-									"gcloud auth activate-service-account --key-file=/secret/source",
-									fmt.Sprintf("gsutil cp -r /tmp/build/%s/* gs://k8s-runtime-blobstore/%s/", output.Name, output.Name),
-							},
+			Image:        "krishnasfood/iamwatching",
+			Command: 	  []string{"./watcher"},
+			Args:         []string{fmt.Sprintf("-pod=%s", podname), "-container=task-pod"},
 			VolumeMounts: volumeMounts,
 			Env:          implicitEnvVars,
-			WorkingDir:   "/tmp/build",
+			WorkingDir:   "/watchthis",
 		}
 		regularContainers = append(initContainers, d)
 	}
+
 
 	// container for the task
 	c := v1.Container{
@@ -176,7 +174,7 @@ func MakePod(config atc.TaskConfig) *v1.Pod {
 		Command: []string{config.Run.Path},
 		//Args:         spec.mainContainer.Args,
 		Args:         config.Run.Args,
-		VolumeMounts: implicitVolumeMounts,
+		VolumeMounts: volumeMounts,
 		Env:          implicitEnvVars,
 		WorkingDir:   "/tmp/build",
 		TTY:          true,
@@ -189,13 +187,10 @@ func MakePod(config atc.TaskConfig) *v1.Pod {
 
 	// another sidecar for streaming logs
 
-	// volumes := append(taskSpec.Volumes, implicitVolumes...)
-	// volumes = append(volumes, secrets...)
-
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
-			Name:      fmt.Sprintf("hello-pod-trial-%s", time.Now().Format("150405")),
+			Name:      podname,
 			// OwnerReferences: []metav1.OwnerReference{
 			// 	*metav1.NewControllerRef(taskRun, groupVersionKind),
 			// },
