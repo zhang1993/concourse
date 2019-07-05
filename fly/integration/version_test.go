@@ -117,3 +117,31 @@ var _ = Describe("Version Checks", func() {
 		})
 	})
 })
+
+var _ = Describe("Fly CLI", func() {
+	Describe("the version", func() {
+		It("command prints the fly cli version", func() {
+			flyCmd := exec.Command(flyPath, "version")
+
+			sess, err := gexec.Start(flyCmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			<-sess.Exited
+			Expect(sess.ExitCode()).To(Equal(0))
+
+			Expect(sess.Out).To(gbytes.Say(concourse.Version))
+		})
+
+		It("option prints the fly cli version", func() {
+			flyCmd := exec.Command(flyPath, "--version")
+
+			sess, err := gexec.Start(flyCmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			<-sess.Exited
+			Expect(sess.ExitCode()).To(Equal(0))
+
+			Expect(sess.Out).To(gbytes.Say(concourse.Version))
+		})
+	})
+})

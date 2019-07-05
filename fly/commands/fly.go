@@ -10,7 +10,8 @@ type FlyCommand struct {
 	DeleteTarget DeleteTargetCommand `command:"delete-target" alias:"dtg" description:"Delete target"`
 	EditTarget   EditTargetCommand   `command:"edit-target" alias:"etg" description:"Edit a target"`
 
-	Version func() `short:"v" long:"version" description:"Print the version of Fly and exit"`
+	VersionCmd VersionCommand `command:"version" description:"Print the version of Fly and exit"`
+	VersionArg func() `short:"v" long:"version" description:"Print the version of Fly and exit"`
 
 	Verbose bool `long:"verbose" description:"Print API requests and responses"`
 

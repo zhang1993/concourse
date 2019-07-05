@@ -16,14 +16,11 @@ func main() {
 	parser := flags.NewParser(&commands.Fly, flags.HelpFlag|flags.PassDoubleDash)
 	parser.NamespaceDelimiter = "-"
 
-	helpParser := flags.NewParser(&commands.Fly, flags.HelpFlag)
-	helpParser.NamespaceDelimiter = "-"
-
 	commands.WireTeamConnectors(parser.Find("set-team"))
 
 	_, err := parser.Parse()
 	err = loginAndRetry(parser, err)
-	handleError(helpParser, err)
+	handleError(err)
 }
 
 func loginAndRetry(parser *flags.Parser, err error) error {
@@ -42,7 +39,10 @@ func loginAndRetry(parser *flags.Parser, err error) error {
 	return err
 }
 
-func handleError(helpParser *flags.Parser, err error) {
+func handleError(err error) {
+	unparsedParser := flags.NewParser(&commands.Fly, flags.HelpFlag|flags.PassDoubleDash)
+	unparsedParser.NamespaceDelimiter = "-"
+
 	if err != nil {
 		if err == concourse.ErrUnauthorized {
 			fmt.Fprintln(ui.Stderr, "not authorized. run the following to log in:")
@@ -64,11 +64,11 @@ func handleError(helpParser *flags.Parser, err error) {
 			fmt.Fprintln(ui.Stderr, "")
 			fmt.Fprintln(ui.Stderr, "is the targeted Concourse running? better go catch it lol")
 		} else if err == commands.ErrShowHelpMessage {
-			showHelp(helpParser)
+			showHelp(unparsedParser)
 		} else if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrCommandRequired {
-			showHelp(helpParser)
+			showHelp(unparsedParser)
 		} else if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
-			showHelp(helpParser)
+			showHelp(unparsedParser)
 		} else {
 			fmt.Fprintf(ui.Stderr, "error: %s\n", err)
 		}
@@ -77,8 +77,8 @@ func handleError(helpParser *flags.Parser, err error) {
 	}
 }
 
-func showHelp(helpParser *flags.Parser) {
-	helpParser.ParseArgs([]string{"-h"})
-	helpParser.WriteHelp(os.Stdout)
+func showHelp(unparsedParser *flags.Parser) {
+	unparsedParser.ParseArgs([]string{"-h"})
+	unparsedParser.WriteHelp(os.Stdout)
 	os.Exit(0)
 }
