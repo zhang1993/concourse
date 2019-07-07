@@ -16,7 +16,6 @@ import (
 )
 
 var _ = Describe("Version Checks", func() {
-	// patch version
 	var (
 		flyVersion string
 		flySession *gexec.Session
@@ -59,7 +58,6 @@ var _ = Describe("Version Checks", func() {
 		})
 	})
 
-	// when then match
 	Describe("when the client and server are the same version", func() {
 		BeforeEach(func() {
 			flyVersion = atcVersion
@@ -71,7 +69,6 @@ var _ = Describe("Version Checks", func() {
 		})
 	})
 
-	// minor version
 	Describe("when the client and server differ by a minor version", func() {
 		BeforeEach(func() {
 			major, minor, patch, err := version.GetSemver(atcVersion)
@@ -88,7 +85,6 @@ var _ = Describe("Version Checks", func() {
 		})
 	})
 
-	// major version (same as minor)
 	Describe("when the client and server differ by a major version", func() {
 		BeforeEach(func() {
 			major, minor, patch, err := version.GetSemver(atcVersion)
@@ -105,7 +101,6 @@ var _ = Describe("Version Checks", func() {
 		})
 	})
 
-	// dev version
 	Describe("when the client is a development version", func() {
 		BeforeEach(func() {
 			flyVersion = concourse.Version
