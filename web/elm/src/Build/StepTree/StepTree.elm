@@ -61,6 +61,16 @@ init hl resources buildPlan =
         Concourse.BuildStepTask name ->
             initBottom hl Task buildPlan.id name
 
+        Concourse.BuildStepGet name version ->
+            initBottom hl
+                (Get << setupGetStep resources name version)
+                buildPlan.id
+                name
+
+
+        Concourse.BuildStepPut name ->
+            initBottom hl Put buildPlan.id name
+
         Concourse.BuildStepArtifactInput name ->
             initBottom hl
                 (\s ->
@@ -69,17 +79,11 @@ init hl resources buildPlan =
                 buildPlan.id
                 name
 
-        Concourse.BuildStepGet name version ->
-            initBottom hl
-                (Get << setupGetStep resources name version)
-                buildPlan.id
-                name
-
         Concourse.BuildStepArtifactOutput name ->
             initBottom hl ArtifactOutput buildPlan.id name
 
-        Concourse.BuildStepPut name ->
-            initBottom hl Put buildPlan.id name
+        Concourse.BuildStepSetPipeline name ->
+            initBottom hl SetPipeline buildPlan.id name
 
         Concourse.BuildStepAggregate plans ->
             initMultiStep hl resources buildPlan.id Aggregate plans
@@ -270,6 +274,9 @@ treeIsActive stepTree =
 
         Task step ->
             stepIsActive step
+        
+        SetPipeline step ->
+            stepIsActive step
 
         ArtifactInput _ ->
             False
@@ -431,16 +438,19 @@ viewTree session model tree =
         Task step ->
             viewStep model session step StepHeaderTask
 
-        ArtifactInput step ->
-            viewStep model session step (StepHeaderGet False)
-
         Get step ->
             viewStep model session step (StepHeaderGet step.firstOccurrence)
 
-        ArtifactOutput step ->
+        Put step ->
             viewStep model session step StepHeaderPut
 
-        Put step ->
+        SetPipeline step ->
+            viewStep model session step StepHeaderSetPipeline
+
+        ArtifactInput step ->
+            viewStep model session step (StepHeaderGet False)
+
+        ArtifactOutput step ->
             viewStep model session step StepHeaderPut
 
         Try step ->
