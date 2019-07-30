@@ -2,8 +2,9 @@ package exec
 
 import (
 	"context"
-	"github.com/concourse/concourse/vars"
 	"io"
+
+	"github.com/concourse/concourse/vars"
 
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagerctx"
@@ -27,7 +28,7 @@ type PutDelegate interface {
 
 	Initializing(lager.Logger)
 	Starting(lager.Logger)
-	Finished(lager.Logger, ExitStatus, VersionInfo)
+	Finished(lager.Logger, ExitStatus, runtime.VersionResult)
 	Errored(lager.Logger, string)
 
 	SaveOutput(lager.Logger, atc.PutPlan, atc.Source, atc.VersionedResourceTypes, VersionInfo)
@@ -43,7 +44,7 @@ type PutStep struct {
 	resourceFactory       resource.ResourceFactory
 	resourceConfigFactory db.ResourceConfigFactory
 	strategy              worker.ContainerPlacementStrategy
-	workerClient      	  worker.Client
+	workerClient          worker.Client
 	delegate              PutDelegate
 	succeeded             bool
 }
@@ -66,7 +67,7 @@ func NewPutStep(
 		containerMetadata:     containerMetadata,
 		resourceFactory:       resourceFactory,
 		resourceConfigFactory: resourceConfigFactory,
-		workerClient:     	   workerClient,
+		workerClient:          workerClient,
 		strategy:              strategy,
 		delegate:              delegate,
 	}
@@ -156,7 +157,6 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 		Delegate:      step.delegate,
 	}
 
-
 	events := make(chan runtime.Event, 1)
 	//go func(logger lager.Logger, events chan runtime.Event, delegate PutDelegate) {
 	//	for {
@@ -181,8 +181,7 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 
 	resourceDir := resource.ResourcesDir("put")
 
-	versionResult := &runtime.VersionResult{}
-	versionResult, err = step.workerClient.RunPutStep(
+	versionResult, err := step.workerClient.RunPutStep(
 		ctx,
 		logger,
 		owner,
@@ -200,7 +199,6 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 		},
 		events,
 	)
-
 
 	//chosenWorker, err := step.pool.FindOrChooseWorkerForContainer(
 	//	ctx,
@@ -248,27 +246,22 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 		logger.Error("failed-to-put-resource", err)
 
 		if err, ok := err.(resource.ErrResourceScriptFailed); ok {
-			step.delegate.Finished(logger, ExitStatus(err.ExitStatus), VersionInfo{})
+			step.delegate.Finished(logger, ExitStatus(err.ExitStatus), runtime.VersionResult{})
 			return nil
 		}
 
 		return err
 	}
 
-	versionInfo := VersionInfo{
-		Version:  versionResult.Version,
-		Metadata: versionResult.Metadata,
-	}
-
 	if step.plan.Resource != "" {
-		step.delegate.SaveOutput(logger, step.plan, source, resourceTypes, versionInfo)
+		step.delegate.SaveOutput(logger, step.plan, source, resourceTypes, versionResult)
 	}
 
-	state.StoreResult(step.planID, versionInfo)
+	state.StoreResult(step.planID, versionResult)
 
 	step.succeeded = true
 
-	step.delegate.Finished(logger, 0, versionInfo)
+	step.delegate.Finished(logger, 0, versionResult)
 
 	return nil
 
