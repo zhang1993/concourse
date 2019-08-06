@@ -181,7 +181,7 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 
 	resourceDir := resource.ResourcesDir("put")
 
-	versionResult, err := step.workerClient.RunPutStep(
+	result := step.workerClient.RunPutStep(
 		ctx,
 		logger,
 		owner,
@@ -199,6 +199,9 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 		},
 		events,
 	)
+
+	versionResult := result.VersionResult
+	err = result.Err
 
 	//chosenWorker, err := step.pool.FindOrChooseWorkerForContainer(
 	//	ctx,
