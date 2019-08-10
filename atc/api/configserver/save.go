@@ -46,30 +46,7 @@ func (s *Server) SaveConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		ignoredUnknownToplevels := map[string]interface{}{}
-
-		// do a naive unmarshal first so we can ignore unknown top-level keys
-		err = yaml.UnmarshalStrict(body, &ignoredUnknownToplevels)
-		if err != nil {
-			s.handleBadRequest(w, "malformed config")
-			return
-		}
-
-		for k := range ignoredUnknownToplevels {
-			switch k {
-			case "groups", "jobs", "resources", "resource_types":
-			default:
-				delete(ignoredUnknownToplevels, k)
-			}
-		}
-
-		configWithoutUnknownToplevels, err := yaml.Marshal(ignoredUnknownToplevels)
-		if err != nil {
-			s.handleBadRequest(w, fmt.Sprintf("yaml re-marshal failed: %s", err))
-			return
-		}
-
-		err = yaml.UnmarshalStrict(configWithoutUnknownToplevels, &config, yaml.DisallowUnknownFields)
+		err = atc.UnmarshalConfig(body, &config)
 		if err != nil {
 			session.Error("malformed-request-payload", err, lager.Data{
 				"content-type": r.Header.Get("Content-Type"),

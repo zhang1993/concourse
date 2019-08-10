@@ -9,7 +9,6 @@ import (
 	"code.cloudfoundry.org/lager/lagerctx"
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/db"
-	"github.com/ghodss/yaml"
 )
 
 type SetPipelineStep struct {
@@ -20,7 +19,12 @@ type SetPipelineStep struct {
 	succeeded   bool
 }
 
-func NewSetPipelineStep(plan atc.Plan, build db.Build, teamFactory db.TeamFactory, delegate BuildStepDelegate) Step {
+func NewSetPipelineStep(
+	plan atc.Plan,
+	build db.Build,
+	teamFactory db.TeamFactory,
+	delegate BuildStepDelegate,
+) Step {
 	return &SetPipelineStep{
 		plan:        plan,
 		teamFactory: teamFactory,
@@ -56,9 +60,8 @@ func (step *SetPipelineStep) Run(ctx context.Context, state RunState) error {
 
 	step.delegate.Starting(logger)
 
-	// TODO: mapstructure decode hooks and all that messy stuff
 	var config atc.Config
-	err = yaml.Unmarshal(configBytes, &config)
+	err = atc.UnmarshalConfig(configBytes, &config)
 	if err != nil {
 		return err
 	}

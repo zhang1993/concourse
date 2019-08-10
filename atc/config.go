@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -21,6 +22,33 @@ type Config struct {
 	Resources     ResourceConfigs `json:"resources,omitempty"`
 	ResourceTypes ResourceTypes   `json:"resource_types,omitempty"`
 	Jobs          JobConfigs      `json:"jobs,omitempty"`
+}
+
+func UnmarshalConfig(payload []byte, config interface{}) error {
+	// a 'skeleton' of Config, specifying only the toplevel fields
+	type skeletonConfig struct {
+		Groups        interface{} `json:"groups,omitempty"`
+		Resources     interface{} `json:"resources,omitempty"`
+		ResourceTypes interface{} `json:"resource_types,omitempty"`
+		Jobs          interface{} `json:"jobs,omitempty"`
+	}
+
+	var stripped skeletonConfig
+	err := yaml.UnmarshalStrict(payload, &stripped)
+	if err != nil {
+		return err
+	}
+
+	strippedPayload, err := yaml.Marshal(stripped)
+	if err != nil {
+		return err
+	}
+
+	return yaml.UnmarshalStrict(
+		strippedPayload,
+		&config,
+		yaml.DisallowUnknownFields,
+	)
 }
 
 type GroupConfig struct {
