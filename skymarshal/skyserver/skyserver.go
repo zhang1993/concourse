@@ -1,6 +1,8 @@
 package skyserver
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
@@ -243,7 +245,7 @@ func (s *SkyServer) Redirect(w http.ResponseWriter, r *http.Request, token *oaut
 		return
 	}
 
-	tokenStr := token.TokenType + " " + token.AccessToken
+	tokenStr := compress(token.TokenType + " " + token.AccessToken)
 
 	csrfToken, ok := token.Extra("csrf").(string)
 	if !ok {
@@ -251,7 +253,7 @@ func (s *SkyServer) Redirect(w http.ResponseWriter, r *http.Request, token *oaut
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
+	// compress here
 	http.SetCookie(w, &http.Cookie{
 		Name:     authCookieName,
 		Value:    tokenStr,
@@ -417,6 +419,20 @@ func encode(token *token.StateToken) string {
 	json, _ := json.Marshal(token)
 
 	return base64.StdEncoding.EncodeToString(json)
+}
+
+func compress(str string) string {
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	_, err := gz.Write([]byte(str))
+	if err != nil {
+		panic(err)
+	}
+	err = gz.Close()
+	if err != nil {
+		panic(err)
+	}
+	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
 func decode(raw string) *token.StateToken {

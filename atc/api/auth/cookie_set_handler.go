@@ -1,8 +1,12 @@
 package auth
 
 import (
+	"bytes"
+	"io/ioutil"
 	"context"
 	"net/http"
+	"encoding/base64"
+	"compress/gzip"
 )
 
 type CookieSetHandler struct {
@@ -16,11 +20,24 @@ func (handler CookieSetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		r = r.WithContext(ctx)
 
 		if r.Header.Get("Authorization") == "" {
-			r.Header.Set("Authorization", cookie.Value)
+			r.Header.Set("Authorization", decompress(cookie.Value))
 		}
 	}
 
 	handler.Handler.ServeHTTP(w, r)
+}
+
+func decompress(str string) string {
+	data, _ := base64.StdEncoding.DecodeString(str)
+	gz, err := gzip.NewReader(bytes.NewBuffer([]byte(data)))
+	if err != nil {
+		panic(err)
+	}
+	decompressed, err := ioutil.ReadAll(gz)
+	if err != nil {
+		panic(err)
+	}
+	return string(decompressed)
 }
 
 // We don't validate CSRF token for GET requests
