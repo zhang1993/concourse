@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,40 +37,7 @@ func (command *LoginCommand) Execute(args []string) error {
 		return errors.New("name for the target must be specified (--target/-t)")
 	}
 
-	var target rc.Target
-	var err error
-
-	var caCert string
-	if command.CACert != "" {
-		caCertBytes, err := ioutil.ReadFile(string(command.CACert))
-		if err != nil {
-			return err
-		}
-		caCert = string(caCertBytes)
-	}
-
-	if command.ATCURL != "" {
-		if command.TeamName == "" {
-			command.TeamName = atc.DefaultTeamName
-		}
-
-		target, err = rc.NewUnauthenticatedTarget(
-			Fly.Target,
-			command.ATCURL,
-			command.TeamName,
-			command.Insecure,
-			caCert,
-			Fly.Verbose,
-		)
-	} else {
-		target, err = rc.LoadUnauthenticatedTarget(
-			Fly.Target,
-			command.TeamName,
-			command.Insecure,
-			caCert,
-			Fly.Verbose,
-		)
-	}
+	target, err := command.target()
 	if err != nil {
 		return err
 	}
@@ -128,21 +94,79 @@ func (command *LoginCommand) Execute(args []string) error {
 		return err
 	}
 
-	fmt.Println("")
-
-	err = checkTokenTeams(tokenValue, command.TeamName)
-	if err != nil {
-		return err
+	token := &rc.TargetToken{
+		Type:  tokenType,
+		Value: tokenValue,
 	}
 
-	return command.saveTarget(
-		client.URL(),
-		&rc.TargetToken{
-			Type:  tokenType,
-			Value: tokenValue,
-		},
-		target.CACert(),
-	)
+	fmt.Println("")
+
+	tokenContents := strings.Split(tokenValue, ".")
+	if len(tokenContents) >= 2 {
+		userinfo, err := command.userInfo(token)
+		if err != nil {
+			return err
+		}
+
+		err = checkTokenTeams(userinfo, command.TeamName)
+		if err != nil {
+			return err
+		}
+	}
+
+	return command.saveTarget(client.URL(), token, target.CACert())
+}
+
+func (command *LoginCommand) target() (rc.Target, error) {
+	var target rc.Target
+	var err error
+
+	var caCert string
+	if command.CACert != "" {
+		caCertBytes, err := ioutil.ReadFile(string(command.CACert))
+		if err != nil {
+			return nil, err
+		}
+		caCert = string(caCertBytes)
+	}
+
+	if command.ATCURL != "" {
+		if command.TeamName == "" {
+			command.TeamName = atc.DefaultTeamName
+		}
+
+		target, err = rc.NewUnauthenticatedTarget(
+			Fly.Target,
+			command.ATCURL,
+			command.TeamName,
+			command.Insecure,
+			caCert,
+			Fly.Verbose,
+		)
+	} else {
+		target, err = rc.LoadUnauthenticatedTarget(
+			Fly.Target,
+			command.TeamName,
+			command.Insecure,
+			caCert,
+			Fly.Verbose,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return target, nil
+}
+
+func (command *LoginCommand) userInfo(token *rc.TargetToken) (map[string]interface{}, error) {
+	target, err := command.target()
+	if err != nil {
+		return nil, err
+	}
+
+	target.SetToken(token)
+
+	return target.Client().UserInfo()
 }
 
 func (command *LoginCommand) passwordGrant(client concourse.Client, username, password string) (string, string, error) {
@@ -214,29 +238,14 @@ func (command *LoginCommand) authCodeGrant(targetUrl string, browserOnly bool) (
 	return segments[0], segments[1], nil
 }
 
-func checkTokenTeams(tokenValue string, loginTeam string) error {
-	tokenContents := strings.Split(tokenValue, ".")
-	if len(tokenContents) < 2 {
-		return nil
-	}
-
-	rawData, err := base64.StdEncoding.WithPadding(base64.NoPadding).DecodeString(tokenContents[1])
-	if err != nil {
-		return err
-	}
-
-	var payload map[string]interface{}
-	if err := json.Unmarshal(rawData, &payload); err != nil {
-		return err
-	}
-
+func checkTokenTeams(userinfo map[string]interface{}, loginTeam string) error {
 	var teamNames []string
 	teamRoles := map[string][]string{}
-	if err := mapstructure.Decode(payload["teams"], &teamRoles); err == nil {
+	if err := mapstructure.Decode(userinfo["teams"], &teamRoles); err == nil {
 		for team, _ := range teamRoles {
 			teamNames = append(teamNames, team)
 		}
-	} else if err := mapstructure.Decode(payload["teams"], &teamNames); err != nil {
+	} else if err := mapstructure.Decode(userinfo["teams"], &teamNames); err != nil {
 		return err
 	}
 
@@ -246,7 +255,7 @@ func checkTokenTeams(tokenValue string, loginTeam string) error {
 		}
 	}
 
-	userName, _ := payload["user_name"].(string)
+	userName, _ := userinfo["user_name"].(string)
 
 	return fmt.Errorf("user [%s] is not in team [%s]", userName, loginTeam)
 }

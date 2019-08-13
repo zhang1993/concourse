@@ -48,6 +48,7 @@ type Target interface {
 	WorkerVersion() (string, error)
 	IsWorkerVersionCompatible(string) (bool, error)
 	Token() *TargetToken
+	SetToken(*TargetToken)
 	TokenAuthorization() (string, bool)
 	Version() (string, error)
 }
@@ -252,6 +253,10 @@ func (t *target) URL() string {
 
 func (t *target) Token() *TargetToken {
 	return t.token
+}
+
+func (t *target) SetToken(token *TargetToken) {
+	t.token = token
 }
 
 func (t *target) Version() (string, error) {

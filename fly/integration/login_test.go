@@ -170,14 +170,6 @@ var _ = Describe("login Command", func() {
 
 		Context("when the token's roles doesn't include the team", func() {
 			BeforeEach(func() {
-				encodedToken := base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(`{
-					"teams": {
-						"some-other-team": ["owner"]
-					},
-					"user_id": "test",
-					"user_name": "test"
-				}`))
-
 				loginATCServer.AppendHandlers(
 					infoHandler(),
 					ghttp.CombineHandlers(
@@ -186,7 +178,20 @@ var _ = Describe("login Command", func() {
 							200,
 							map[string]string{
 								"token_type":   "Bearer",
-								"access_token": "foo." + encodedToken,
+								"access_token": "foo.awesomesecrettoken",
+							},
+						),
+					),
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", "/sky/userinfo"),
+						ghttp.RespondWithJSONEncoded(
+							200,
+							map[string]interface{}{
+								"user_id":   "test",
+								"user_name": "test",
+								"teams": map[string][]string{
+									"some-other-team": []string{"owner"},
+								},
 							},
 						),
 					),
@@ -209,12 +214,6 @@ var _ = Describe("login Command", func() {
 
 		Context("when the token's (legacy) team list doesn't include the team", func() {
 			BeforeEach(func() {
-				encodedToken := base64.StdEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(`{
-					"teams": ["some-other-team"],
-					"user_id": "test",
-					"user_name": "test"
-				}`))
-
 				loginATCServer.AppendHandlers(
 					infoHandler(),
 					ghttp.CombineHandlers(
@@ -223,7 +222,18 @@ var _ = Describe("login Command", func() {
 							200,
 							map[string]string{
 								"token_type":   "Bearer",
-								"access_token": "foo." + encodedToken,
+								"access_token": "foo.awesomesecrettoken",
+							},
+						),
+					),
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", "/sky/userinfo"),
+						ghttp.RespondWithJSONEncoded(
+							200,
+							map[string]interface{}{
+								"user_id":   "test",
+								"user_name": "test",
+								"teams":     []string{"some-other-team"},
 							},
 						),
 					),
