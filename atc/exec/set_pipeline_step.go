@@ -93,14 +93,16 @@ func (step *SetPipelineStep) Run(ctx context.Context, state RunState) error {
 	if found {
 		fromVersion = pipeline.ConfigVersion()
 
-		// TODO: diff?
+		// TODO: diff
 	}
 
 	pipeline, created, err := team.SavePipeline(name, config, fromVersion, false)
 	if err != nil {
-		// TODO: handle 'from' version race?
-		step.delegate.Finished(logger, true)
+		if err == db.ErrConfigComparisonFailed {
+			// TODO: retry
+		}
 
+		step.delegate.Finished(logger, false)
 		return err
 	}
 
