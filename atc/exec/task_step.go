@@ -159,7 +159,7 @@ func (step *TaskStep) Run(ctx context.Context, state RunState) error {
 
 	repository := state.Artifacts()
 
-	config, err := taskConfigSource.FetchConfig(logger, repository)
+	config, err := taskConfigSource.FetchConfig(logger, repository, step.workerClient, step.metadata.TeamID)
 
 	for _, warning := range taskConfigSource.Warnings() {
 		fmt.Fprintln(step.delegate.Stderr(), "[WARNING]", warning)
@@ -443,29 +443,35 @@ func (step *TaskStep) registerCaches(logger lager.Logger, repository *artifact.R
 }
 
 type taskArtifactSource struct {
-	worker.Volume
+	volumeHandle string
 }
 
 func NewTaskArtifactSource(volume worker.Volume) *taskArtifactSource {
-	return &taskArtifactSource{volume}
+	return &taskArtifactSource{volume.Handle()}
 }
 
 func (src *taskArtifactSource) StreamTo(logger lager.Logger, destination worker.ArtifactDestination) error {
 	logger = logger.Session("task-artifact-streaming", lager.Data{
-		"src-volume": src.Handle(),
-		"src-worker": src.WorkerName(),
+		"src-volume": src.volumeHandle,
+		//"src-worker": src.WorkerName(),
 	})
 
-	return streamToHelper(src, logger, destination)
+	//return streamToHelper(src, logger, destination)
+	return errors.New("taskArtifactSource.StreamTo() not implemented")
 }
 
 func (src *taskArtifactSource) StreamFile(logger lager.Logger, filename string) (io.ReadCloser, error) {
 	logger.Debug("streaming-file-from-volume")
-	return streamFileHelper(src, logger, filename)
+	//return streamFileHelper(src, logger, filename)
+	return nil, errors.New("taskArtifactSource.StreamFile() not implemented")
 }
 
 func (src *taskArtifactSource) VolumeOn(logger lager.Logger, w worker.Worker) (worker.Volume, bool, error) {
-	return w.LookupVolume(logger, src.Handle())
+	return w.LookupVolume(logger, src.volumeHandle)
+}
+
+func (src *taskArtifactSource) VolumeHandle() string {
+	return src.volumeHandle
 }
 
 type taskInputSource struct {
@@ -541,4 +547,11 @@ func (src *taskCacheSource) StreamFile(logger lager.Logger, filename string) (io
 
 func (src *taskCacheSource) VolumeOn(logger lager.Logger, w worker.Worker) (worker.Volume, bool, error) {
 	return w.FindVolumeForTaskCache(src.logger, src.teamID, src.jobID, src.stepName, src.path)
+}
+
+// TODO: this means that we don't look up the volume in worker.Client
+// before calling FindOrChooseWorker. This only works because we never
+// stream task caches over to workers
+func (src *taskCacheSource) VolumeHandle() string {
+	return ""
 }

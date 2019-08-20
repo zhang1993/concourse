@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"archive/tar"
+	"github.com/DataDog/zstd"
 	"io"
 
 	"code.cloudfoundry.org/lager"
@@ -21,6 +23,8 @@ type Volume interface {
 
 	StreamIn(path string, tarStream io.Reader) error
 	StreamOut(path string) (io.ReadCloser, error)
+	StreamTo(lager.Logger, ArtifactDestination) error
+	StreamFile(lager.Logger, string) (io.ReadCloser, error)
 
 	COWStrategy() baggageclaim.COWStrategy
 
@@ -152,4 +156,80 @@ func (v *volume) InitializeTaskCache(
 
 func (v *volume) CreateChildForContainer(creatingContainer db.CreatingContainer, mountPath string) (db.CreatingVolume, error) {
 	return v.dbVolume.CreateChildForContainer(creatingContainer, mountPath)
+}
+
+func (v *volume) StreamTo(logger lager.Logger, destination ArtifactDestination) error {
+	return streamToHelper(v, logger, destination)
+}
+
+func (v *volume) StreamFile(logger lager.Logger, path string) (io.ReadCloser, error) {
+	return streamFileHelper(v, logger, path)
+}
+
+func streamToHelper(s interface {
+	StreamOut(string) (io.ReadCloser, error)
+}, logger lager.Logger, destination ArtifactDestination) error {
+	logger.Debug("start")
+
+	defer logger.Debug("end")
+
+	out, err := s.StreamOut(".")
+	if err != nil {
+		logger.Error("failed", err)
+		return err
+	}
+
+	defer out.Close()
+
+	err = destination.StreamIn(".", out)
+	if err != nil {
+		logger.Error("failed", err)
+		return err
+	}
+	return nil
+}
+
+func streamFileHelper(s interface {
+	StreamOut(string) (io.ReadCloser, error)
+}, logger lager.Logger, path string) (io.ReadCloser, error) {
+	out, err := s.StreamOut(path)
+	if err != nil {
+		return nil, err
+	}
+
+	zstdReader := zstd.NewReader(out)
+	tarReader := tar.NewReader(zstdReader)
+
+	_, err = tarReader.Next()
+	if err != nil {
+		return nil, FileNotFoundError{Path: path}
+	}
+
+	return fileReadMultiCloser{
+		reader: tarReader,
+		closers: []io.Closer{
+			out,
+			zstdReader,
+		},
+	}, nil
+}
+
+type fileReadMultiCloser struct {
+	reader  io.Reader
+	closers []io.Closer
+}
+
+func (frc fileReadMultiCloser) Read(p []byte) (n int, err error) {
+	return frc.reader.Read(p)
+}
+
+func (frc fileReadMultiCloser) Close() error {
+	for _, closer := range frc.closers {
+		err := closer.Close()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

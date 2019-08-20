@@ -149,6 +149,40 @@ func (client *client) RunTaskStep(
 	processSpec ProcessSpec,
 	events chan runtime.Event,
 ) TaskResult {
+	inputVolumes := make(map[InputSource]Volume)
+	for _, source := range containerSpec.Inputs {
+		fmt.Println("==========", source.Source())
+		volumeHandle := source.Source().VolumeHandle()
+		volume, found, err := client.FindVolume(logger, workerSpec.TeamID, volumeHandle)
+		if err != nil {
+			return TaskResult{-1, []VolumeMount{}, err}
+		}
+		if !found {
+			// Task caches are passed as inputs. If they have not been initialized
+			// yet they have empty volume handles
+			if volumeHandle != "" {
+				return TaskResult{-1, []VolumeMount{}, fmt.Errorf("could not find input volume with handle %s", volumeHandle)}
+			}
+
+		}
+
+		inputVolumes[source] = volume
+	}
+
+	containerSpec.InputVolumes = inputVolumes
+
+	var imageSource ArtifactSource
+	if imageSource = containerSpec.ImageSpec.ImageArtifactSource; imageSource != nil {
+		imageVolume, found, err := client.FindVolume(logger, workerSpec.TeamID, imageSource.VolumeHandle())
+		if err != nil {
+			return TaskResult{-1, []VolumeMount{}, err}
+		}
+		if !found {
+			return TaskResult{-1, []VolumeMount{}, fmt.Errorf("could not find image volume with handle %s", imageSource.VolumeHandle())}
+		}
+		containerSpec.ImageSpec.ImageVolume = imageVolume
+	}
+
 	chosenWorker, err := client.chooseTaskWorker(
 		ctx,
 		logger,
@@ -418,8 +452,36 @@ func (client *client) RunPutStep(
 	spec ProcessSpec,
 	events chan runtime.Event,
 ) PutResult {
-
 	vr := runtime.VersionResult{}
+	inputVolumes := make(map[InputSource]Volume)
+
+	for _, source := range containerSpec.Inputs {
+		volumeHandle := source.Source().VolumeHandle()
+		volume, found, err := client.FindVolume(logger, workerSpec.TeamID, volumeHandle)
+		if err != nil {
+			return PutResult{-1, vr, err}
+		}
+		if !found {
+			return PutResult{-1, vr, fmt.Errorf("could not find input volume with handle %s", volumeHandle)}
+		}
+
+		inputVolumes[source] = volume
+	}
+
+	containerSpec.InputVolumes = inputVolumes
+
+
+	var imageSource ArtifactSource
+	if imageSource = containerSpec.ImageSpec.ImageArtifactSource; imageSource != nil {
+		imageVolume, found, err := client.FindVolume(logger, workerSpec.TeamID, imageSource.VolumeHandle())
+		if err != nil {
+			return PutResult{-1, vr, err}
+		}
+		if !found {
+			return PutResult{-1, vr, fmt.Errorf("could not find image volume with handle %s", imageSource.VolumeHandle())}
+		}
+		containerSpec.ImageSpec.ImageVolume = imageVolume
+	}
 
 	chosenWorker, err := client.pool.FindOrChooseWorkerForContainer(
 		ctx,

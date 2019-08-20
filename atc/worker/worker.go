@@ -84,9 +84,9 @@ func NewGardenWorker(
 	dbTeamFactory db.TeamFactory,
 	dbWorker db.Worker,
 	numBuildContainers int,
-	// TODO: numBuildContainers is only needed for placement strategy but this
-	// method is called in ContainerProvider.FindOrCreateContainer as well and
-	// hence we pass in 0 values for numBuildContainers everywhere.
+// TODO: numBuildContainers is only needed for placement strategy but this
+// method is called in ContainerProvider.FindOrCreateContainer as well and
+// hence we pass in 0 values for numBuildContainers everywhere.
 ) Worker {
 	workerHelper := workerHelper{
 		gardenClient:  gardenClient,
@@ -366,7 +366,7 @@ type mountableLocalInput struct {
 }
 
 type mountableRemoteInput struct {
-	desiredArtifact  ArtifactSource
+	desiredArtifact  Volume
 	desiredMountPath string
 }
 
@@ -449,8 +449,9 @@ func (worker *gardenWorker) createVolumes(
 				desiredMountPath: cleanedInputPath,
 			})
 		} else {
+			existingRemoteVolume := spec.InputVolumes[inputSource]
 			nonlocalInputs = append(nonlocalInputs, mountableRemoteInput{
-				desiredArtifact:  inputSource.Source(),
+				desiredArtifact:  existingRemoteVolume,
 				desiredMountPath: cleanedInputPath,
 			})
 		}
@@ -586,9 +587,12 @@ func (worker *gardenWorker) cloneRemoteVolumes(
 		}
 
 		g.Go(func() error {
-			err = nonLocalInput.desiredArtifact.StreamTo(logger.Session("stream-to", destData), inputVolume)
-			if err != nil {
-				return err
+			// taskCacheSources might be nil if the task cache is not initialized
+			if nonLocalInput.desiredArtifact != nil {
+				err = nonLocalInput.desiredArtifact.StreamTo(logger.Session("stream-to", destData), inputVolume)
+				if err != nil {
+					return err
+				}
 			}
 
 			mounts[i] = VolumeMount{
@@ -751,9 +755,11 @@ insert_coin:
 func (worker *gardenWorker) ActiveTasks() (int, error) {
 	return worker.dbWorker.ActiveTasks()
 }
+
 func (worker *gardenWorker) IncreaseActiveTasks() error {
 	return worker.dbWorker.IncreaseActiveTasks()
 }
+
 func (worker *gardenWorker) DecreaseActiveTasks() error {
 	return worker.dbWorker.DecreaseActiveTasks()
 }

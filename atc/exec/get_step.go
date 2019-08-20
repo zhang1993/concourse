@@ -1,15 +1,14 @@
 package exec
 
 import (
-	"archive/tar"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/concourse/concourse/atc/runtime"
 	"io"
 
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagerctx"
-	"github.com/DataDog/zstd"
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db"
@@ -255,78 +254,18 @@ func (s *getArtifactSource) VolumeOn(logger lager.Logger, worker worker.Worker) 
 
 // StreamTo streams the resource's data to the destination.
 func (s *getArtifactSource) StreamTo(logger lager.Logger, destination worker.ArtifactDestination) error {
-	return streamToHelper(s.versionedSource, logger, destination)
+	//return streamToHelper(s.versionedSource, logger, destination)
+	return errors.New("getArtifactSource StreamTo not implemented")
 }
 
 // StreamFile streams a single file out of the resource.
 func (s *getArtifactSource) StreamFile(logger lager.Logger, path string) (io.ReadCloser, error) {
-	return streamFileHelper(s.versionedSource, logger, path)
+	//return streamFileHelper(s.versionedSource, logger, path)
+	return nil, errors.New("getArtifactSource StreamFile not implemented")
 }
 
-func streamToHelper(s interface {
-	StreamOut(string) (io.ReadCloser, error)
-}, logger lager.Logger, destination worker.ArtifactDestination) error {
-	logger.Debug("start")
-
-	defer logger.Debug("end")
-
-	out, err := s.StreamOut(".")
-	if err != nil {
-		logger.Error("failed", err)
-		return err
-	}
-
-	defer out.Close()
-
-	err = destination.StreamIn(".", out)
-	if err != nil {
-		logger.Error("failed", err)
-		return err
-	}
-	return nil
+func (s *getArtifactSource) VolumeHandle() string {
+	return s.versionedSource.VolumeHandle()
 }
 
-func streamFileHelper(s interface {
-	StreamOut(string) (io.ReadCloser, error)
-}, logger lager.Logger, path string) (io.ReadCloser, error) {
-	out, err := s.StreamOut(path)
-	if err != nil {
-		return nil, err
-	}
 
-	zstdReader := zstd.NewReader(out)
-	tarReader := tar.NewReader(zstdReader)
-
-	_, err = tarReader.Next()
-	if err != nil {
-		return nil, FileNotFoundError{Path: path}
-	}
-
-	return fileReadMultiCloser{
-		reader: tarReader,
-		closers: []io.Closer{
-			out,
-			zstdReader,
-		},
-	}, nil
-}
-
-type fileReadMultiCloser struct {
-	reader  io.Reader
-	closers []io.Closer
-}
-
-func (frc fileReadMultiCloser) Read(p []byte) (n int, err error) {
-	return frc.reader.Read(p)
-}
-
-func (frc fileReadMultiCloser) Close() error {
-	for _, closer := range frc.closers {
-		err := closer.Close()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}

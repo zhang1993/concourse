@@ -982,7 +982,7 @@ var _ = Describe("TaskStep", func() {
 							Context("but the stream is empty", func() {
 								It("returns ErrFileNotFound", func() {
 									_, err := artifactSource1.StreamFile(logger, "some-path")
-									Expect(err).To(MatchError(exec.FileNotFoundError{Path: "some-path"}))
+									Expect(err).To(MatchError(worker.FileNotFoundError{Path: "some-path"}))
 								})
 							})
 						})

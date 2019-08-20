@@ -26,4 +26,6 @@ type ArtifactSource interface {
 	// given worker. If a volume can be found, it will be used directly. If not,
 	// `StreamTo` will be used to copy the data to the destination instead.
 	VolumeOn(lager.Logger, Worker) (Volume, bool, error)
+
+	VolumeHandle() string
 }

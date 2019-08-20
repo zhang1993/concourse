@@ -33,6 +33,8 @@ type ContainerSpec struct {
 	// streamed.
 	Inputs []InputSource
 
+	InputVolumes map[InputSource]Volume
+
 	// Outputs for which volumes should be created and mounted into the container.
 	Outputs OutputPaths
 
@@ -67,6 +69,7 @@ type ImageSpec struct {
 	ImageURL            string
 	ImageResource       *ImageResource
 	ImageArtifactSource ArtifactSource
+	ImageVolume		Volume
 	Privileged          bool
 }
 

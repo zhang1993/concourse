@@ -184,12 +184,17 @@ func (i *imageResourceFetcher) Fetch(
 		return nil, nil, nil, err
 	}
 
-	volume := versionedSource.Volume()
-	if volume == nil {
+	//volume := versionedSource.Volume()
+	volume, found, err := i.worker.LookupVolume(logger, versionedSource.VolumeHandle())
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if found == false || volume == nil {
 		return nil, nil, nil, ErrImageGetDidNotProduceVolume
 	}
 
-	reader, err := versionedSource.StreamOut(ImageMetadataFile)
+	reader, err := volume.StreamOut(ImageMetadataFile)
 	if err != nil {
 		return nil, nil, nil, err
 	}
