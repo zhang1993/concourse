@@ -3,6 +3,7 @@ package metric
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"code.cloudfoundry.org/lager"
@@ -64,15 +65,16 @@ var (
 	eventHost       string
 	eventAttributes map[string]string
 	emissions       chan eventEmission
+	mutex           sync.Mutex
 )
 
 func Initialize(logger lager.Logger, host string, attributes map[string]string, bufferSize uint32) error {
 	logger.Debug("metric-initialize", lager.Data{
-		"host": host,
-		"attributes": attributes,
+		"host":        host,
+		"attributes":  attributes,
 		"buffer-size": bufferSize,
 	})
-	
+
 	var (
 		emitterDescriptions []string
 		err                 error
@@ -100,10 +102,11 @@ func Initialize(logger lager.Logger, host string, attributes map[string]string, 
 		return nil
 	}
 
-	emitter = emitter
 	eventHost = host
 	eventAttributes = attributes
+	mutex.Lock()
 	emissions = make(chan eventEmission, int(bufferSize))
+	mutex.Unlock()
 
 	go emitLoop()
 
@@ -144,6 +147,9 @@ func emit(logger lager.Logger, event Event) {
 }
 
 func emitLoop() {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	for emission := range emissions {
 		emitter.Emit(emission.logger.Session("emit"), emission.event)
 	}
