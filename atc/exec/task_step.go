@@ -218,7 +218,7 @@ func (step *TaskStep) Run(ctx context.Context, state RunState) error {
 		}
 	}(logger, config, events, step.delegate)
 
-	pod := worker.MakePod(config)
+	pod := worker.MakePodForGet(config)
 
 	result := step.workerClient.RunTaskStep(
 		ctx,
