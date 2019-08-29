@@ -1,8 +1,9 @@
-package resource
+package fetcher
 
 import (
 	"context"
 	"errors"
+	"github.com/concourse/concourse/atc/resource"
 	"io"
 	"time"
 
@@ -24,13 +25,13 @@ type Fetcher interface {
 	Fetch(
 		ctx context.Context,
 		logger lager.Logger,
-		session Session,
+		session resource.Session,
 		gardenWorker worker.Worker,
 		containerSpec worker.ContainerSpec,
 		resourceTypes atc.VersionedResourceTypes,
-		resourceInstance ResourceInstance,
+		resourceInstance resource.ResourceInstance,
 		imageFetchingDelegate worker.ImageFetchingDelegate,
-	) (VersionedSource, error)
+	) (resource.VersionedSource, error)
 }
 
 func NewFetcher(
@@ -54,15 +55,15 @@ type fetcher struct {
 func (f *fetcher) Fetch(
 	ctx context.Context,
 	logger lager.Logger,
-	session Session,
+	session resource.Session,
 	gardenWorker worker.Worker,
 	containerSpec worker.ContainerSpec,
 	resourceTypes atc.VersionedResourceTypes,
-	resourceInstance ResourceInstance,
+	resourceInstance resource.ResourceInstance,
 	imageFetchingDelegate worker.ImageFetchingDelegate,
-) (VersionedSource, error) {
+) (resource.VersionedSource, error) {
 	containerSpec.Outputs = map[string]string{
-		"resource": ResourcesDir("get"),
+		"resource": resource.ResourcesDir("get"),
 	}
 
 	source := f.fetchSourceFactory.NewFetchSource(logger, gardenWorker, resourceInstance, resourceTypes, containerSpec, session, imageFetchingDelegate)
@@ -99,7 +100,7 @@ func (f *fetcher) fetchWithLock(
 	logger lager.Logger,
 	source FetchSource,
 	stdout io.Writer,
-) (VersionedSource, error) {
+) (resource.VersionedSource, error) {
 	versionedSource, found, err := source.Find()
 	if err != nil {
 		return nil, err

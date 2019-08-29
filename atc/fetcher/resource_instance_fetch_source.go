@@ -1,7 +1,8 @@
-package resource
+package fetcher
 
 import (
 	"context"
+	"github.com/concourse/concourse/atc/resource"
 	"github.com/concourse/concourse/atc/runtime"
 
 	"code.cloudfoundry.org/lager"
@@ -14,8 +15,8 @@ import (
 
 type FetchSource interface {
 	LockName() (string, error)
-	Find() (VersionedSource, bool, error)
-	Create(context.Context) (VersionedSource, error)
+	Find() (resource.VersionedSource, bool, error)
+	Create(context.Context) (resource.VersionedSource, error)
 }
 
 //go:generate counterfeiter . FetchSourceFactory
@@ -24,22 +25,22 @@ type FetchSourceFactory interface {
 	NewFetchSource(
 		logger lager.Logger,
 		worker worker.Worker,
-		resourceInstance ResourceInstance,
+		resourceInstance resource.ResourceInstance,
 		resourceTypes atc.VersionedResourceTypes,
 		containerSpec worker.ContainerSpec,
-		session Session,
+		session resource.Session,
 		imageFetchingDelegate worker.ImageFetchingDelegate,
 	) FetchSource
 }
 
 type fetchSourceFactory struct {
 	resourceCacheFactory db.ResourceCacheFactory
-	resourceFactory      ResourceFactory
+	resourceFactory      resource.ResourceFactory
 }
 
 func NewFetchSourceFactory(
 	resourceCacheFactory db.ResourceCacheFactory,
-	resourceFactory ResourceFactory,
+	resourceFactory resource.ResourceFactory,
 ) FetchSourceFactory {
 	return &fetchSourceFactory{
 		resourceCacheFactory: resourceCacheFactory,
@@ -50,10 +51,10 @@ func NewFetchSourceFactory(
 func (r *fetchSourceFactory) NewFetchSource(
 	logger lager.Logger,
 	worker worker.Worker,
-	resourceInstance ResourceInstance,
+	resourceInstance resource.ResourceInstance,
 	resourceTypes atc.VersionedResourceTypes,
 	containerSpec worker.ContainerSpec,
-	session Session,
+	session resource.Session,
 	imageFetchingDelegate worker.ImageFetchingDelegate,
 ) FetchSource {
 	return &resourceInstanceFetchSource{
@@ -72,20 +73,20 @@ func (r *fetchSourceFactory) NewFetchSource(
 type resourceInstanceFetchSource struct {
 	logger                 lager.Logger
 	worker                 worker.Worker
-	resourceInstance       ResourceInstance
+	resourceInstance       resource.ResourceInstance
 	resourceTypes          atc.VersionedResourceTypes
 	containerSpec          worker.ContainerSpec
-	session                Session
+	session                resource.Session
 	imageFetchingDelegate  worker.ImageFetchingDelegate
 	dbResourceCacheFactory db.ResourceCacheFactory
-	resourceFactory        ResourceFactory
+	resourceFactory        resource.ResourceFactory
 }
 
 func (s *resourceInstanceFetchSource) LockName() (string, error) {
 	return s.resourceInstance.LockName(s.worker.Name())
 }
 
-func (s *resourceInstanceFetchSource) Find() (VersionedSource, bool, error) {
+func (s *resourceInstanceFetchSource) Find() (resource.VersionedSource, bool, error) {
 	sLog := s.logger.Session("find")
 
 	volume, found, err := s.resourceInstance.FindOn(s.logger, s.worker)
@@ -106,7 +107,7 @@ func (s *resourceInstanceFetchSource) Find() (VersionedSource, bool, error) {
 
 	s.logger.Debug("found-initialized-versioned-source", lager.Data{"version": s.resourceInstance.Version(), "metadata": metadata.ToATCMetadata()})
 
-	return NewGetVersionedSource(
+	return resource.NewGetVersionedSource(
 		volume,
 		s.resourceInstance.Version(),
 		metadata.ToATCMetadata(),
@@ -115,7 +116,7 @@ func (s *resourceInstanceFetchSource) Find() (VersionedSource, bool, error) {
 
 // Create runs under the lock but we need to make sure volume does not exist
 // yet before creating it under the lock
-func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSource, error) {
+func (s *resourceInstanceFetchSource) Create(ctx context.Context) (resource.VersionedSource, error) {
 	sLog := s.logger.Session("create")
 
 	versionedSource, found, err := s.Find()
@@ -149,7 +150,7 @@ func (s *resourceInstanceFetchSource) Create(ctx context.Context) (VersionedSour
 		return nil, err
 	}
 
-	mountPath := ResourcesDir("get")
+	mountPath := resource.ResourcesDir("get")
 	var volume worker.Volume
 	for _, mount := range container.VolumeMounts() {
 		if mount.MountPath == mountPath {

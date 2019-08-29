@@ -6,6 +6,8 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/concourse/concourse/atc/fetcher"
+	"github.com/concourse/concourse/atc/fetcher/fetcherfakes"
 	"io"
 	"io/ioutil"
 
@@ -28,7 +30,7 @@ import (
 
 var _ = Describe("Image", func() {
 	var fakeResourceFactory *resourcefakes.FakeResourceFactory
-	var fakeResourceFetcher *resourcefakes.FakeFetcher
+	var fakeResourceFetcher *fetcherfakes.FakeFetcher
 	var fakeResourceCacheFactory *dbfakes.FakeResourceCacheFactory
 	var fakeResourceConfigFactory *dbfakes.FakeResourceConfigFactory
 	var fakeCreatingContainer *dbfakes.FakeCreatingContainer
@@ -55,7 +57,7 @@ var _ = Describe("Image", func() {
 
 	BeforeEach(func() {
 		fakeResourceFactory = new(resourcefakes.FakeResourceFactory)
-		fakeResourceFetcher = new(resourcefakes.FakeFetcher)
+		fakeResourceFetcher = new(fetcherfakes.FakeFetcher)
 		fakeResourceConfigFactory = new(dbfakes.FakeResourceConfigFactory)
 		fakeCreatingContainer = new(dbfakes.FakeCreatingContainer)
 		stderrBuf = gbytes.NewBuffer()
@@ -217,11 +219,11 @@ var _ = Describe("Image", func() {
 
 					Context("when fetching resource fails", func() {
 						BeforeEach(func() {
-							fakeResourceFetcher.FetchReturns(nil, resource.ErrInterrupted)
+							fakeResourceFetcher.FetchReturns(nil, fetcher.ErrInterrupted)
 						})
 
 						It("returns error", func() {
-							Expect(fetchErr).To(Equal(resource.ErrInterrupted))
+							Expect(fetchErr).To(Equal(fetcher.ErrInterrupted))
 						})
 					})
 
@@ -483,11 +485,11 @@ var _ = Describe("Image", func() {
 
 			Context("when fetching resource fails", func() {
 				BeforeEach(func() {
-					fakeResourceFetcher.FetchReturns(nil, resource.ErrInterrupted)
+					fakeResourceFetcher.FetchReturns(nil, fetcher.ErrInterrupted)
 				})
 
 				It("returns error", func() {
-					Expect(fetchErr).To(Equal(resource.ErrInterrupted))
+					Expect(fetchErr).To(Equal(fetcher.ErrInterrupted))
 				})
 			})
 

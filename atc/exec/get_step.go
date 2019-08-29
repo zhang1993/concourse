@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"context"
 	"fmt"
+	"github.com/concourse/concourse/atc/fetcher"
 	"github.com/concourse/concourse/atc/runtime"
 	"io"
 
@@ -53,7 +54,7 @@ type GetStep struct {
 	metadata             StepMetadata
 	containerMetadata    db.ContainerMetadata
 	secrets              creds.Secrets
-	resourceFetcher      resource.Fetcher
+	resourceFetcher      fetcher.Fetcher
 	resourceCacheFactory db.ResourceCacheFactory
 	strategy             worker.ContainerPlacementStrategy
 	workerPool           worker.Pool
@@ -67,7 +68,7 @@ func NewGetStep(
 	metadata StepMetadata,
 	containerMetadata db.ContainerMetadata,
 	secrets creds.Secrets,
-	resourceFetcher resource.Fetcher,
+	resourceFetcher fetcher.Fetcher,
 	resourceCacheFactory db.ResourceCacheFactory,
 	strategy worker.ContainerPlacementStrategy,
 	workerPool worker.Pool,
