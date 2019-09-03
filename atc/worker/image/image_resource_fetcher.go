@@ -1,21 +1,16 @@
 package image
 
 import (
-	"archive/tar"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 
 	"code.cloudfoundry.org/lager"
-	"github.com/DataDog/zstd"
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/resource"
 	"github.com/concourse/concourse/atc/worker"
 )
-
-const ImageMetadataFile = "metadata.json"
 
 // ErrImageUnavailable is returned when a task's configured image resource
 // has no versions.
@@ -44,7 +39,7 @@ type ImageResourceFetcher interface {
 		logger lager.Logger,
 		container db.CreatingContainer,
 		privileged bool,
-	) (worker.Volume, io.ReadCloser, atc.Version, error)
+	) (worker.Volume, atc.Version, error)
 }
 
 type imageResourceFetcherFactory struct {
@@ -110,14 +105,14 @@ func (i *imageResourceFetcher) Fetch(
 	logger lager.Logger,
 	container db.CreatingContainer,
 	privileged bool,
-) (worker.Volume, io.ReadCloser, atc.Version, error) {
+) (worker.Volume, atc.Version, error) {
 	version := i.version
 	if version == nil {
 		var err error
 		version, err = i.getLatestVersion(ctx, logger, container)
 		if err != nil {
 			logger.Error("failed-to-get-latest-image-version", err)
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -136,7 +131,7 @@ func (i *imageResourceFetcher) Fetch(
 	)
 	if err != nil {
 		logger.Error("failed-to-create-resource-cache", err)
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	resourceInstance := resource.NewResourceInstance(
@@ -151,7 +146,7 @@ func (i *imageResourceFetcher) Fetch(
 
 	err = i.imageFetchingDelegate.ImageVersionDetermined(resourceCache)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	getSess := resource.Session{
@@ -181,36 +176,15 @@ func (i *imageResourceFetcher) Fetch(
 	)
 	if err != nil {
 		logger.Error("failed-to-fetch-image", err)
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	volume := versionedSource.Volume()
 	if volume == nil {
-		return nil, nil, nil, ErrImageGetDidNotProduceVolume
+		return nil, nil, ErrImageGetDidNotProduceVolume
 	}
 
-	reader, err := versionedSource.StreamOut(ImageMetadataFile)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	zstdReader := zstd.NewReader(reader)
-	tarReader := tar.NewReader(zstdReader)
-
-	_, err = tarReader.Next()
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("could not read file \"%s\" from tar", ImageMetadataFile)
-	}
-
-	releasingReader := &fileReadMultiCloser{
-		reader: tarReader,
-		closers: []io.Closer{
-			reader,
-			zstdReader,
-		},
-	}
-
-	return volume, releasingReader, version, nil
+	return volume, version, nil
 }
 
 func (i *imageResourceFetcher) ensureVersionOfType(

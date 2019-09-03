@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"io"
 
 	"code.cloudfoundry.org/lager"
@@ -84,11 +85,11 @@ func (v *volume) SetPrivileged(privileged bool) error {
 }
 
 func (v *volume) StreamIn(path string, tarStream io.Reader) error {
-	return v.bcVolume.StreamIn(path, baggageclaim.ZstdEncoding, tarStream)
+	return v.bcVolume.StreamIn(context.TODO(), path, baggageclaim.ZstdEncoding, tarStream)
 }
 
 func (v *volume) StreamOut(path string) (io.ReadCloser, error) {
-	return v.bcVolume.StreamOut(path, baggageclaim.ZstdEncoding)
+	return v.bcVolume.StreamOut(context.TODO(), path, baggageclaim.ZstdEncoding)
 }
 
 func (v *volume) Properties() (baggageclaim.VolumeProperties, error) {
