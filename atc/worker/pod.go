@@ -184,8 +184,6 @@ func MakePod(config atc.TaskConfig) *v1.Pod {
 	// if we need to keep the pod around for hijacking, then we need to add
 	// a sidecar that will not terminate until we tell it to
 
-	// another sidecar for streaming logs
-
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ConcourseNamespace,

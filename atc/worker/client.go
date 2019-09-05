@@ -174,7 +174,8 @@ func (client *client) RunTaskStep(
 	}
 
 	podIsDone := make(chan bool, 1)
-	go tailTaskLogs(clientset, taskPod.Name, processSpec.StdoutWriter, pod, podIsDone)
+	//go tailTaskLogs(clientset, taskPod.Name, processSpec.StdoutWriter, pod, podIsDone)
+	go tailGetLogs(clientset, taskPod.Name, processSpec.StdoutWriter, pod, podIsDone)
 
 	// wait for pod to exit with success/fail
 	err = waitForPodState(clientset, taskPod.Name, "default", func(pod *v1.Pod) (bool, error) {
@@ -298,10 +299,45 @@ func (client *client) RunTaskStep(
 }
 
 // **** k8s related func - start
+
+func tailGetLogs(c *kubernetes.Clientset, podName string, out io.Writer, pod *v1.Pod, isDone chan bool) error {
+	logOptions := &v1.PodLogOptions{
+		Container: "stdout-sidecar",
+		Follow:    true,
+	}
+	for {
+		err := WaitForPod(c, pod)
+		if err == nil {
+			break
+		}
+	}
+	readCloser, err := c.CoreV1().Pods(ConcourseNamespace).GetLogs(podName, logOptions).Stream()
+	// defer readCloser.Close()
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(out, readCloser)
+	if err != nil {
+		fmt.Println("error copying stream", err)
+		readCloser.Close()
+		return err
+	}
+	readCloser.Close()
+
+	select {
+	case <-isDone:
+		return nil
+	default:
+	}
+
+	return err
+}
+
 func tailTaskLogs(c *kubernetes.Clientset, podName string, out io.Writer, pod *v1.Pod, isDone chan bool) error {
 	logOptions := &v1.PodLogOptions{
 		Container: TaskExecutionContainerName,
-		Follow:    true,
+		//Container: "stdout-sidecar",
+		Follow: true,
 		//Previous:  true,
 	}
 	for {
