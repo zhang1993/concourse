@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/concourse/concourse/atc"
-	"github.com/concourse/concourse/atc/exec/artifact"
+	"github.com/concourse/concourse/atc/exec/build"
 )
 
 //go:generate counterfeiter . Step
@@ -36,7 +36,7 @@ type BuildOutputFilter func(text string) string
 //go:generate counterfeiter . RunState
 
 type RunState interface {
-	Artifacts() *artifact.Repository
+	Artifacts() *build.Repository
 
 	Result(atc.PlanID, interface{}) bool
 	StoreResult(atc.PlanID, interface{})
