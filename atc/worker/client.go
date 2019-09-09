@@ -7,7 +7,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
+
+	"k8s.io/apimachinery/pkg/watch"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -168,32 +171,77 @@ func (client *client) RunTaskStep(
 	if err != nil {
 		panic(err.Error())
 	}
+
+	configmapSpec := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ConcourseNamespace,
+			Name:      pod.Name,
+		},
+		Data: map[string]string{
+			"exitcode": "",
+			"err":      "",
+		},
+	}
+	cm, err := clientset.CoreV1().ConfigMaps(ConcourseNamespace).Create(configmapSpec)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	taskPod, err := clientset.CoreV1().Pods(ConcourseNamespace).Create(pod)
 	if err != nil {
 		panic(err.Error())
 	}
 
 	podIsDone := make(chan bool, 1)
-	//go tailTaskLogs(clientset, taskPod.Name, processSpec.StdoutWriter, pod, podIsDone)
-	go tailGetLogs(clientset, taskPod.Name, processSpec.StdoutWriter, pod, podIsDone)
+	go tailTaskLogs(clientset, taskPod.Name, processSpec.StdoutWriter, pod, podIsDone)
+	//go tailGetLogs(clientset, taskPod.Name, processSpec.StdoutWriter, pod, podIsDone)
 
-	// wait for pod to exit with success/fail
-	err = waitForPodState(clientset, taskPod.Name, "default", func(pod *v1.Pod) (bool, error) {
-		if pod.Status.Phase == "Succeeded" {
-			podIsDone <- true
-			return true, nil
-		} else if pod.Status.Phase == "Failed" {
-			return true, errors.New("failed")
+	watcher, err := clientset.CoreV1().ConfigMaps(ConcourseNamespace).Watch(metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("metadata.name=%s", cm.Name),
+	})
+	defer watcher.Stop()
+
+	var exitCode int
+	var errMsg string
+	for event := range watcher.ResultChan() {
+		if event.Type == watch.Modified {
+			if updatedCm, ok := event.Object.(*v1.ConfigMap); ok {
+				exitCode, err = strconv.Atoi(updatedCm.Data["exitcode"])
+				if err != nil {
+					panic(err.Error())
+				}
+				errMsg = updatedCm.Data["err"]
+				break
+			}
 		}
-		return false, nil
-	}, "PodIsDone")
-	if err != nil {
-		logger.Debug("task-failed")
-		return TaskResult{Status: -1, VolumeMounts: []VolumeMount{}, Err: err}
 	}
 
-	return TaskResult{Status: 0, VolumeMounts: []VolumeMount{}, Err: nil}
+	podIsDone <- true
+	if exitCode == 0 {
+		return TaskResult{Status: 0, VolumeMounts: []VolumeMount{}, Err: nil}
+	} else {
+		logger.Debug("task-failed")
+		return TaskResult{Status: -1, VolumeMounts: []VolumeMount{}, Err: errors.New(errMsg)}
+	}
+	//return TaskResult{Status: exitCode, VolumeMounts: []VolumeMount{}, Err: errors.New(errMsg)}
 
+	// wait for pod to exit with success/fail
+	//err = waitForPodState(clientset, taskPod.Name, "default", func(pod *v1.Pod) (bool, error) {
+	//	if pod.Status.Phase == "Succeeded" {
+	//		podIsDone <- true
+	//		return true, nil
+	//	} else if pod.Status.Phase == "Failed" {
+	//		return true, errors.New("failed")
+	//	}
+	//	return false, nil
+	//}, "PodIsDone")
+	//if err != nil {
+	//	logger.Debug("task-failed")
+	//	return TaskResult{Status: -1, VolumeMounts: []VolumeMount{}, Err: err}
+	//}
+	//
+	//return TaskResult{Status: 0, VolumeMounts: []VolumeMount{}, Err: nil}
+	//
 	//step.succeeded = true
 	//return TaskResult{Status: -1, VolumeMounts: []VolumeMount{}, Err: err}
 

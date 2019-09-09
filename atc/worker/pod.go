@@ -3,6 +3,7 @@ package worker
 import (
 	"crypto/rand"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/concourse/concourse/atc"
@@ -40,12 +41,18 @@ var (
 	}, {
 		Name:      "gcpsecret",
 		MountPath: "/secret",
+	}, {
+		Name:      "tools",
+		MountPath: "/tools",
 	}}
 	implicitVolumes = []v1.Volume{{
 		Name:         "scratch",
 		VolumeSource: emptyVolumeSource,
 	}, {
 		Name:         "home",
+		VolumeSource: emptyVolumeSource,
+	}, {
+		Name:         "tools",
 		VolumeSource: emptyVolumeSource,
 	}, {
 		Name: "gcpsecret",
@@ -112,6 +119,19 @@ func MakePod(config atc.TaskConfig) *v1.Pod {
 	volumeMounts := implicitVolumeMounts
 	podname := fmt.Sprintf("hello-pod-trial-%s", time.Now().Format("150405"))
 
+	copyrunner := v1.Container{
+		Name:            "copy-runner",
+		Image:           "concourse/porter-dev:dev",
+		ImagePullPolicy: "Always",
+		Command:         []string{"cp"},
+		Args:            []string{"/opt/porter/runner/runner", "/tools/runner"},
+		VolumeMounts:    volumeMounts,
+		Env:             implicitEnvVars,
+		WorkingDir:      "/tmp/build",
+	}
+
+	initContainers = append(initContainers, copyrunner)
+
 	for _, input := range config.Inputs {
 		newVolume := v1.Volume{
 			Name:         input.Name,
@@ -164,15 +184,28 @@ func MakePod(config atc.TaskConfig) *v1.Pod {
 	//	regularContainers = append(initContainers, d)
 	//}
 
+	//runnerArgs := []string{}
+	//runnerArgs = append(runnerArgs, "--entrypoint")
+	//runnerArgs = append(runnerArgs, config.Run.Path)
+	//
+	//for _, a := range config.Run.Args {
+	//	runnerArgs = append(runnerArgs, "--args")
+	//	runnerArgs = append(runnerArgs, a)
+	//}
 	// container for the task
+	fmt.Println("config.Run.Path", config.Run.Path)
+	fmt.Println("config.Run.Args", config.Run.Args)
+	combinedArgs := fmt.Sprintf("`%s`", strings.Join(config.Run.Args, " "))
+	fmt.Println("combinedArgs", combinedArgs)
 	c := v1.Container{
 		Name: TaskExecutionContainerName,
 		//Image:        spec.mainContainer.ImageSpec.ImageURL,
-		Image: "ubuntu:xenial",
-		//Command:      []string{spec.mainContainer.Path},
-		Command: []string{config.Run.Path},
-		//Args:         spec.mainContainer.Args,
-		Args:         config.Run.Args,
+		Image:   "ubuntu:xenial",
+		Command: []string{"/tools/runner"},
+		Args:    []string{"--entrypoint", config.Run.Path, "--args", fmt.Sprintf("`%s`", strings.Join(config.Run.Args, " ")), "--configmap", podname},
+		// --entrypoint gotest --args arg1 --args arg2
+		//Command: []string{config.Run.Path},
+		//Args:         config.Run.Args,
 		VolumeMounts: volumeMounts,
 		Env:          implicitEnvVars,
 		WorkingDir:   "/tmp/build",
