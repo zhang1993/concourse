@@ -30,6 +30,20 @@ func (s *Server) PinResourceVersion(pipeline db.Pipeline) http.Handler {
 			return
 		}
 
+		if resource.ConfigPinnedVersion() != nil {
+			logger.Info("cannot-pin-version-when-already-pinned-to-config-version", lager.Data{"config-pinned-version": resource.ConfigPinnedVersion()})
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if resource.APIPinnedVersion() != nil {
+			err = resource.UnpinVersion()
+			if err != nil {
+				logger.Error("failed-to-unpin-resource-version", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
+
 		err = resource.PinVersion(resourceConfigVersionID)
 		if err != nil {
 			logger.Error("failed-to-pin-resource-version", err)

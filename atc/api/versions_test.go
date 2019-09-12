@@ -706,28 +706,75 @@ var _ = Describe("Versions API", func() {
 						fakePipeline.ResourceReturns(fakeResource, true, nil)
 					})
 
-					It("tries to pin the right resource config version", func() {
-						resourceConfigVersionID := fakeResource.PinVersionArgsForCall(0)
-						Expect(resourceConfigVersionID).To(Equal(42))
-					})
-
-					Context("when pinning the resource succeeds", func() {
+					Context("when the resource is already pinned to a config pinned version", func() {
 						BeforeEach(func() {
-							fakeResource.PinVersionReturns(nil)
+							fakeResource.ConfigPinnedVersionReturns(atc.Version{"some": "value"})
 						})
-
-						It("returns 200", func() {
-							Expect(response.StatusCode).To(Equal(http.StatusOK))
-						})
-					})
-
-					Context("when pinning the resource fails", func() {
-						BeforeEach(func() {
-							fakeResource.PinVersionReturns(errors.New("welp"))
-						})
-
 						It("returns 500", func() {
 							Expect(response.StatusCode).To(Equal(http.StatusInternalServerError))
+						})
+					})
+
+					Context("when the resource is not pinned", func() {
+						BeforeEach(func() {
+							fakeResource.ConfigPinnedVersionReturns(nil)
+							fakeResource.APIPinnedVersionReturns(nil)
+						})
+						It("tries to pin the right resource config version", func() {
+							resourceConfigVersionID := fakeResource.PinVersionArgsForCall(0)
+							Expect(resourceConfigVersionID).To(Equal(42))
+						})
+
+						Context("when pinning the resource succeeds", func() {
+							BeforeEach(func() {
+								fakeResource.PinVersionReturns(nil)
+							})
+
+							It("returns 200", func() {
+								Expect(response.StatusCode).To(Equal(http.StatusOK))
+							})
+						})
+
+						Context("when pinning the resource fails", func() {
+							BeforeEach(func() {
+								fakeResource.PinVersionReturns(errors.New("welp"))
+							})
+
+							It("returns 500", func() {
+								Expect(response.StatusCode).To(Equal(http.StatusInternalServerError))
+							})
+						})
+					})
+
+					Context("when a resource is pinned to an api pinned version", func() {
+						BeforeEach(func() {
+							fakeResource.ConfigPinnedVersionReturns(nil)
+							fakeResource.APIPinnedVersionReturns(atc.Version{"some": "value"})
+						})
+
+						It("unpin api pinned version first", func() {
+							Expect(fakeResource.UnpinVersionCallCount()).To(Equal(1))
+						})
+
+						Context("when unpin version fails", func() {
+							BeforeEach(func() {
+								fakeResource.UnpinVersionReturns(errors.New("oops"))
+							})
+
+							It("returns 500", func() {
+								Expect(response.StatusCode).To(Equal(http.StatusInternalServerError))
+							})
+						})
+
+						Context("when unpin version succeeds", func() {
+							BeforeEach(func() {
+								fakeResource.UnpinVersionReturns(nil)
+							})
+
+							It("returns 200", func() {
+								Expect(fakeResource.PinVersionCallCount()).To(Equal(1))
+								Expect(response.StatusCode).To(Equal(http.StatusOK))
+							})
 						})
 					})
 				})
