@@ -11,7 +11,6 @@ import (
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/exec/build"
-	"github.com/concourse/concourse/atc/fetcher"
 	"github.com/concourse/concourse/atc/resource"
 	"github.com/concourse/concourse/atc/runtime"
 	"github.com/concourse/concourse/atc/worker"
@@ -59,9 +58,10 @@ type GetStep struct {
 	plan                 atc.GetPlan
 	metadata             StepMetadata
 	containerMetadata    db.ContainerMetadata
-	resourceFetcher      fetcher.Fetcher
+	resourceFetcher      worker.Fetcher
 	resourceCacheFactory db.ResourceCacheFactory
 	strategy             worker.ContainerPlacementStrategy
+	workerClient         worker.Client
 	workerPool           worker.Pool
 	delegate             GetDelegate
 	succeeded            bool
@@ -72,7 +72,7 @@ func NewGetStep(
 	plan atc.GetPlan,
 	metadata StepMetadata,
 	containerMetadata db.ContainerMetadata,
-	resourceFetcher fetcher.Fetcher,
+	resourceFetcher worker.Fetcher,
 	resourceCacheFactory db.ResourceCacheFactory,
 	strategy worker.ContainerPlacementStrategy,
 	workerPool worker.Pool,
@@ -173,6 +173,7 @@ func (step *GetStep) Run(ctx context.Context, state RunState) error {
 		return err
 	}
 
+	// TODO containerOwner accepts workerName and this should be extracted out
 	resourceInstance := resource.NewResourceInstance(
 		resource.ResourceType(step.plan.Type),
 		version,
@@ -183,57 +184,102 @@ func (step *GetStep) Run(ctx context.Context, state RunState) error {
 		db.NewBuildStepContainerOwner(step.metadata.BuildID, step.planID, step.metadata.TeamID),
 	)
 
-	chosenWorker, err := step.workerPool.FindOrChooseWorkerForContainer(
+	events := make(chan runtime.Event, 1)
+	go func(logger lager.Logger, events chan runtime.Event, delegate GetDelegate) {
+		for {
+			ev := <-events
+			switch {
+			case ev.EventType == runtime.InitializingEvent:
+				step.delegate.Initializing(logger)
+
+			case ev.EventType == runtime.StartingEvent:
+				step.delegate.Starting(logger)
+
+			case ev.EventType == runtime.FinishedEvent:
+				step.delegate.Finished(logger, ExitStatus(ev.ExitStatus), ev.VersionResult)
+
+			default:
+				return
+			}
+		}
+	}(logger, events, step.delegate)
+
+	// start of workerClient.RunGetStep?
+	getResult := step.workerClient.RunGetStep(
 		ctx,
 		logger,
 		resourceInstance.ContainerOwner(),
 		containerSpec,
 		workerSpec,
 		step.strategy,
-	)
-	if err != nil {
-		return err
-	}
-
-	step.delegate.Starting(logger)
-
-	versionedSource, err := step.resourceFetcher.Fetch(
-		ctx,
-		logger,
 		step.containerMetadata,
-		chosenWorker,
-		containerSpec,
 		resourceTypes,
 		resourceInstance,
+		step.resourceFetcher,
 		step.delegate,
+		events,
 	)
-	if err != nil {
-		logger.Error("failed-to-fetch-resource", err)
+	//chosenWorker, err := step.workerPool.FindOrChooseWorkerForContainer(
+	//	ctx,
+	//	logger,
+	//	resourceInstance.ContainerOwner(),
+	//	containerSpec,
+	//	workerSpec,
+	//	step.strategy,
+	//)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//step.delegate.Starting(logger)
+	//
+	//versionedSource, err := step.resourceFetcher.Fetch(
+	//	ctx,
+	//	logger,
+	//	step.containerMetadata,
+	//	chosenWorker,
+	//	containerSpec,
+	//	resourceTypes,
+	//	resourceInstance,
+	//	step.delegate,
+	//)
+	//if err != nil {
+	//	logger.Error("failed-to-fetch-resource", err)
+	//
+	//	if err, ok := err.(resource.ErrResourceScriptFailed); ok {
+	//		step.delegate.Finished(logger, ExitStatus(err.ExitStatus), runtime.VersionResult{})
+	//		return nil
+	//	}
+	//
+	//	return err
+	//}
+	//
+	//// end of workerClient.RunGetStep?
+	//state.ArtifactRepository().RegisterArtifact(build.ArtifactName(step.plan.Name), &runtime.GetArtifact{
+	//	VolumeHandle: versionedSource.Volume().Handle(),
+	//})
+	//
+	//versionResult := runtime.VersionResult{
+	//	Version:  versionedSource.Version(),
+	//	Metadata: versionedSource.Metadata(),
+	//}
 
-		if err, ok := err.(resource.ErrResourceScriptFailed); ok {
-			step.delegate.Finished(logger, ExitStatus(err.ExitStatus), runtime.VersionResult{})
+	if getResult.Err != nil {
+		logger.Error("failed-to-fetch-resource", err)
+		if _, ok := err.(resource.ErrResourceScriptFailed); ok {
 			return nil
 		}
 
 		return err
 	}
 
-	state.Artifacts().RegisterArtifact(build.ArtifactName(step.plan.Name), &runtime.GetArtifact{
-		VolumeHandle: versionedSource.Volume().Handle(),
-	})
-
-	versionResult := runtime.VersionResult{
-		Version:  versionedSource.Version(),
-		Metadata: versionedSource.Metadata(),
-	}
+	state.ArtifactRepository().RegisterArtifact(build.ArtifactName(step.plan.Name), &getResult.GetArtifact)
 
 	if step.plan.Resource != "" {
-		step.delegate.UpdateVersion(logger, step.plan, versionResult)
+		step.delegate.UpdateVersion(logger, step.plan, getResult.VersionResult)
 	}
 
 	step.succeeded = true
-
-	step.delegate.Finished(logger, 0, versionResult)
 
 	return nil
 }

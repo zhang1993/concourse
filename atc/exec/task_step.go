@@ -158,7 +158,7 @@ func (step *TaskStep) Run(ctx context.Context, state RunState) error {
 	// validate
 	taskConfigSource = ValidatingConfigSource{ConfigSource: taskConfigSource}
 
-	repository := state.Artifacts()
+	repository := state.ArtifactRepository()
 
 	config, err := taskConfigSource.FetchConfig(ctx, logger, repository)
 
