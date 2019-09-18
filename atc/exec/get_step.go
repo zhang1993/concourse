@@ -183,6 +183,7 @@ func (step *GetStep) Run(ctx context.Context, state RunState) error {
 		resourceCache,
 		db.NewBuildStepContainerOwner(step.metadata.BuildID, step.planID, step.metadata.TeamID),
 	)
+	// Stuff above is all part of Concourse CORE
 
 	events := make(chan runtime.Event, 1)
 	go func(logger lager.Logger, events chan runtime.Event, delegate GetDelegate) {
@@ -217,6 +218,7 @@ func (step *GetStep) Run(ctx context.Context, state RunState) error {
 		resourceInstance,
 		step.resourceFetcher,
 		step.delegate,
+		resourceCache,
 		events,
 	)
 	//chosenWorker, err := step.workerPool.FindOrChooseWorkerForContainer(
