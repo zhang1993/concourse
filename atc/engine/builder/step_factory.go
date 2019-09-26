@@ -21,7 +21,6 @@ type stepFactory struct {
 	resourceConfigFactory db.ResourceConfigFactory
 	defaultLimits         atc.ContainerLimits
 	strategy              worker.ContainerPlacementStrategy
-	resourceFactory       resource.ResourceFactory
 	lockFactory           lock.LockFactory
 }
 
@@ -83,7 +82,6 @@ func (factory *stepFactory) PutStep(
 		*plan.Put,
 		stepMetadata,
 		containerMetadata,
-		factory.resourceFactory,
 		factory.resourceConfigFactory,
 		factory.strategy,
 		factory.client,
@@ -106,7 +104,6 @@ func (factory *stepFactory) CheckStep(
 		*plan.Check,
 		stepMetadata,
 		containerMetadata,
-		factory.resourceFactory,
 		worker.NewRandomPlacementStrategy(),
 		factory.pool,
 		delegate,
