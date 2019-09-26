@@ -16,6 +16,7 @@ import (
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
+	"github.com/concourse/concourse"
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/api"
 	"github.com/concourse/concourse/atc/api/accessor"
@@ -38,7 +39,7 @@ import (
 	"github.com/concourse/concourse/atc/metric"
 	"github.com/concourse/concourse/atc/pipelines"
 	"github.com/concourse/concourse/atc/radar"
-	"github.com/concourse/concourse/atc/resource"
+	"github.com/concourse/concourse/atc/runtime"
 	"github.com/concourse/concourse/atc/scheduler"
 	"github.com/concourse/concourse/atc/syslog"
 	"github.com/concourse/concourse/atc/worker"
@@ -562,16 +563,14 @@ func (cmd *RunCommand) constructAPIMembers(
 		return nil, err
 	}
 
-	resourceFactory := resource.NewResourceFactory()
 	dbResourceCacheFactory := db.NewResourceCacheFactory(dbConn, lockFactory)
-	fetchSourceFactory := worker.NewFetchSourceFactory(dbResourceCacheFactory)
-	resourceFetcher := worker.NewFetcher(clock.NewClock(), lockFactory, fetchSourceFactory)
+	//fetchSourceFactory := runtime.NewFetchSourceFactory(dbResourceCacheFactory)
+	//resourceFetcher := runtime.NewFetcher(clock.NewClock(), lockFactory, fetchSourceFactory)
 	dbResourceConfigFactory := db.NewResourceConfigFactory(dbConn, lockFactory)
 	imageResourceFetcherFactory := image.NewImageResourceFetcherFactory(
 		dbResourceCacheFactory,
 		dbResourceConfigFactory,
 		resourceFetcher,
-		resourceFactory,
 	)
 
 	dbWorkerBaseResourceTypeFactory := db.NewWorkerBaseResourceTypeFactory(dbConn)
@@ -740,16 +739,14 @@ func (cmd *RunCommand) constructBackendMembers(
 
 	teamFactory := db.NewTeamFactory(dbConn, lockFactory)
 
-	resourceFactory := resource.NewResourceFactory()
 	dbResourceCacheFactory := db.NewResourceCacheFactory(dbConn, lockFactory)
-	fetchSourceFactory := worker.NewFetchSourceFactory(dbResourceCacheFactory)
-	resourceFetcher := worker.NewFetcher(clock.NewClock(), lockFactory, fetchSourceFactory)
+	//fetchSourceFactory := worker.fetcher.NewFetchSourceFactory(dbResourceCacheFactory)
+	//resourceFetcher := runtime.NewFetcher(clock.NewClock(), lockFactory, fetchSourceFactory)
 	dbResourceConfigFactory := db.NewResourceConfigFactory(dbConn, lockFactory)
 	imageResourceFetcherFactory := image.NewImageResourceFetcherFactory(
 		dbResourceCacheFactory,
 		dbResourceConfigFactory,
 		resourceFetcher,
-		resourceFactory,
 	)
 
 	dbWorkerBaseResourceTypeFactory := db.NewWorkerBaseResourceTypeFactory(dbConn)
@@ -796,20 +793,17 @@ func (cmd *RunCommand) constructBackendMembers(
 	engine := cmd.constructEngine(
 		pool,
 		workerClient,
-		resourceFetcher,
 		teamFactory,
 		dbResourceCacheFactory,
 		dbResourceConfigFactory,
 		secretManager,
 		defaultLimits,
 		buildContainerStrategy,
-		resourceFactory,
 		lockFactory,
 	)
 
 	radarSchedulerFactory := pipelines.NewRadarSchedulerFactory(
 		pool,
-		resourceFactory,
 		dbResourceConfigFactory,
 		cmd.ResourceTypeCheckingInterval,
 		cmd.ResourceCheckingInterval,
@@ -1450,27 +1444,23 @@ func (cmd *RunCommand) configureComponentIntervals(componentFactory db.Component
 func (cmd *RunCommand) constructEngine(
 	workerPool worker.Pool,
 	workerClient worker.Client,
-	resourceFetcher worker.Fetcher,
 	teamFactory db.TeamFactory,
 	resourceCacheFactory db.ResourceCacheFactory,
 	resourceConfigFactory db.ResourceConfigFactory,
 	secretManager creds.Secrets,
 	defaultLimits atc.ContainerLimits,
 	strategy worker.ContainerPlacementStrategy,
-	resourceFactory resource.ResourceFactory,
 	lockFactory lock.LockFactory,
 ) engine.Engine {
 
 	stepFactory := builder.NewStepFactory(
 		workerPool,
 		workerClient,
-		resourceFetcher,
 		teamFactory,
 		resourceCacheFactory,
 		resourceConfigFactory,
 		defaultLimits,
 		strategy,
-		resourceFactory,
 		lockFactory,
 	)
 
