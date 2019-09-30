@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/concourse/concourse/atc/runner"
 	"io"
 
 	"code.cloudfoundry.org/garden"
@@ -52,7 +53,7 @@ func (resource *resource) runScript(
 	}
 
 	if recoverable {
-		result, _ := resource.container.Properties()
+		result, _ := resource.runnable.Properties()
 		code := result[resourceResultPropertyName]
 		if code != "" {
 			return json.Unmarshal([]byte(code), &output)
@@ -73,12 +74,12 @@ func (resource *resource) runScript(
 		processIO.Stderr = stderr
 	}
 
-	var process garden.Process
+	var process runner.Process
 
 	if recoverable {
-		process, err = resource.container.Attach(ctx, ResourceProcessID, processIO)
+		process, err = resource.runnable.Attach(ctx, ResourceProcessID, processIO)
 		if err != nil {
-			process, err = resource.container.Run(
+			process, err = resource.runnable.Run(
 				ctx,
 				garden.ProcessSpec{
 					ID:   ResourceProcessID,
@@ -90,7 +91,7 @@ func (resource *resource) runScript(
 			}
 		}
 	} else {
-		process, err = resource.container.Run(ctx, garden.ProcessSpec{
+		process, err = resource.runnable.Run(ctx, garden.ProcessSpec{
 			Path: path,
 			Args: args,
 		}, processIO)
@@ -126,7 +127,7 @@ func (resource *resource) runScript(
 		}
 
 		if recoverable {
-			err := resource.container.SetProperty(resourceResultPropertyName, stdout.String())
+			err := resource.runnable.SetProperty(resourceResultPropertyName, stdout.String())
 			if err != nil {
 				return err
 			}
@@ -135,7 +136,7 @@ func (resource *resource) runScript(
 		return json.Unmarshal(stdout.Bytes(), output)
 
 	case <-ctx.Done():
-		resource.container.Stop(false)
+		resource.runnable.Stop(false)
 		<-processExited
 		return ctx.Err()
 	}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/concourse/concourse/atc/runner"
+	"github.com/concourse/concourse/atc/storage"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -51,7 +53,18 @@ type Worker interface {
 		atc.VersionedResourceTypes,
 	) (Container, error)
 
+	FindOrCreateRunnable(
+		context.Context,
+		lager.Logger,
+		ImageFetchingDelegate,
+		db.ContainerOwner,
+		db.ContainerMetadata,
+		ContainerSpec,
+		atc.VersionedResourceTypes,
+	) (runner.Runnable, error)
+
 	FindVolumeForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (Volume, bool, error)
+	FindBlobForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (storage.Blob, bool, error)
 	FindVolumeForTaskCache(lager.Logger, int, int, string, string) (Volume, bool, error)
 
 	CertsVolume(lager.Logger) (volume Volume, found bool, err error)
@@ -153,6 +166,11 @@ func (worker *gardenWorker) FindResourceTypeByPath(path string) (atc.WorkerResou
 }
 
 func (worker *gardenWorker) FindVolumeForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (Volume, bool, error) {
+	return worker.volumeClient.FindVolumeForResourceCache(logger, resourceCache)
+}
+
+
+func (worker *gardenWorker) FindBlobForResourceCache(logger lager.Logger, resourceCache db.UsedResourceCache) (storage.Blob, bool, error) {
 	return worker.volumeClient.FindVolumeForResourceCache(logger, resourceCache)
 }
 
@@ -310,6 +328,147 @@ func (worker *gardenWorker) FindOrCreateContainer(
 		gardenContainer,
 	)
 }
+
+
+func (worker *gardenWorker) FindOrCreateRunnable(
+	ctx context.Context,
+	logger lager.Logger,
+	delegate ImageFetchingDelegate,
+	owner db.ContainerOwner,
+	metadata db.ContainerMetadata,
+	containerSpec ContainerSpec,
+	resourceTypes atc.VersionedResourceTypes,
+) (runner.Runnable, error) {
+
+	var (
+		gardenContainer   gclient.Container
+		createdContainer  db.CreatedContainer
+		creatingContainer db.CreatingContainer
+		containerHandle   string
+		err               error
+	)
+
+	// ensure either creatingContainer or createdContainer exists
+	creatingContainer, createdContainer, err = worker.dbWorker.FindContainer(owner)
+	if err != nil {
+		return nil, err
+	}
+
+	if creatingContainer != nil {
+		containerHandle = creatingContainer.Handle()
+	} else if createdContainer != nil {
+		containerHandle = createdContainer.Handle()
+	} else {
+
+		logger.Debug("creating-container-in-db")
+		creatingContainer, err = worker.dbWorker.CreateContainer(
+			owner,
+			metadata,
+		)
+		if err != nil {
+			logger.Error("failed-to-create-container-in-db", err)
+			if _, ok := err.(db.ContainerOwnerDisappearedError); ok {
+				return nil, ResourceConfigCheckSessionExpiredError
+			}
+		}
+		logger.Debug("created-creating-container-in-db")
+		containerHandle = creatingContainer.Handle()
+	}
+
+	logger = logger.WithData(lager.Data{"container": containerHandle})
+
+	gardenContainer, err = worker.gardenClient.Lookup(containerHandle)
+	if err != nil {
+		if _, ok := err.(garden.ContainerNotFoundError); !ok {
+			logger.Error("failed-to-lookup-creating-container-in-garden", err)
+			return nil, err
+		}
+	}
+
+	// if createdContainer exists, gardenContainer should also exist
+	if createdContainer != nil {
+		logger = logger.WithData(lager.Data{"container": containerHandle})
+		logger.Debug("found-created-container-in-db")
+
+		if gardenContainer == nil {
+			return nil, garden.ContainerNotFoundError{Handle: containerHandle}
+		}
+		return worker.helper.constructGardenWorkerContainer(
+			logger,
+			createdContainer,
+			gardenContainer,
+		)
+	}
+
+	// we now have a creatingContainer. If a gardenContainer does not exist, we
+	// will create one. If it does exist, we will transition the creatingContainer
+	// to created and return a worker.Container
+	if gardenContainer == nil {
+		fetchedImage, err := worker.fetchImageForContainer(
+			ctx,
+			logger,
+			containerSpec.ImageSpec,
+			containerSpec.TeamID,
+			delegate,
+			resourceTypes,
+			creatingContainer,
+		)
+		if err != nil {
+			creatingContainer.Failed()
+			logger.Error("failed-to-fetch-image-for-container", err)
+			return nil, err
+		}
+
+		volumeMounts, err := worker.createVolumes(ctx, logger, fetchedImage.Privileged, creatingContainer, containerSpec)
+		if err != nil {
+			creatingContainer.Failed()
+			logger.Error("failed-to-create-volume-mounts-for-container", err)
+			return nil, err
+		}
+		bindMounts, err := worker.getBindMounts(volumeMounts, containerSpec.BindMounts)
+		if err != nil {
+			creatingContainer.Failed()
+			logger.Error("failed-to-create-bind-mounts-for-container", err)
+			return nil, err
+		}
+
+		logger.Debug("creating-garden-container")
+
+		gardenContainer, err = worker.helper.createGardenContainer(containerSpec, fetchedImage, creatingContainer.Handle(), bindMounts)
+		if err != nil {
+			_, failedErr := creatingContainer.Failed()
+			if failedErr != nil {
+				logger.Error("failed-to-mark-container-as-failed", err)
+			}
+			metric.FailedContainers.Inc()
+
+			logger.Error("failed-to-create-container-in-garden", err)
+			return nil, err
+		}
+
+	}
+
+	logger.Debug("created-container-in-garden")
+
+	metric.ContainersCreated.Inc()
+	createdContainer, err = creatingContainer.Created()
+	if err != nil {
+		logger.Error("failed-to-mark-container-as-created", err)
+
+		_ = worker.gardenClient.Destroy(containerHandle)
+
+		return nil, err
+	}
+
+	logger.Debug("created-container-in-db")
+
+	return worker.helper.constructGardenWorkerContainer(
+		logger,
+		createdContainer,
+		gardenContainer,
+	)
+}
+
 
 func (worker *gardenWorker) getBindMounts(volumeMounts []VolumeMount, bindMountSources []BindMountSource) ([]garden.BindMount, error) {
 	bindMounts := []garden.BindMount{}

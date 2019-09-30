@@ -2,6 +2,7 @@ package resource
 
 import (
 	"context"
+	"github.com/concourse/concourse/atc/runner"
 	"github.com/concourse/concourse/atc/storage"
 	"io"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 //go:generate counterfeiter . ResourceFactory
 
 type ResourceFactory interface {
-	NewResourceForContainer(blob storage.Blob) Resource
+	NewResourceForContainer(runnable runner.Runnable) Resource
 }
 
 //go:generate counterfeiter . Resource
@@ -39,15 +40,15 @@ func ResourcesDir(suffix string) string {
 	return filepath.Join("/tmp", "build", suffix)
 }
 
-func NewResource(blob storage.Blob) *resource {
+func NewResource(runnable runner.Runnable) *resource {
 	return &resource{
-		blob: blob,
+		runnable: runnable,
 	}
 }
 
 type resource struct {
 	//container worker.Container
-	blob storage.Blob
+	runnable runner.Runnable
 
 	ScriptFailure bool
 }
@@ -58,6 +59,6 @@ func NewResourceFactory() *resourceFactory {
 
 type resourceFactory struct{}
 
-func (rf *resourceFactory) NewResourceForContainer(blob storage.Blob) Resource {
-	return NewResource(blob)
+func (rf *resourceFactory) NewResourceForContainer(runnable runner.Runnable) Resource {
+	return NewResource(runnable)
 }
