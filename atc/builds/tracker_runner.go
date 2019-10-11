@@ -1,11 +1,15 @@
 package builds
 
 import (
+	"fmt"
 	"os"
 	"time"
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
+	"github.com/concourse/concourse/atc"
+	"github.com/concourse/concourse/atc/db"
+	"github.com/concourse/concourse/atc/db/lock"
 )
 
 //go:generate counterfeiter . BuildTracker
@@ -24,14 +28,17 @@ type Notifications interface {
 }
 
 type TrackerRunner struct {
-	Tracker       BuildTracker
-	Notifications Notifications
-	Interval      time.Duration
-	Clock         clock.Clock
-	Logger        lager.Logger
+	Tracker          BuildTracker
+	Notifications    Notifications
+	Interval         time.Duration
+	Clock            clock.Clock
+	Logger           lager.Logger
+	LockFactory      lock.LockFactory
+	ComponentFactory db.ComponentFactory
 }
 
 func (runner TrackerRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+	close(ready)
 
 	shutdownNotifier, err := runner.Notifications.Listen("atc_shutdown")
 	if err != nil {
@@ -49,22 +56,83 @@ func (runner TrackerRunner) Run(signals <-chan os.Signal, ready chan<- struct{})
 
 	ticker := runner.Clock.NewTicker(runner.Interval)
 
-	close(ready)
-
-	runner.Tracker.Track()
-
 	for {
 		select {
+		case <-ticker.C():
+			component, _, err := runner.ComponentFactory.Find(atc.ComponentBuildTracker)
+			if err != nil {
+				runner.Logger.Error("failed-to-find-component", err)
+				break
+			}
+
+			if component.Paused() {
+				runner.Logger.Debug("component-is-paused", lager.Data{"name": atc.ComponentBuildTracker})
+				break
+			}
+
+			if !component.IntervalElapsed() {
+				runner.Logger.Debug("component-interval-not-reached", lager.Data{"name": atc.ComponentBuildTracker, "last-ran": component.LastRan()})
+				break
+			}
+
+			lock, acquired, err := runner.LockFactory.Acquire(runner.Logger, lock.NewTaskLockID(atc.ComponentBuildTracker))
+			if err != nil {
+				break
+			}
+
+			if !acquired {
+				runner.Logger.Debug(fmt.Sprintln("failed-to-acquire-a-lock-for-", component.Name()))
+				break
+			}
+
+			runner.Tracker.Track()
+
+			if err = component.UpdateLastRan(); err != nil {
+				runner.Logger.Error("failed-to-update-last-ran", err)
+			}
+
+			err = lock.Release()
+			if err != nil {
+				runner.Logger.Error("failed-to-release", err)
+				break
+			}
 		case <-shutdownNotifier:
 			runner.Logger.Info("received-atc-shutdown-message")
+			component, _, err := runner.ComponentFactory.Find(atc.ComponentBuildTracker)
+			if err != nil {
+				runner.Logger.Error("failed-to-find-component", err)
+				break
+			}
+
+			if component.Paused() {
+				runner.Logger.Debug("component-is-paused", lager.Data{"name": atc.ComponentBuildTracker})
+				break
+			}
+
 			runner.Tracker.Track()
+
+			if err = component.UpdateLastRan(); err != nil {
+				runner.Logger.Error("failed-to-update-last-ran", err)
+			}
 
 		case <-buildNotifier:
 			runner.Logger.Info("received-build-started-message")
+			component, _, err := runner.ComponentFactory.Find(atc.ComponentBuildTracker)
+			if err != nil {
+				runner.Logger.Error("failed-to-find-component", err)
+				break
+			}
+
+			if component.Paused() {
+				runner.Logger.Debug("component-is-paused", lager.Data{"name": atc.ComponentBuildTracker})
+				break
+			}
+
 			runner.Tracker.Track()
 
-		case <-ticker.C():
-			runner.Tracker.Track()
+			if err = component.UpdateLastRan(); err != nil {
+				runner.Logger.Error("failed-to-update-last-ran", err)
+			}
 
 		case <-signals:
 			runner.Logger.Info("releasing-tracker")
