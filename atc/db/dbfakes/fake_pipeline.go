@@ -2,10 +2,10 @@
 package dbfakes
 
 import (
-	"sync"
+	sync "sync"
 
-	"github.com/concourse/concourse/atc"
-	"github.com/concourse/concourse/atc/db"
+	atc "github.com/concourse/concourse/atc"
+	db "github.com/concourse/concourse/atc/db"
 )
 
 type FakePipeline struct {
@@ -141,18 +141,6 @@ type FakePipeline struct {
 	}
 	exposeReturnsOnCall map[int]struct {
 		result1 error
-	}
-	GetAllPendingBuildsStub        func() (map[string][]db.Build, error)
-	getAllPendingBuildsMutex       sync.RWMutex
-	getAllPendingBuildsArgsForCall []struct {
-	}
-	getAllPendingBuildsReturns struct {
-		result1 map[string][]db.Build
-		result2 error
-	}
-	getAllPendingBuildsReturnsOnCall map[int]struct {
-		result1 map[string][]db.Build
-		result2 error
 	}
 	GetBuildsWithVersionAsInputStub        func(int, int) ([]db.Build, error)
 	getBuildsWithVersionAsInputMutex       sync.RWMutex
@@ -1101,61 +1089,6 @@ func (fake *FakePipeline) ExposeReturnsOnCall(i int, result1 error) {
 	fake.exposeReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
-}
-
-func (fake *FakePipeline) GetAllPendingBuilds() (map[string][]db.Build, error) {
-	fake.getAllPendingBuildsMutex.Lock()
-	ret, specificReturn := fake.getAllPendingBuildsReturnsOnCall[len(fake.getAllPendingBuildsArgsForCall)]
-	fake.getAllPendingBuildsArgsForCall = append(fake.getAllPendingBuildsArgsForCall, struct {
-	}{})
-	fake.recordInvocation("GetAllPendingBuilds", []interface{}{})
-	fake.getAllPendingBuildsMutex.Unlock()
-	if fake.GetAllPendingBuildsStub != nil {
-		return fake.GetAllPendingBuildsStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	fakeReturns := fake.getAllPendingBuildsReturns
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakePipeline) GetAllPendingBuildsCallCount() int {
-	fake.getAllPendingBuildsMutex.RLock()
-	defer fake.getAllPendingBuildsMutex.RUnlock()
-	return len(fake.getAllPendingBuildsArgsForCall)
-}
-
-func (fake *FakePipeline) GetAllPendingBuildsCalls(stub func() (map[string][]db.Build, error)) {
-	fake.getAllPendingBuildsMutex.Lock()
-	defer fake.getAllPendingBuildsMutex.Unlock()
-	fake.GetAllPendingBuildsStub = stub
-}
-
-func (fake *FakePipeline) GetAllPendingBuildsReturns(result1 map[string][]db.Build, result2 error) {
-	fake.getAllPendingBuildsMutex.Lock()
-	defer fake.getAllPendingBuildsMutex.Unlock()
-	fake.GetAllPendingBuildsStub = nil
-	fake.getAllPendingBuildsReturns = struct {
-		result1 map[string][]db.Build
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakePipeline) GetAllPendingBuildsReturnsOnCall(i int, result1 map[string][]db.Build, result2 error) {
-	fake.getAllPendingBuildsMutex.Lock()
-	defer fake.getAllPendingBuildsMutex.Unlock()
-	fake.GetAllPendingBuildsStub = nil
-	if fake.getAllPendingBuildsReturnsOnCall == nil {
-		fake.getAllPendingBuildsReturnsOnCall = make(map[int]struct {
-			result1 map[string][]db.Build
-			result2 error
-		})
-	}
-	fake.getAllPendingBuildsReturnsOnCall[i] = struct {
-		result1 map[string][]db.Build
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *FakePipeline) GetBuildsWithVersionAsInput(arg1 int, arg2 int) ([]db.Build, error) {
@@ -2617,8 +2550,6 @@ func (fake *FakePipeline) Invocations() map[string][][]interface{} {
 	defer fake.destroyMutex.RUnlock()
 	fake.exposeMutex.RLock()
 	defer fake.exposeMutex.RUnlock()
-	fake.getAllPendingBuildsMutex.RLock()
-	defer fake.getAllPendingBuildsMutex.RUnlock()
 	fake.getBuildsWithVersionAsInputMutex.RLock()
 	defer fake.getBuildsWithVersionAsInputMutex.RUnlock()
 	fake.getBuildsWithVersionAsOutputMutex.RLock()

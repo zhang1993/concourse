@@ -513,12 +513,14 @@ func (cmd *RunCommand) constructMembers(
 		return nil, err
 	}
 
-	backendMembers, err := cmd.constructBackendMembers(logger, backendConn, lockFactory, secretManager)
+	componentFactory := db.NewComponentFactory(backendConn)
+
+	backendMembers, err := cmd.constructBackendMembers(logger, backendConn, lockFactory, componentFactory, secretManager)
 	if err != nil {
 		return nil, err
 	}
 
-	gcMembers, err := cmd.constructGCMembers(logger, gcConn, lockFactory)
+	gcMembers, err := cmd.constructGCMembers(logger, gcConn, lockFactory, componentFactory)
 	if err != nil {
 		return nil, err
 	}
@@ -717,6 +719,7 @@ func (cmd *RunCommand) constructBackendMembers(
 	logger lager.Logger,
 	dbConn db.Conn,
 	lockFactory lock.LockFactory,
+	componentFactory db.ComponentFactory,
 	secretManager creds.Secrets,
 ) ([]grouper.Member, error) {
 
@@ -808,7 +811,6 @@ func (cmd *RunCommand) constructBackendMembers(
 	dbBuildFactory := db.NewBuildFactory(dbConn, lockFactory, cmd.GC.OneOffBuildGracePeriod)
 	dbCheckFactory := db.NewCheckFactory(dbConn, lockFactory, secretManager, cmd.GlobalResourceCheckTimeout)
 	dbPipelineFactory := db.NewPipelineFactory(dbConn, lockFactory)
-	componentFactory := db.NewComponentFactory(dbConn)
 
 	err = cmd.configureComponentInterval(componentFactory)
 	if err != nil {
@@ -820,7 +822,7 @@ func (cmd *RunCommand) constructBackendMembers(
 	members := []grouper.Member{
 		{Name: "pipelines", Runner: pipelines.SyncRunner{
 			Syncer: cmd.constructPipelineSyncer(
-				logger.Session("pipelines"),
+				logger.Session(atc.ComponentScheduler),
 				dbPipelineFactory,
 				componentFactory,
 				radarSchedulerFactory,
@@ -843,43 +845,6 @@ func (cmd *RunCommand) constructBackendMembers(
 			LockFactory:      lockFactory,
 			ComponentFactory: componentFactory,
 		}},
-
-		{Name: atc.ComponentCollector, Runner: lockrunner.NewRunner(
-			logger.Session(atc.ComponentCollector),
-			gc.NewCollector(
-				gc.NewBuildCollector(dbBuildFactory),
-				gc.NewWorkerCollector(dbWorkerLifecycle),
-				gc.NewResourceCacheUseCollector(dbResourceCacheLifecycle),
-				gc.NewResourceConfigCollector(dbResourceConfigFactory),
-				gc.NewResourceCacheCollector(dbResourceCacheLifecycle),
-				gc.NewArtifactCollector(dbArtifactLifecycle),
-				gc.NewCheckCollector(
-					dbCheckLifecycle,
-					cmd.GC.CheckRecyclePeriod,
-				),
-				gc.NewVolumeCollector(
-					dbVolumeRepository,
-					cmd.GC.MissingGracePeriod,
-				),
-				gc.NewContainerCollector(
-					dbContainerRepository,
-					gc.NewWorkerJobRunner(
-						logger.Session("container-collector-worker-job-runner"),
-						workerProvider,
-						time.Minute,
-					),
-					cmd.GC.MissingGracePeriod,
-				),
-				gc.NewResourceConfigCheckSessionCollector(
-					resourceConfigCheckSessionLifecycle,
-				),
-			),
-			atc.ComponentCollector,
-			lockFactory,
-			componentFactory,
-			clock.NewClock(),
-			runnerInterval,
-		)},
 
 		// run separately so as to not preempt critical GC
 		{Name: atc.ComponentBuildReaper, Runner: lockrunner.NewRunner(
@@ -975,6 +940,7 @@ func (cmd *RunCommand) constructGCMembers(
 	logger lager.Logger,
 	gcConn db.Conn,
 	lockFactory lock.LockFactory,
+	componentFactory db.ComponentFactory,
 ) ([]grouper.Member, error) {
 	// Each component of GC has it's own dedicated connection pool to make sure
 	// that they do not compete with each other, they all run individually
@@ -1081,6 +1047,7 @@ func (cmd *RunCommand) constructGCMembers(
 				collector,
 				name,
 				lockFactory,
+				componentFactory,
 				clock.NewClock(),
 				cmd.GC.Interval,
 			)})
@@ -1446,7 +1413,6 @@ func (cmd *RunCommand) configureComponentInterval(componentFactory db.ComponentF
 		map[string]time.Duration{
 			atc.ComponentBuildReaper:   30 * time.Second,
 			atc.ComponentBuildTracker:  cmd.BuildTrackerInterval,
-			atc.ComponentCollector:     cmd.GC.Interval,
 			atc.ComponentLidarScanner:  cmd.LidarScannerInterval,
 			atc.ComponentLidarChecker:  cmd.LidarCheckerInterval,
 			atc.ComponentScheduler:     10 * time.Second,
