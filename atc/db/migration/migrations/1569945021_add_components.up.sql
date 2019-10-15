@@ -16,8 +16,7 @@ BEGIN;
     ('scanner', '1m'),
     ('checker', '10s'),
     ('reaper', '30s'),
-    ('drainer', '30s');
-    ('collector', '30s'),
+    ('drainer', '30s'),
     ('worker-collector', '30s'),
     ('resource-cache-use-collector', '30s'),
     ('resource-cache-collector', '30s'),
