@@ -832,19 +832,19 @@ func (cmd *RunCommand) constructBackendMembers(
 			Interval: runnerInterval,
 			Clock:    clock.NewClock(),
 		}},
-		{Name: atc.ComponentBuildTracker, Runner: builds.TrackerRunner{
-			Tracker: builds.NewTracker(
+		{Name: atc.ComponentBuildTracker, Runner: builds.NewRunner(
+			logger.Session("tracker-runner"),
+			clock.NewClock(),
+			builds.NewTracker(
 				logger.Session(atc.ComponentBuildTracker),
 				dbBuildFactory,
 				engine,
 			),
-			Notifications:    bus,
-			Interval:         runnerInterval,
-			Clock:            clock.NewClock(),
-			Logger:           logger.Session("tracker-runner"),
-			LockFactory:      lockFactory,
-			ComponentFactory: componentFactory,
-		}},
+			runnerInterval,
+			bus,
+			lockFactory,
+			componentFactory,
+		)},
 
 		// run separately so as to not preempt critical GC
 		{Name: atc.ComponentBuildReaper, Runner: lockrunner.NewRunner(
