@@ -14,6 +14,15 @@ func Worker(workerInfo db.Worker) atc.Worker {
 	if workerInfo.BaggageclaimURL() != nil {
 		baggageclaimURL = *workerInfo.BaggageclaimURL()
 	}
+
+	baggageclaimPeerURL := ""
+	if workerInfo.BaggageclaimPeerURL() != nil {
+		baggageclaimPeerURL = *workerInfo.BaggageclaimPeerURL()
+	}
+	zone := ""
+	if workerInfo.Zone() != nil {
+		zone = *workerInfo.Zone()
+	}
 	version := ""
 	if workerInfo.Version() != nil {
 		version = *workerInfo.Version()
@@ -24,22 +33,24 @@ func Worker(workerInfo db.Worker) atc.Worker {
 	}
 
 	atcWorker := atc.Worker{
-		GardenAddr:       gardenAddr,
-		BaggageclaimURL:  baggageclaimURL,
-		HTTPProxyURL:     workerInfo.HTTPProxyURL(),
-		HTTPSProxyURL:    workerInfo.HTTPSProxyURL(),
-		NoProxy:          workerInfo.NoProxy(),
-		ActiveContainers: workerInfo.ActiveContainers(),
-		ActiveVolumes:    workerInfo.ActiveVolumes(),
-		ActiveTasks:      activeTasks,
-		ResourceTypes:    workerInfo.ResourceTypes(),
-		Platform:         workerInfo.Platform(),
-		Tags:             workerInfo.Tags(),
-		Name:             workerInfo.Name(),
-		Team:             workerInfo.TeamName(),
-		State:            string(workerInfo.State()),
-		Version:          version,
-		Ephemeral:        workerInfo.Ephemeral(),
+		GardenAddr:          gardenAddr,
+		BaggageclaimURL:     baggageclaimURL,
+		BaggageclaimPeerURL: baggageclaimPeerURL,
+		Zone:                zone,
+		HTTPProxyURL:        workerInfo.HTTPProxyURL(),
+		HTTPSProxyURL:       workerInfo.HTTPSProxyURL(),
+		NoProxy:             workerInfo.NoProxy(),
+		ActiveContainers:    workerInfo.ActiveContainers(),
+		ActiveVolumes:       workerInfo.ActiveVolumes(),
+		ActiveTasks:         activeTasks,
+		ResourceTypes:       workerInfo.ResourceTypes(),
+		Platform:            workerInfo.Platform(),
+		Tags:                workerInfo.Tags(),
+		Name:                workerInfo.Name(),
+		Team:                workerInfo.TeamName(),
+		State:               string(workerInfo.State()),
+		Version:             version,
+		Ephemeral:           workerInfo.Ephemeral(),
 	}
 
 	if !workerInfo.StartTime().IsZero() {

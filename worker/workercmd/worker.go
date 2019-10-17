@@ -55,6 +55,8 @@ type WorkerCommand struct {
 
 	Baggageclaim baggageclaimcmd.BaggageclaimCommand `group:"Baggageclaim Configuration" namespace:"baggageclaim"`
 
+	Zone string `long:"zone" description:"zone where this worker lives on."`
+
 	ResourceTypes flag.Dir `long:"resource-types" description:"Path to directory containing resource types the worker should advertise."`
 
 	Logger flag.Lager
@@ -81,6 +83,8 @@ func (cmd *WorkerCommand) Runner(args []string) (ifrit.Runner, error) {
 		return nil, err
 	}
 
+	atcWorker.Zone = cmd.Zone
+	atcWorker.BaggageclaimPeerURL = cmd.Baggageclaim.PeerURL
 	atcWorker.Version = concourse.WorkerVersion
 
 	baggageclaimRunner, err := cmd.baggageclaimRunner(logger.Session("baggageclaim"))
@@ -130,7 +134,7 @@ func (cmd *WorkerCommand) Runner(args []string) (ifrit.Runner, error) {
 			// we've seen destroy calls to baggageclaim hang and lock gc
 			// gc is periodic so we don't need to retry here, we can rely
 			// on the next sweeper tick.
-			Timeout: 5*time.Minute,
+			Timeout: 5 * time.Minute,
 		},
 	)
 

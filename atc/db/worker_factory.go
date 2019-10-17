@@ -41,6 +41,8 @@ var workersQuery = psql.Select(`
 		w.addr,
 		w.state,
 		w.baggageclaim_url,
+		w.baggageclaim_peer_url,
+		w.zone,
 		w.certs_path,
 		w.http_proxy_url,
 		w.https_proxy_url,
@@ -128,6 +130,8 @@ func scanWorker(worker *worker, row scannable) error {
 		addStr        sql.NullString
 		state         string
 		bcURLStr      sql.NullString
+		bcPeerURLStr  sql.NullString
+		zoneStr       sql.NullString
 		certsPathStr  sql.NullString
 		httpProxyURL  sql.NullString
 		httpsProxyURL sql.NullString
@@ -148,6 +152,8 @@ func scanWorker(worker *worker, row scannable) error {
 		&addStr,
 		&state,
 		&bcURLStr,
+		&bcPeerURLStr,
+		&zoneStr,
 		&certsPathStr,
 		&httpProxyURL,
 		&httpsProxyURL,
@@ -177,6 +183,14 @@ func scanWorker(worker *worker, row scannable) error {
 
 	if bcURLStr.Valid {
 		worker.baggageclaimURL = &bcURLStr.String
+	}
+
+	if bcPeerURLStr.Valid {
+		worker.baggageclaimPeerURL = &bcPeerURLStr.String
+	}
+
+	if zoneStr.Valid {
+		worker.zone = &zoneStr.String
 	}
 
 	if certsPathStr.Valid {
@@ -402,6 +416,8 @@ func saveWorker(tx Tx, atcWorker atc.Worker, teamID *int, ttl time.Duration, con
 		tags,
 		atcWorker.Platform,
 		atcWorker.BaggageclaimURL,
+		atcWorker.BaggageclaimPeerURL,
+		atcWorker.Zone,
 		atcWorker.CertsPath,
 		atcWorker.HTTPProxyURL,
 		atcWorker.HTTPSProxyURL,
@@ -433,6 +449,8 @@ func saveWorker(tx Tx, atcWorker atc.Worker, teamID *int, ttl time.Duration, con
 			"tags",
 			"platform",
 			"baggageclaim_url",
+			"baggageclaim_peer_url",
+			"zone",
 			"certs_path",
 			"http_proxy_url",
 			"https_proxy_url",
@@ -458,6 +476,8 @@ func saveWorker(tx Tx, atcWorker atc.Worker, teamID *int, ttl time.Duration, con
 				tags = ?,
 				platform = ?,
 				baggageclaim_url = ?,
+				baggageclaim_peer_url = ?,
+				zone = ?,
 				certs_path = ?,
 				http_proxy_url = ?,
 				https_proxy_url = ?,
@@ -491,25 +511,27 @@ func saveWorker(tx Tx, atcWorker atc.Worker, teamID *int, ttl time.Duration, con
 	}
 
 	savedWorker := &worker{
-		name:             atcWorker.Name,
-		version:          workerVersion,
-		state:            workerState,
-		gardenAddr:       &atcWorker.GardenAddr,
-		baggageclaimURL:  &atcWorker.BaggageclaimURL,
-		certsPath:        atcWorker.CertsPath,
-		httpProxyURL:     atcWorker.HTTPProxyURL,
-		httpsProxyURL:    atcWorker.HTTPSProxyURL,
-		noProxy:          atcWorker.NoProxy,
-		activeContainers: atcWorker.ActiveContainers,
-		activeVolumes:    atcWorker.ActiveVolumes,
-		resourceTypes:    atcWorker.ResourceTypes,
-		platform:         atcWorker.Platform,
-		tags:             atcWorker.Tags,
-		teamName:         atcWorker.Team,
-		teamID:           workerTeamID,
-		startTime:        time.Unix(atcWorker.StartTime, 0),
-		ephemeral:        atcWorker.Ephemeral,
-		conn:             conn,
+		name:                atcWorker.Name,
+		version:             workerVersion,
+		state:               workerState,
+		gardenAddr:          &atcWorker.GardenAddr,
+		baggageclaimURL:     &atcWorker.BaggageclaimURL,
+		baggageclaimPeerURL: &atcWorker.BaggageclaimPeerURL,
+		zone:                &atcWorker.Zone,
+		certsPath:           atcWorker.CertsPath,
+		httpProxyURL:        atcWorker.HTTPProxyURL,
+		httpsProxyURL:       atcWorker.HTTPSProxyURL,
+		noProxy:             atcWorker.NoProxy,
+		activeContainers:    atcWorker.ActiveContainers,
+		activeVolumes:       atcWorker.ActiveVolumes,
+		resourceTypes:       atcWorker.ResourceTypes,
+		platform:            atcWorker.Platform,
+		tags:                atcWorker.Tags,
+		teamName:            atcWorker.Team,
+		teamID:              workerTeamID,
+		startTime:           time.Unix(atcWorker.StartTime, 0),
+		ephemeral:           atcWorker.Ephemeral,
+		conn:                conn,
 	}
 
 	workerBaseResourceTypeIDs := []int{}

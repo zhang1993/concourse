@@ -7,8 +7,11 @@ import (
 
 type Worker struct {
 	// not garden_addr, for backwards-compatibility
-	GardenAddr      string `json:"addr"`
-	BaggageclaimURL string `json:"baggageclaim_url"`
+	GardenAddr          string `json:"addr"`
+	BaggageclaimURL     string `json:"baggageclaim_url"`
+	BaggageclaimPeerURL string `json:"baggageclaim_peer_url"`
+
+	Zone string `json:"zone"`
 
 	CertsPath *string `json:"certs_path,omitempty"`
 
