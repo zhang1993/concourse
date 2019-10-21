@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"testing"
 	"time"
@@ -251,16 +250,24 @@ func deletePods(namespace string, flags ...string) []string {
 	return podNames
 }
 
+//  fn (opts) -> address
+//
+//  make requests to address
+//
+// TODO we might have to discern between `service/` resources (and pod ... )
+//     -- places where we use `service/` or `pod/` will have to be refactored
+//
 func startPortForwardingWithProtocol(namespace, resource, port, protocol string) (*gexec.Session, string) {
-	session := Start(nil, "kubectl", "port-forward", "--namespace="+namespace, resource, ":"+port)
-	Eventually(session.Out).Should(gbytes.Say("Forwarding"))
 
-	address := regexp.MustCompile(`127\.0\.0\.1:[0-9]+`).
-		FindStringSubmatch(string(session.Out.Contents()))
+	// session := Start(nil, "kubectl", "port-forward", "--namespace="+namespace, resource, ":"+port)
+	// Eventually(session.Out).Should(gbytes.Say("Forwarding"))
 
-	Expect(address).NotTo(BeEmpty())
+	// address := regexp.MustCompile(`127\.0\.0\.1:[0-9]+`).
+	// 	FindStringSubmatch(string(session.Out.Contents()))
 
-	return session, protocol + "://" + address[0]
+	// Expect(address).NotTo(BeEmpty())
+
+	return nil, fmt.Sprintf("%s://%s.%s.svc.cluster.local:%s", protocol, resource, namespace, port)
 }
 
 func startPortForwarding(namespace, resource, port string) (*gexec.Session, string) {

@@ -45,7 +45,7 @@ var _ = Describe("External PostgreSQL", func() {
 
 		By("Creating the web proxy")
 		proxySession, atcEndpoint = startPortForwarding(
-			namespace, "service/"+releaseName+"-web", "8080")
+			namespace, releaseName+"-web", "8080")
 	})
 
 	AfterEach(func() {
