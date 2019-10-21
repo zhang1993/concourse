@@ -6,8 +6,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/onsi/gomega/gexec"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -46,7 +44,7 @@ func getPrometheusMetrics(endpoint, releaseName string) (*prometheusMetrics, err
 
 var _ = Describe("Prometheus integration", func() {
 	var (
-		proxySession          *gexec.Session
+		proxySession          interruptible
 		prometheusReleaseName string
 		prometheusEndpoint    string
 	)

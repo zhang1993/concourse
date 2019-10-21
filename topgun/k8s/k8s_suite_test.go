@@ -16,7 +16,7 @@ import (
 
 	"github.com/caarlos0/env"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
+	"github.com/onsi/ginkgo/gomega/gexec"
 
 	. "github.com/concourse/concourse/topgun"
 	. "github.com/onsi/ginkgo"
@@ -130,7 +130,7 @@ type podListResponse struct {
 	Items []pod `json:"items"`
 }
 
-func helmDeploy(releaseName, namespace, chartDir string, args ...string) *gexec.Session {
+func helmDeploy(releaseName, namespace, chartDir string, args ...string) *gingko.Session {
 	helmArgs := []string{
 		"upgrade",
 		"--install",
@@ -291,7 +291,7 @@ func getService(namespace, name string) service {
 
 // TODO implement
 //
-func inCluster () bool {
+func inCluster() bool {
 	return true
 }
 
@@ -335,20 +335,20 @@ func getPodAddress(namespace, pod string) string {
 // //     -- places where we use `service/` or `pod/` will have to be refactored
 // //
 func startPortForwardingWithProtocol(namespace, resource, port, protocol string) (interruptible, string) {
-// 	// session := Start(nil, "kubectl", "port-forward", "--namespace="+namespace, resource, ":"+port)
-// 	// Eventually(session.Out).Should(gbytes.Say("Forwarding"))
-// 
-// 	// address := regexp.MustCompile(`127\.0\.0\.1:[0-9]+`).
-// 	// 	FindStringSubmatch(string(session.Out.Contents()))
-// 
-// 	// Expect(address).NotTo(BeEmpty())
-// 
-// 	return &noopInterruptible{}, fmt.Sprintf("%s://%s.%s.svc.cluster.local:%s", protocol, resource, namespace, port)
+	// 	// session := Start(nil, "kubectl", "port-forward", "--namespace="+namespace, resource, ":"+port)
+	// 	// Eventually(session.Out).Should(gbytes.Say("Forwarding"))
+	//
+	// 	// address := regexp.MustCompile(`127\.0\.0\.1:[0-9]+`).
+	// 	// 	FindStringSubmatch(string(session.Out.Contents()))
+	//
+	// 	// Expect(address).NotTo(BeEmpty())
+	//
+	// 	return &noopInterruptible{}, fmt.Sprintf("%s://%s.%s.svc.cluster.local:%s", protocol, resource, namespace, port)
 	return &noopInterruptible, "FOO"
 }
 
 func startPortForwarding(namespace, resource, port string) (interruptible, string) {
-// 	return startPortForwardingWithProtocol(namespace, resource, port, "http")
+	// 	return startPortForwardingWithProtocol(namespace, resource, port, "http")
 	return &noopInterruptible, "FOO"
 }
 
@@ -361,7 +361,7 @@ func getRunningWorkers(workers []Worker) (running []Worker) {
 	return
 }
 
-func cleanup(releaseName, namespace string, proxySession *gexec.Session) {
+func cleanup(releaseName, namespace string, proxySession interruptible) {
 	helmDestroy(releaseName)
 	Run(nil, "kubectl", "delete", "namespace", namespace, "--wait=false")
 

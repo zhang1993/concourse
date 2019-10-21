@@ -3,8 +3,6 @@ package k8s_test
 import (
 	"time"
 
-	"github.com/onsi/gomega/gexec"
-
 	. "github.com/concourse/concourse/topgun"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -15,7 +13,7 @@ var _ = Describe("DNS Resolution", func() {
 
 	var (
 		atcEndpoint  string
-		proxySession *gexec.Session
+		proxySession interruptible
 	)
 
 	BeforeEach(func() {

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 
 	. "github.com/concourse/concourse/topgun"
 	. "github.com/onsi/ginkgo"
@@ -14,7 +13,7 @@ import (
 var _ = Describe("Worker lifecycle", func() {
 
 	var (
-		proxySession *gexec.Session
+		proxySession interruptible
 		atcEndpoint  string
 		gracePeriod  string
 	)

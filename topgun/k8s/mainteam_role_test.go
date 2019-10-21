@@ -1,8 +1,6 @@
 package k8s_test
 
 import (
-	"github.com/onsi/gomega/gexec"
-
 	. "github.com/concourse/concourse/topgun"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -10,7 +8,7 @@ import (
 
 var _ = Describe("Main team role config", func() {
 	var (
-		proxySession        *gexec.Session
+		proxySession        interruptible
 		atcEndpoint         string
 		helmDeployTestFlags []string
 		username            = "test-viewer"

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 	"github.com/square/certstrap/pkix"
 
 	. "github.com/onsi/ginkgo"
@@ -45,7 +44,7 @@ var _ = Describe("Web HTTP or HTTPS(TLS) termination at web node", func() {
 
 	Context("When configured correctly", func() {
 		var (
-			proxySession  *gexec.Session
+			proxySession  interruptible
 			atcEndpoint   string
 			chartConfig   []string
 			proxyPort     string

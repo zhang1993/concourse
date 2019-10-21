@@ -3,15 +3,13 @@ package k8s_test
 import (
 	"path"
 
-	"github.com/onsi/gomega/gexec"
-
 	. "github.com/onsi/ginkgo"
 )
 
 var _ = Describe("External PostgreSQL", func() {
 	var (
 		pgReleaseName string
-		proxySession  *gexec.Session
+		proxySession  interruptible
 		atcEndpoint   string
 	)
 

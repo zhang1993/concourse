@@ -3,8 +3,6 @@ package k8s_test
 import (
 	"time"
 
-	"github.com/onsi/gomega/gexec"
-
 	. "github.com/concourse/concourse/topgun"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,7 +11,7 @@ import (
 var _ = Describe("TSA Service Node Port", func() {
 
 	var (
-		proxySession *gexec.Session
+		proxySession interruptible
 	)
 
 	JustBeforeEach(func() {

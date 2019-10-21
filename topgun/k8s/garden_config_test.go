@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/onsi/gomega/gexec"
-
 	. "github.com/concourse/concourse/topgun"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,7 +11,7 @@ import (
 
 var _ = Describe("Garden Config", func() {
 	var (
-		proxySession        *gexec.Session
+		proxySession        interruptible
 		gardenEndpoint      string
 		helmDeployTestFlags []string
 	)
