@@ -44,7 +44,7 @@ var _ = Describe("External PostgreSQL", func() {
 		waitAllPodsInNamespaceToBeReady(namespace)
 
 		By("Creating the web proxy")
-		proxySession, atcEndpoint = startPortForwarding(
+		proxySession, atcEndpoint = serveService(
 			namespace, releaseName+"-web", "8080")
 	})
 

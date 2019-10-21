@@ -261,13 +261,13 @@ func deletePods(namespace string, flags ...string) []string {
 	return podNames
 }
 
-type interruptable interface {
+type interruptible interface {
 	Interrupt() (err error)
 }
 
-type noopInterrutable struct{}
+type noopInterruptible struct{}
 
-func (i *noopInterrutable) Interrupt() (err error) {
+func (i *noopInterruptible) Interrupt() (err error) {
 	return
 }
 
@@ -289,12 +289,33 @@ func getService(namespace, name string) service {
 	return svc
 }
 
-func servePod(namespace, pod, port string) (interruptable, string) {
+// TODO implement
+//
+func inCluster () bool {
+	return true
+}
+
+// TODO think about this when dealing with nodeport
+//
+func getServiceAddress(namespace, serviceName string) string {
+	service := getService(namespace, serviceName)
+	return service.Spec.ClusterIP
+}
+
+func servePod(namespace, pod, port string) (interruptible, string) {
 	if inCluster() {
-		return noopInterruptable{}, getPodAddress(namespace, pod) + ":" + port
+		return noopInterruptible{}, getPodAddress(namespace, pod) + ":" + port
 	}
 
 	return portForwardPod(namespace, pod, port)
+}
+
+func serveService(namespace, service, port string) (interruptible, string) {
+	if inCluster() {
+		return noopInterruptible{}, getServiceAddress(namespace, service) + ":" + port
+	}
+
+	return portForwardService(namespace, service, port)
 }
 
 func getPodAddress(namespace, pod string) string {
@@ -306,27 +327,29 @@ func getPodAddress(namespace, pod string) string {
 	return pods[0].Status.Ip
 }
 
-//  fn (opts) -> address
-//
-//  make requests to address
-//
-// TODO we might have to discern between `service/` resources (and pod ... )
-//     -- places where we use `service/` or `pod/` will have to be refactored
-//
-func startPortForwardingWithProtocol(namespace, resource, port, protocol string) (interruptable, string) {
-	// session := Start(nil, "kubectl", "port-forward", "--namespace="+namespace, resource, ":"+port)
-	// Eventually(session.Out).Should(gbytes.Say("Forwarding"))
-
-	// address := regexp.MustCompile(`127\.0\.0\.1:[0-9]+`).
-	// 	FindStringSubmatch(string(session.Out.Contents()))
-
-	// Expect(address).NotTo(BeEmpty())
-
-	return &noopInterrutable{}, fmt.Sprintf("%s://%s.%s.svc.cluster.local:%s", protocol, resource, namespace, port)
+// //  fn (opts) -> address
+// //
+// //  make requests to address
+// //
+// // TODO we might have to discern between `service/` resources (and pod ... )
+// //     -- places where we use `service/` or `pod/` will have to be refactored
+// //
+func startPortForwardingWithProtocol(namespace, resource, port, protocol string) (interruptible, string) {
+// 	// session := Start(nil, "kubectl", "port-forward", "--namespace="+namespace, resource, ":"+port)
+// 	// Eventually(session.Out).Should(gbytes.Say("Forwarding"))
+// 
+// 	// address := regexp.MustCompile(`127\.0\.0\.1:[0-9]+`).
+// 	// 	FindStringSubmatch(string(session.Out.Contents()))
+// 
+// 	// Expect(address).NotTo(BeEmpty())
+// 
+// 	return &noopInterruptible{}, fmt.Sprintf("%s://%s.%s.svc.cluster.local:%s", protocol, resource, namespace, port)
+	return &noopInterruptible, "FOO"
 }
 
-func startPortForwarding(namespace, resource, port string) (interruptable, string) {
-	return startPortForwardingWithProtocol(namespace, resource, port, "http")
+func startPortForwarding(namespace, resource, port string) (interruptible, string) {
+// 	return startPortForwardingWithProtocol(namespace, resource, port, "http")
+	return &noopInterruptible, "FOO"
 }
 
 func getRunningWorkers(workers []Worker) (running []Worker) {
