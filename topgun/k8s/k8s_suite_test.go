@@ -115,6 +115,17 @@ type pod struct {
 	} `json:"metadata"`
 }
 
+type service struct {
+	Metadata struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	} `json:"metadata"`
+	Spec struct {
+		ClusterIP string `json:"clusterIP"`
+		Type      string `json:"type"`
+	} `json:"spec"`
+}
+
 type podListResponse struct {
 	Items []pod `json:"items"`
 }
@@ -250,6 +261,51 @@ func deletePods(namespace string, flags ...string) []string {
 	return podNames
 }
 
+type interruptable interface {
+	Interrupt() (err error)
+}
+
+type noopInterrutable struct{}
+
+func (i *noopInterrutable) Interrupt() (err error) {
+	return
+}
+
+func getService(namespace, name string) service {
+	var (
+		args = []string{
+			"--namespace=" + namespace,
+			"--output=json",
+		}
+		svc = service{}
+	)
+
+	session := Start(nil, "kubectl", args...)
+	Wait(session)
+
+	err := json.Unmarshal(session.Out.Contents(), &svc)
+	Expect(err).ToNot(HaveOccurred())
+
+	return svc
+}
+
+func servePod(namespace, pod, port string) (interruptable, string) {
+	if inCluster() {
+		return noopInterruptable{}, getPodAddress(namespace, pod) + ":" + port
+	}
+
+	return portForwardPod(namespace, pod, port)
+}
+
+func getPodAddress(namespace, pod string) string {
+	// TODO add flag for filtering pod list down by name
+	pods := getPods(namespace, pod)
+
+	// assert_eq(len(pods), 1)
+
+	return pods[0].Status.Ip
+}
+
 //  fn (opts) -> address
 //
 //  make requests to address
@@ -257,8 +313,7 @@ func deletePods(namespace string, flags ...string) []string {
 // TODO we might have to discern between `service/` resources (and pod ... )
 //     -- places where we use `service/` or `pod/` will have to be refactored
 //
-func startPortForwardingWithProtocol(namespace, resource, port, protocol string) (*gexec.Session, string) {
-
+func startPortForwardingWithProtocol(namespace, resource, port, protocol string) (interruptable, string) {
 	// session := Start(nil, "kubectl", "port-forward", "--namespace="+namespace, resource, ":"+port)
 	// Eventually(session.Out).Should(gbytes.Say("Forwarding"))
 
@@ -267,10 +322,10 @@ func startPortForwardingWithProtocol(namespace, resource, port, protocol string)
 
 	// Expect(address).NotTo(BeEmpty())
 
-	return nil, fmt.Sprintf("%s://%s.%s.svc.cluster.local:%s", protocol, resource, namespace, port)
+	return &noopInterrutable{}, fmt.Sprintf("%s://%s.%s.svc.cluster.local:%s", protocol, resource, namespace, port)
 }
 
-func startPortForwarding(namespace, resource, port string) (*gexec.Session, string) {
+func startPortForwarding(namespace, resource, port string) (interruptable, string) {
 	return startPortForwardingWithProtocol(namespace, resource, port, "http")
 }
 
