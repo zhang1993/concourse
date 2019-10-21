@@ -53,7 +53,7 @@ var _ = Describe("External PostgreSQL", func() {
 		cleanup(releaseName, namespace, proxySession)
 	})
 
-	It("can have pipelines set", func() {
+	FIt("can have pipelines set", func() {
 		defer proxySession.Interrupt()
 
 		By("Logging in")
