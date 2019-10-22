@@ -1,0 +1,30 @@
+resources:
+  - name: res1
+    tags: [common]
+    type: time
+    source: {interval: 10s}
+  - name: res2
+    tags: [common]
+    type: time
+    source: {interval: 10s}
+
+jobs:
+  - name: test
+    plan:
+      - in_parallel:
+        - get: res1
+          tags: [worker1]
+        - get: res2
+          tags: [worker1]
+      - task: task
+        tags: [worker2]
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source: {repository: busybox}
+          inputs:
+            - name: res1
+            - name: res2
+          run:
+            path: ls

@@ -7,11 +7,10 @@ services:
     - 6543:5432
     environment:
       POSTGRES_DB: concourse
-      POSTGRES_USER: dev
       POSTGRES_PASSWORD: dev
+      POSTGRES_USER: dev
 
   web:
-    build: .
     image: concourse/concourse:local
     volumes:
     - .:/src
@@ -20,33 +19,38 @@ services:
     ports:
     - 8080:8080
     environment:
-      CONCOURSE_LOG_LEVEL: debug
-      CONCOURSE_POSTGRES_HOST: db
-      CONCOURSE_POSTGRES_USER: dev
-      CONCOURSE_POSTGRES_PASSWORD: dev
-      CONCOURSE_POSTGRES_DATABASE: concourse
-      CONCOURSE_EXTERNAL_URL: http://localhost:8080
       CONCOURSE_ADD_LOCAL_USER: test:test,guest:guest
-      CONCOURSE_MAIN_TEAM_LOCAL_USER: test
       CONCOURSE_CLUSTER_NAME: dev
+      CONCOURSE_EXTERNAL_URL: http://localhost:8080
+      CONCOURSE_MAIN_TEAM_LOCAL_USER: test
+      CONCOURSE_POSTGRES_DATABASE: concourse
+      CONCOURSE_POSTGRES_HOST: db
+      CONCOURSE_POSTGRES_PASSWORD: dev
+      CONCOURSE_POSTGRES_USER: dev
 
-  worker:
-    build: .
+  worker1: &worker
     image: concourse/concourse:local
     command: worker
     privileged: true
     depends_on: [web]
     ports:
-    - 7777:7777
-    - 7788:7788
+      - 9000:7777
     stop_signal: SIGUSR2
-    environment:
-      CONCOURSE_LOG_LEVEL: debug
-      CONCOURSE_TSA_HOST: web:2222
-
-      # avoid using loopbacks
-      CONCOURSE_BAGGAGECLAIM_DRIVER: overlay
-
-      # so we can reach Garden/Baggageclaim for debugging
-      CONCOURSE_BIND_IP: 0.0.0.0
+    environment: &worker-env
       CONCOURSE_BAGGAGECLAIM_BIND_IP: 0.0.0.0
+      CONCOURSE_BAGGAGECLAIM_DRIVER: overlay
+      CONCOURSE_BAGGAGECLAIM_PEER_URL: http://worker1:7777
+      CONCOURSE_BIND_IP: 0.0.0.0
+      CONCOURSE_LOG_LEVEL: debug
+      CONCOURSE_TAG: common,worker1
+      CONCOURSE_TSA_HOST: web:2222
+      CONCOURSE_ZONE: z1
+
+  worker2:
+    <<: *worker
+    ports:
+      - 9001:7777
+    environment:
+      <<: *worker-env
+      CONCOURSE_BAGGAGECLAIM_PEER_URL: http://worker2:7777
+      CONCOURSE_TAG: common,worker2

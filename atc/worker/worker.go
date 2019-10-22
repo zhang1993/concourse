@@ -5,20 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/concourse/baggageclaim"
-	"github.com/concourse/concourse/atc/metric"
-	"github.com/concourse/concourse/atc/worker/gclient"
-	"golang.org/x/sync/errgroup"
-
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
+	"github.com/concourse/baggageclaim"
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/db"
+	"github.com/concourse/concourse/atc/metric"
+	"github.com/concourse/concourse/atc/worker/gclient"
 	"github.com/cppforlife/go-semi-semantic/version"
+	"golang.org/x/sync/errgroup"
 )
 
 const userPropertyName = "user"
@@ -34,6 +34,7 @@ type Worker interface {
 	Name() string
 	ResourceTypes() []atc.WorkerResourceType
 	Tags() atc.Tags
+	Zone() string
 	Uptime() time.Duration
 	IsOwnedByTeam() bool
 	Ephemeral() bool
@@ -449,6 +450,8 @@ func (worker *gardenWorker) createVolumes(
 				desiredMountPath: cleanedInputPath,
 			})
 		} else {
+			// [cc] mountableRemoteInput
+			//
 			nonlocalInputs = append(nonlocalInputs, mountableRemoteInput{
 				desiredArtifact:  inputSource.Source(),
 				desiredMountPath: cleanedInputPath,
@@ -561,6 +564,8 @@ func (worker *gardenWorker) cloneRemoteVolumes(
 	mounts := make([]VolumeMount, len(nonLocals))
 	g, groupCtx := errgroup.WithContext(ctx)
 
+	debug.PrintStack()
+
 	for i, nonLocalInput := range nonLocals {
 		// this is to ensure each go func gets its own non changing copy of the iterator
 		i, nonLocalInput := i, nonLocalInput
@@ -583,6 +588,8 @@ func (worker *gardenWorker) cloneRemoteVolumes(
 		}
 
 		g.Go(func() error {
+			// [cc] actual streaming
+			//
 			err = nonLocalInput.desiredArtifact.StreamTo(groupCtx, logger.Session("stream-to", destData), inputVolume)
 			if err != nil {
 				return err
@@ -643,6 +650,14 @@ func (worker *gardenWorker) ResourceTypes() []atc.WorkerResourceType {
 
 func (worker *gardenWorker) Tags() atc.Tags {
 	return worker.dbWorker.Tags()
+}
+
+func (worker *gardenWorker) Zone() string {
+	if worker.dbWorker.Zone() == nil {
+		return ""
+	}
+
+	return *worker.dbWorker.Zone()
 }
 
 func (worker *gardenWorker) Ephemeral() bool {

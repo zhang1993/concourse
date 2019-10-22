@@ -15,6 +15,7 @@ type VersionedSource interface {
 	Version() atc.Version
 	Metadata() []atc.MetadataField
 
+	StreamTo(context.Context, string) (io.ReadCloser, error)
 	StreamOut(context.Context, string) (io.ReadCloser, error)
 	StreamIn(context.Context, string, io.Reader) error
 

@@ -252,6 +252,10 @@ func (s *getArtifactSource) VolumeOn(logger lager.Logger, worker worker.Worker) 
 
 // StreamTo streams the resource's data to the destination.
 func (s *getArtifactSource) StreamTo(ctx context.Context, logger lager.Logger, destination worker.ArtifactDestination) error {
+	if s.Zone() == destination.Zone() {
+		return s.versionedSource.StreamTo(ctx, destination)
+	}
+
 	return streamToHelper(ctx, s.versionedSource, logger, destination)
 }
 

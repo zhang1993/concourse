@@ -22,6 +22,7 @@ type Volume interface {
 
 	StreamIn(ctx context.Context, path string, tarStream io.Reader) error
 	StreamOut(ctx context.Context, path string) (io.ReadCloser, error)
+	StreamTo(ctx context.Context, srcPath, dstHandle, dstPath string) (io.ReadCloser, error)
 
 	COWStrategy() baggageclaim.COWStrategy
 
