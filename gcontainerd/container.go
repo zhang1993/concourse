@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
-	"github.com/nu7hatch/gouuid"
+	uuid "github.com/nu7hatch/gouuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pkg/errors"
 )
