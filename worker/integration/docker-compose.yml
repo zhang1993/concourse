@@ -1,0 +1,10 @@
+version: '3'
+services:
+  worker_test:
+    image: runtime-test
+    build: /Users/pivotal/workspace/concourse/worker/workercmd
+    volumes:
+    - /Users/pivotal/workspace/concourse:/concourse
+    - /Users/pivotal/Documents:/key
+    working_dir: /concourse/worker/integration
+    command: go test
