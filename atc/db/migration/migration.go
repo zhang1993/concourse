@@ -29,7 +29,7 @@ func NewOpenHelper(
 		lock.NewDatabaseMigrationLockID()[0],
 		source,
 		goMigrationsRunner,
-		&oldSchemaMigrationAdapter{})
+		&OldSchemaMigrationAdapter{})
 
 	return &OpenHelper{
 		driver,
@@ -119,20 +119,19 @@ func checkTableExist(db *sql.DB, tableName string) (bool, error) {
 		defer rows.Close()
 	}
 
-	if err == nil {
-		return true, nil
-	}
-
-	if strings.Contains(err.Error(), "does not exist") {
-		return false, nil
-	} else {
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return false, nil
+		}
 		return false, err
 	}
+
+	return true, nil
 }
 
-type oldSchemaMigrationAdapter struct{}
+type OldSchemaMigrationAdapter struct{}
 
-func (adapter *oldSchemaMigrationAdapter) MigrateFromOldSchema(db *sql.DB, toVersion int) (int, error) {
+func (adapter *OldSchemaMigrationAdapter) ConvertFromOldSchema(db *sql.DB, toVersion int) (int, error) {
 	oldSchemaExists, err := checkTableExist(db, "schema_migrations")
 	if err != nil {
 		return 0, err
@@ -162,7 +161,7 @@ func (adapter *oldSchemaMigrationAdapter) MigrateFromOldSchema(db *sql.DB, toVer
 	return existingVersion, nil
 }
 
-func (adapter *oldSchemaMigrationAdapter) MigrateToOldSchema(db *sql.DB, toVersion int) error {
+func (adapter *OldSchemaMigrationAdapter) ConvertToOldSchema(db *sql.DB, toVersion int) error {
 	newMigrationsHistoryFirstVersion := 1532706545
 
 	if toVersion >= newMigrationsHistoryFirstVersion {
@@ -194,6 +193,6 @@ func (adapter *oldSchemaMigrationAdapter) MigrateToOldSchema(db *sql.DB, toVersi
 	return nil
 }
 
-func (adapter *oldSchemaMigrationAdapter) CurrentVersion(db *sql.DB) (int, error) {
+func (adapter *OldSchemaMigrationAdapter) CurrentVersion(db *sql.DB) (int, error) {
 	return 0, errors.New("not implemented")
 }
