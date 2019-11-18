@@ -1782,21 +1782,4 @@ var _ = Describe("Pipeline", func() {
 		})
 	})
 
-	// XXX: FIX
-	// Describe("UpdateLastScheduled", func() {
-	// 	var requestedTime time.Time
-	// 	BeforeEach(func() {
-	// 		requestedTime = time.Now()
-
-	// 		err := pipeline.UpdateLastScheduled(requestedTime)
-	// 		Expect(err).ToNot(HaveOccurred())
-	// 	})
-
-	// 	It("update last scheduled to be the given requested time", func() {
-	// 		var lastScheduled time.Time
-	// 		err := dbConn.QueryRow("SELECT last_scheduled FROM pipelines WHERE id = $1", pipeline.ID()).Scan(&lastScheduled)
-	// 		Expect(err).ToNot(HaveOccurred())
-	// 		Expect(lastScheduled).Should(BeTemporally("==", requestedTime))
-	// 	})
-	// })
 })
