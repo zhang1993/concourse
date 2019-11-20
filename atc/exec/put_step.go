@@ -164,8 +164,7 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 		StderrWriter: step.delegate.Stderr(),
 	}
 
-	//TODO: add a test to validate the correct source and params are passed
-	res := step.resourceFactory.NewResource(source, params, nil)
+	resourceToPut := step.resourceFactory.NewResource(source, params, nil)
 
 	step.delegate.Starting(logger)
 
@@ -179,7 +178,7 @@ func (step *PutStep) Run(ctx context.Context, state RunState) error {
 		step.containerMetadata,
 		imageSpec,
 		processSpec,
-		res,
+		resourceToPut,
 	)
 
 	versionResult := result.VersionResult
