@@ -259,17 +259,6 @@ sideBarHandleCallback callback ( model, effects ) =
                                         )
                                 )
 
-                        SubPage.DashboardModel _ ->
-                            SideBar.handleCallback
-                                (case callback of
-                                    APIDataFetched (Ok ( _, apiData )) ->
-                                        PipelinesFetched (Ok apiData.pipelines)
-
-                                    _ ->
-                                        callback
-                                )
-                                RemoteData.NotAsked
-
                         _ ->
                             SideBar.handleCallback callback <|
                                 RemoteData.NotAsked

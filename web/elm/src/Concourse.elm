@@ -879,7 +879,6 @@ decodeCause =
 
 type alias APIData =
     { teams : List Team
-    , pipelines : List Pipeline
     }
 
 
