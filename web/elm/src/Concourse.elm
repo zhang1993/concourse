@@ -1,6 +1,5 @@
 module Concourse exposing
-    ( APIData
-    , AuthSession
+    ( AuthSession
     , AuthToken
     , Build
     , BuildDuration
@@ -871,15 +870,6 @@ decodeCause =
     Json.Decode.succeed Cause
         |> andMap (Json.Decode.field "versioned_resource_id" Json.Decode.int)
         |> andMap (Json.Decode.field "build_id" Json.Decode.int)
-
-
-
--- APIData
-
-
-type alias APIData =
-    { teams : List Team
-    }
 
 
 
