@@ -22,7 +22,7 @@ module Dashboard.Group exposing
 import Concourse
 import Dashboard.Group.Models exposing (Group, Pipeline)
 import Dashboard.Group.Tag as Tag
-import Dashboard.Models exposing (DragState(..), DropState(..))
+import Dashboard.Models exposing (DashboardError, DragState(..), DropState(..))
 import Dashboard.Pipeline as Pipeline
 import Dashboard.Styles as Styles
 import Dict exposing (Dict)
@@ -37,6 +37,7 @@ import Message.Effects as Effects
 import Message.Message exposing (DomID(..), Message(..))
 import Monocle.Optional
 import Ordering exposing (Ordering)
+import RemoteData exposing (RemoteData)
 import Time
 import UserState exposing (UserState(..))
 
@@ -191,7 +192,7 @@ view :
     ->
         { dragState : DragState
         , dropState : DropState
-        , now : Time.Posix
+        , now : RemoteData DashboardError Time.Posix
         , hovered : HoverState.HoverState
         , pipelineRunningKeyframes : String
         , pipelinesWithResourceErrors : Dict ( String, String ) Bool

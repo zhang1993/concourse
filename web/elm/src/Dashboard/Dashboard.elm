@@ -16,13 +16,7 @@ import Dashboard.Filter as Filter
 import Dashboard.Footer as Footer
 import Dashboard.Group as Group
 import Dashboard.Group.Models exposing (Group, Pipeline)
-import Dashboard.Models as Models
-    exposing
-        ( DashboardError(..)
-        , Dropdown(..)
-        , Model
-        , SubState
-        )
+import Dashboard.Models as Models exposing (DashboardError(..), DragState(..), DropState(..), Dropdown(..), Model, SubState)
 import Dashboard.SearchBar as SearchBar
 import Dashboard.Styles as Styles
 import Dashboard.Text as Text
@@ -65,7 +59,7 @@ import Monocle.Compose exposing (optionalWithLens, optionalWithOptional)
 import Monocle.Lens
 import Monocle.Optional
 import MonocleHelpers exposing (bind, modifyWithEffect)
-import RemoteData
+import RemoteData exposing (RemoteData)
 import Routes
 import ScreenSize exposing (ScreenSize(..))
 import SideBar.SideBar as SideBar
@@ -418,7 +412,7 @@ updateBody msg ( model, effects ) =
             ( newModel, effects ++ unAccumulatedEffects )
 
         Click LogoutButton ->
-            ( { model | state = RemoteData.NotAsked }, effects )
+            ( { model | teams = [], pipelines = [] }, effects )
 
         Click (PipelineButton pipelineId) ->
             let
@@ -565,16 +559,10 @@ dashboardView :
     -> Html Message
 dashboardView session model =
     case model.state of
-        RemoteData.NotAsked ->
-            Html.text ""
-
-        RemoteData.Loading ->
-            Html.text ""
-
         RemoteData.Failure (Turbulence path) ->
             turbulenceView path
 
-        RemoteData.Success substate ->
+        _ ->
             Html.div
                 (class (.pageBodyClass Message.Effects.stickyHeaderConfig)
                     :: Styles.content model.highDensity
@@ -584,7 +572,7 @@ dashboardView session model =
                     :: pipelinesView
                         session
                         { teams = model.teams
-                        , substate = substate
+                        , substate = model.state
                         , query = model.query
                         , hovered = session.hovered
                         , pipelineRunningKeyframes =
@@ -706,7 +694,7 @@ pipelinesView :
     { a | userState : UserState.UserState }
     ->
         { teams : List Concourse.Team
-        , substate : Models.SubState
+        , substate : RemoteData DashboardError Models.SubState
         , hovered : HoverState.HoverState
         , pipelineRunningKeyframes : String
         , query : String
@@ -740,9 +728,13 @@ pipelinesView session params =
                     |> List.map
                         (Group.view
                             session
-                            { dragState = params.substate.dragState
-                            , dropState = params.substate.dropState
-                            , now = params.substate.now
+                            { dragState =
+                                RemoteData.map .dragState params.substate
+                                    |> RemoteData.withDefault NotDragging
+                            , dropState =
+                                RemoteData.map .dropState params.substate
+                                    |> RemoteData.withDefault NotDropping
+                            , now = RemoteData.map .now params.substate
                             , hovered = params.hovered
                             , pipelineRunningKeyframes = params.pipelineRunningKeyframes
                             , pipelinesWithResourceErrors = params.pipelinesWithResourceErrors
