@@ -55,7 +55,7 @@ type ImageResourceFetcher interface {
 }
 
 type imageResourceFetcherFactory struct {
-	resourceFactory resource.ResourceFactory
+	resourceFactory         resource.ResourceFactory
 	dbResourceCacheFactory  db.ResourceCacheFactory
 	dbResourceConfigFactory db.ResourceConfigFactory
 	resourceFetcher         worker.Fetcher
@@ -68,7 +68,7 @@ func NewImageResourceFetcherFactory(
 	resourceFetcher worker.Fetcher,
 ) ImageResourceFetcherFactory {
 	return &imageResourceFetcherFactory{
-		resourceFactory: resourceFactory,
+		resourceFactory:         resourceFactory,
 		dbResourceCacheFactory:  dbResourceCacheFactory,
 		dbResourceConfigFactory: dbResourceConfigFactory,
 		resourceFetcher:         resourceFetcher,
@@ -86,7 +86,7 @@ func (f *imageResourceFetcherFactory) NewImageResourceFetcher(
 	return &imageResourceFetcher{
 		worker:                  worker,
 		resourceFetcher:         f.resourceFetcher,
-		resourceFactory: f.resourceFactory,
+		resourceFactory:         f.resourceFactory,
 		dbResourceCacheFactory:  f.dbResourceCacheFactory,
 		dbResourceConfigFactory: f.dbResourceConfigFactory,
 
@@ -101,7 +101,7 @@ func (f *imageResourceFetcherFactory) NewImageResourceFetcher(
 type imageResourceFetcher struct {
 	worker                  worker.Worker
 	resourceFetcher         worker.Fetcher
-	resourceFactory resource.ResourceFactory
+	resourceFactory         resource.ResourceFactory
 	dbResourceCacheFactory  db.ResourceCacheFactory
 	dbResourceConfigFactory db.ResourceConfigFactory
 
@@ -205,7 +205,8 @@ func (i *imageResourceFetcher) Fetch(
 		return nil, nil, nil, ErrImageGetDidNotProduceVolume
 	}
 
-	reader, err := volume.StreamOut(ctx, ImageMetadataFile)
+	// TODO-Now passing ctx here causes TestFlight failure which is quite peculiar, however, we should definitely NOT pass context.TODO instead
+	reader, err := volume.StreamOut(context.TODO(), ImageMetadataFile)
 	if err != nil {
 		return nil, nil, nil, err
 	}
