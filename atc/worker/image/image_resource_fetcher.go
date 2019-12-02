@@ -206,7 +206,7 @@ func (i *imageResourceFetcher) Fetch(
 	}
 
 	// TODO-Now passing ctx here causes TestFlight failure which is quite peculiar, however, we should definitely NOT pass context.TODO instead
-	reader, err := volume.StreamOut(context.TODO(), ImageMetadataFile)
+	reader, err := volume.StreamOut(ctx, ImageMetadataFile)
 	if err != nil {
 		return nil, nil, nil, err
 	}
