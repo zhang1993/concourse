@@ -84,6 +84,10 @@ var buildsQuery = psql.Select(`
 var minMaxIdQuery = psql.Select("COALESCE(MAX(b.id), 0)", "COALESCE(MIN(b.id), 0)").
 	From("builds as b")
 
+var latestCompletedBuildQuery = psql.Select("max(id)").
+	From("builds").
+	Where(sq.Expr(`status NOT IN ('pending', 'started')`))
+
 //go:generate counterfeiter . Build
 
 type Build interface {
@@ -163,6 +167,7 @@ type build struct {
 	jobName string
 
 	isManuallyTriggered bool
+	isRerun             bool
 
 	rerunOf     int
 	rerunOfName string
@@ -505,7 +510,7 @@ func (b *build) Finish(status BuildStatus) error {
 			return err
 		}
 
-		err = updateTransitionBuildForJob(tx, b.jobID, b.id, status)
+		err = updateTransitionBuildForJob(tx, status, b)
 		if err != nil {
 			return err
 		}
@@ -1462,6 +1467,7 @@ func scanBuild(b *build, row scannable, encryptionStrategy encryption.Strategy) 
 	b.aborted = aborted
 	b.completed = completed
 	b.rerunOf = int(rerunOf.Int64)
+	b.isRerun = b.rerunOf != 0
 	b.rerunOfName = rerunOfName.String
 	b.rerunNumber = int(rerunNumber.Int64)
 
@@ -1558,8 +1564,10 @@ func updateNextBuildForJob(tx Tx, jobID int) error {
 		SET next_build_id = (
 			SELECT min(b.id)
 			FROM builds b
+			INNER JOIN jobs j ON j.id = b.job_id
 			WHERE b.job_id = $1
 			AND b.status IN ('pending', 'started')
+			AND (b.rerun_of IS NULL OR b.rerun_of = j.latest_completed_build_id)
 		)
 		WHERE j.id = $1
 	`, jobID)
@@ -1570,16 +1578,43 @@ func updateNextBuildForJob(tx Tx, jobID int) error {
 }
 
 func updateLatestCompletedBuildForJob(tx Tx, jobID int) error {
-	_, err := tx.Exec(`
+	var latestNonRerunId int
+	err := latestCompletedBuildQuery.
+		Where(sq.Eq{"job_id": jobID}).
+		Where(sq.Eq{"rerun_of": nil}).
+		RunWith(tx).
+		QueryRow().
+		Scan(&latestNonRerunId)
+	if err != nil {
+		return err
+	}
+
+	var latestRerunId sql.NullString
+	err = latestCompletedBuildQuery.
+		Where(sq.Eq{"job_id": jobID}).
+		Where(sq.Eq{"rerun_of": latestNonRerunId}).
+		RunWith(tx).
+		QueryRow().
+		Scan(&latestRerunId)
+	if err != nil {
+		return err
+	}
+
+	var id int
+	if latestRerunId.Valid {
+		id, err = strconv.Atoi(latestRerunId.String)
+		if err != nil {
+			return err
+		}
+	} else {
+		id = latestNonRerunId
+	}
+
+	_, err = tx.Exec(`
 		UPDATE jobs AS j
-		SET latest_completed_build_id = (
-			SELECT max(b.id)
-			FROM builds b
-			WHERE b.job_id = $1
-			AND b.status NOT IN ('pending', 'started')
-		)
-		WHERE j.id = $1
-	`, jobID)
+		SET latest_completed_build_id = $1
+		WHERE j.id = $2
+	`, id, jobID)
 	if err != nil {
 		return err
 	}
@@ -1587,7 +1622,7 @@ func updateLatestCompletedBuildForJob(tx Tx, jobID int) error {
 	return nil
 }
 
-func updateTransitionBuildForJob(tx Tx, jobID int, buildID int, buildStatus BuildStatus) error {
+func updateTransitionBuildForJob(tx Tx, buildStatus BuildStatus, build *build) error {
 	var shouldUpdateTransition bool
 
 	var latestID int
@@ -1595,7 +1630,7 @@ func updateTransitionBuildForJob(tx Tx, jobID int, buildID int, buildStatus Buil
 	err := psql.Select("b.id", "b.status").
 		From("builds b").
 		JoinClause("INNER JOIN jobs j ON j.latest_completed_build_id = b.id").
-		Where(sq.Eq{"j.id": jobID}).
+		Where(sq.Eq{"j.id": build.jobID}).
 		RunWith(tx).
 		QueryRow().
 		Scan(&latestID, &latestStatus)
@@ -1608,7 +1643,7 @@ func updateTransitionBuildForJob(tx Tx, jobID int, buildID int, buildStatus Buil
 		}
 	}
 
-	if buildID < latestID {
+	if build.id < latestID {
 		// latest completed build is actually after this one, so this build
 		// has no influence on the job's overall state
 		//
@@ -1617,15 +1652,15 @@ func updateTransitionBuildForJob(tx Tx, jobID int, buildID int, buildStatus Buil
 		return nil
 	}
 
-	if latestStatus != buildStatus {
+	if latestStatus != buildStatus && (!build.isRerun || build.rerunOf == latestID) {
 		// status has changed; transitioned!
 		shouldUpdateTransition = true
 	}
 
 	if shouldUpdateTransition {
 		_, err := psql.Update("jobs").
-			Set("transition_build_id", buildID).
-			Where(sq.Eq{"id": jobID}).
+			Set("transition_build_id", build.id).
+			Where(sq.Eq{"id": build.jobID}).
 			RunWith(tx).
 			Exec()
 		if err != nil {
