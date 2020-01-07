@@ -1559,22 +1559,32 @@ func buildAbortChannel(buildID int) string {
 }
 
 func updateNextBuildForJob(tx Tx, jobID int) error {
-	_, err := tx.Exec(`
-		UPDATE jobs AS j
-		SET next_build_id = (
-			SELECT min(b.id)
-			FROM builds b
-			INNER JOIN jobs j ON j.id = b.job_id
-			WHERE b.job_id = $1
-			AND b.status IN ('pending', 'started')
-			AND (b.rerun_of IS NULL OR b.rerun_of = j.latest_completed_build_id)
-		)
-		WHERE j.id = $1
-	`, jobID)
+	var nextBuildID sql.NullString
+	err := psql.Select("min(b.id)").
+		From("builds b").
+		JoinClause("INNER JOIN jobs j ON j.id = b.job_id").
+		Where(sq.Eq{"b.job_id": jobID}).
+		Where(sq.Expr(`b.status IN ('pending', 'started')`)).
+		Where(sq.Or{
+			sq.Eq{"b.rerun_of": nil},
+			sq.Expr("b.rerun_of = j.latest_completed_build_id"),
+		}).
+		RunWith(tx).
+		QueryRow().
+		Scan(&nextBuildID)
 	if err != nil {
 		return err
 	}
-	return nil
+
+	var buildID int
+	if nextBuildID.Valid {
+		buildID, err = strconv.Atoi(nextBuildID.String)
+		if err != nil {
+			return err
+		}
+	}
+
+	return updateBuildIDForJob(tx, NextBuildIDColumn, buildID, jobID)
 }
 
 func updateLatestCompletedBuildForJob(tx Tx, jobID int) error {
@@ -1600,26 +1610,17 @@ func updateLatestCompletedBuildForJob(tx Tx, jobID int) error {
 		return err
 	}
 
-	var id int
+	var buildID int
 	if latestRerunId.Valid {
-		id, err = strconv.Atoi(latestRerunId.String)
+		buildID, err = strconv.Atoi(latestRerunId.String)
 		if err != nil {
 			return err
 		}
 	} else {
-		id = latestNonRerunId
+		buildID = latestNonRerunId
 	}
 
-	_, err = tx.Exec(`
-		UPDATE jobs AS j
-		SET latest_completed_build_id = $1
-		WHERE j.id = $2
-	`, id, jobID)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return updateBuildIDForJob(tx, LatestCompletedBuildIDColumn, buildID, jobID)
 }
 
 func updateTransitionBuildForJob(tx Tx, buildStatus BuildStatus, build *build) error {
@@ -1658,14 +1659,7 @@ func updateTransitionBuildForJob(tx Tx, buildStatus BuildStatus, build *build) e
 	}
 
 	if shouldUpdateTransition {
-		_, err := psql.Update("jobs").
-			Set("transition_build_id", build.id).
-			Where(sq.Eq{"id": build.jobID}).
-			RunWith(tx).
-			Exec()
-		if err != nil {
-			return err
-		}
+		return updateBuildIDForJob(tx, TransitionBuildIDColumn, build.id, build.jobID)
 	}
 
 	return nil

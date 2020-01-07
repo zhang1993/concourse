@@ -220,6 +220,16 @@ type FakeJob struct {
 	nameReturnsOnCall map[int]struct {
 		result1 string
 	}
+	NextBuildIDStub        func() int
+	nextBuildIDMutex       sync.RWMutex
+	nextBuildIDArgsForCall []struct {
+	}
+	nextBuildIDReturns struct {
+		result1 int
+	}
+	nextBuildIDReturnsOnCall map[int]struct {
+		result1 int
+	}
 	PauseStub        func() error
 	pauseMutex       sync.RWMutex
 	pauseArgsForCall []struct {
@@ -394,6 +404,16 @@ type FakeJob struct {
 	}
 	teamNameReturnsOnCall map[int]struct {
 		result1 string
+	}
+	TransitionBuildIDStub        func() int
+	transitionBuildIDMutex       sync.RWMutex
+	transitionBuildIDArgsForCall []struct {
+	}
+	transitionBuildIDReturns struct {
+		result1 int
+	}
+	transitionBuildIDReturnsOnCall map[int]struct {
+		result1 int
 	}
 	UnpauseStub        func() error
 	unpauseMutex       sync.RWMutex
@@ -1404,6 +1424,58 @@ func (fake *FakeJob) NameReturnsOnCall(i int, result1 string) {
 	}{result1}
 }
 
+func (fake *FakeJob) NextBuildID() int {
+	fake.nextBuildIDMutex.Lock()
+	ret, specificReturn := fake.nextBuildIDReturnsOnCall[len(fake.nextBuildIDArgsForCall)]
+	fake.nextBuildIDArgsForCall = append(fake.nextBuildIDArgsForCall, struct {
+	}{})
+	fake.recordInvocation("NextBuildID", []interface{}{})
+	fake.nextBuildIDMutex.Unlock()
+	if fake.NextBuildIDStub != nil {
+		return fake.NextBuildIDStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.nextBuildIDReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeJob) NextBuildIDCallCount() int {
+	fake.nextBuildIDMutex.RLock()
+	defer fake.nextBuildIDMutex.RUnlock()
+	return len(fake.nextBuildIDArgsForCall)
+}
+
+func (fake *FakeJob) NextBuildIDCalls(stub func() int) {
+	fake.nextBuildIDMutex.Lock()
+	defer fake.nextBuildIDMutex.Unlock()
+	fake.NextBuildIDStub = stub
+}
+
+func (fake *FakeJob) NextBuildIDReturns(result1 int) {
+	fake.nextBuildIDMutex.Lock()
+	defer fake.nextBuildIDMutex.Unlock()
+	fake.NextBuildIDStub = nil
+	fake.nextBuildIDReturns = struct {
+		result1 int
+	}{result1}
+}
+
+func (fake *FakeJob) NextBuildIDReturnsOnCall(i int, result1 int) {
+	fake.nextBuildIDMutex.Lock()
+	defer fake.nextBuildIDMutex.Unlock()
+	fake.NextBuildIDStub = nil
+	if fake.nextBuildIDReturnsOnCall == nil {
+		fake.nextBuildIDReturnsOnCall = make(map[int]struct {
+			result1 int
+		})
+	}
+	fake.nextBuildIDReturnsOnCall[i] = struct {
+		result1 int
+	}{result1}
+}
+
 func (fake *FakeJob) Pause() error {
 	fake.pauseMutex.Lock()
 	ret, specificReturn := fake.pauseReturnsOnCall[len(fake.pauseArgsForCall)]
@@ -2284,6 +2356,58 @@ func (fake *FakeJob) TeamNameReturnsOnCall(i int, result1 string) {
 	}{result1}
 }
 
+func (fake *FakeJob) TransitionBuildID() int {
+	fake.transitionBuildIDMutex.Lock()
+	ret, specificReturn := fake.transitionBuildIDReturnsOnCall[len(fake.transitionBuildIDArgsForCall)]
+	fake.transitionBuildIDArgsForCall = append(fake.transitionBuildIDArgsForCall, struct {
+	}{})
+	fake.recordInvocation("TransitionBuildID", []interface{}{})
+	fake.transitionBuildIDMutex.Unlock()
+	if fake.TransitionBuildIDStub != nil {
+		return fake.TransitionBuildIDStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.transitionBuildIDReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeJob) TransitionBuildIDCallCount() int {
+	fake.transitionBuildIDMutex.RLock()
+	defer fake.transitionBuildIDMutex.RUnlock()
+	return len(fake.transitionBuildIDArgsForCall)
+}
+
+func (fake *FakeJob) TransitionBuildIDCalls(stub func() int) {
+	fake.transitionBuildIDMutex.Lock()
+	defer fake.transitionBuildIDMutex.Unlock()
+	fake.TransitionBuildIDStub = stub
+}
+
+func (fake *FakeJob) TransitionBuildIDReturns(result1 int) {
+	fake.transitionBuildIDMutex.Lock()
+	defer fake.transitionBuildIDMutex.Unlock()
+	fake.TransitionBuildIDStub = nil
+	fake.transitionBuildIDReturns = struct {
+		result1 int
+	}{result1}
+}
+
+func (fake *FakeJob) TransitionBuildIDReturnsOnCall(i int, result1 int) {
+	fake.transitionBuildIDMutex.Lock()
+	defer fake.transitionBuildIDMutex.Unlock()
+	fake.TransitionBuildIDStub = nil
+	if fake.transitionBuildIDReturnsOnCall == nil {
+		fake.transitionBuildIDReturnsOnCall = make(map[int]struct {
+			result1 int
+		})
+	}
+	fake.transitionBuildIDReturnsOnCall[i] = struct {
+		result1 int
+	}{result1}
+}
+
 func (fake *FakeJob) Unpause() error {
 	fake.unpauseMutex.Lock()
 	ret, specificReturn := fake.unpauseReturnsOnCall[len(fake.unpauseArgsForCall)]
@@ -2493,6 +2617,8 @@ func (fake *FakeJob) Invocations() map[string][][]interface{} {
 	defer fake.latestCompletedBuildIDMutex.RUnlock()
 	fake.nameMutex.RLock()
 	defer fake.nameMutex.RUnlock()
+	fake.nextBuildIDMutex.RLock()
+	defer fake.nextBuildIDMutex.RUnlock()
 	fake.pauseMutex.RLock()
 	defer fake.pauseMutex.RUnlock()
 	fake.pausedMutex.RLock()
@@ -2525,6 +2651,8 @@ func (fake *FakeJob) Invocations() map[string][][]interface{} {
 	defer fake.teamIDMutex.RUnlock()
 	fake.teamNameMutex.RLock()
 	defer fake.teamNameMutex.RUnlock()
+	fake.transitionBuildIDMutex.RLock()
+	defer fake.transitionBuildIDMutex.RUnlock()
 	fake.unpauseMutex.RLock()
 	defer fake.unpauseMutex.RUnlock()
 	fake.updateFirstLoggedBuildIDMutex.RLock()
