@@ -360,6 +360,7 @@ func (builder *stepBuilder) buildCheckStep(check db.Check, plan atc.Plan, credVa
 	}
 
 	stepMetadata := exec.StepMetadata{
+		CheckID:               check.ID(),
 		TeamID:                check.TeamID(),
 		TeamName:              check.TeamName(),
 		PipelineID:            check.PipelineID(),

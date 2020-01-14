@@ -5,6 +5,7 @@ import (
 )
 
 type StepMetadata struct {
+	CheckID               int
 	BuildID               int
 	BuildName             string
 	TeamID                int

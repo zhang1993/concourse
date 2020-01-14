@@ -226,3 +226,30 @@ func (c resourceConfigCheckSessionContainerOwner) Create(tx Tx, workerName strin
 		"resource_config_check_session_id": rccsID,
 	}, nil
 }
+
+func NewCheckContainerOwner(
+	checkID int,
+) ContainerOwner {
+	return checkContainerOwner{
+		CheckID: checkID,
+	}
+}
+
+type checkContainerOwner struct {
+	CheckID int
+}
+
+func (c checkContainerOwner) Find(Conn) (sq.Eq, bool, error) {
+	return sq.Eq(c.sqlMap()), true, nil
+}
+
+func (c checkContainerOwner) Create(Tx, string) (map[string]interface{}, error) {
+	return c.sqlMap(), nil
+}
+
+func (c checkContainerOwner) sqlMap() map[string]interface{} {
+	return map[string]interface{}{
+		"check_id": c.CheckID,
+	}
+}
+
