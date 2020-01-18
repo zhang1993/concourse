@@ -105,6 +105,11 @@ type client struct {
 	provider WorkerProvider
 }
 
+type CheckResult struct {
+	Status int
+	Err    error
+}
+
 type TaskResult struct {
 	ExitStatus   int
 	VolumeMounts []VolumeMount
@@ -395,7 +400,6 @@ func (client *client) RunGetStep(
 	resourceCache db.UsedResourceCache,
 	resource resource.Resource,
 ) (GetResult, error) {
-
 	chosenWorker, err := client.pool.FindOrChooseWorkerForContainer(
 		ctx,
 		logger,

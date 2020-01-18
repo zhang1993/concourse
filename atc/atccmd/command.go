@@ -44,6 +44,7 @@ import (
 	"github.com/concourse/concourse/atc/syslog"
 	"github.com/concourse/concourse/atc/worker"
 	"github.com/concourse/concourse/atc/worker/image"
+	"github.com/concourse/concourse/atc/worker/kubernetes"
 	"github.com/concourse/concourse/atc/wrappa"
 	"github.com/concourse/concourse/skymarshal"
 	"github.com/concourse/concourse/skymarshal/skycmd"
@@ -130,8 +131,8 @@ type RunCommand struct {
 	LidarScannerInterval time.Duration `long:"lidar-scanner-interval" default:"1m" description:"Interval on which the resource scanner will run to see if new checks need to be scheduled"`
 	LidarCheckerInterval time.Duration `long:"lidar-checker-interval" default:"10s" description:"Interval on which the resource checker runs any scheduled checks"`
 
-	GlobalResourceCheckTimeout   time.Duration `long:"global-resource-check-timeout" default:"1h" description:"Time limit on checking for new versions of resources."`
-	ResourceCheckingInterval     time.Duration `long:"resource-checking-interval" default:"1m" description:"Interval on which to check for new versions of resources."`
+	GlobalResourceCheckTimeout time.Duration `long:"global-resource-check-timeout" default:"1h" description:"Time limit on checking for new versions of resources."`
+	ResourceCheckingInterval   time.Duration `long:"resource-checking-interval" default:"1m" description:"Interval on which to check for new versions of resources."`
 
 	ContainerPlacementStrategy        string        `long:"container-placement-strategy" default:"volume-locality" choice:"volume-locality" choice:"random" choice:"fewest-build-containers" choice:"limit-active-tasks" description:"Method by which a worker is selected during container placement."`
 	MaxActiveTasksPerWorker           int           `long:"max-active-tasks-per-worker" default:"0" description:"Maximum allowed number of active build tasks per worker. Has effect only when used with limit-active-tasks placement strategy. 0 means no limit."`
@@ -146,6 +147,11 @@ type RunCommand struct {
 		BaggageclaimURL flag.URL          `long:"baggageclaim-url" description:"A Baggageclaim API endpoint to register with the worker."`
 		ResourceTypes   map[string]string `long:"resource"         description:"A resource type to advertise for the worker. Can be specified multiple times." value-name:"TYPE:IMAGE"`
 	} `group:"Static Worker (optional)" namespace:"worker"`
+
+	KubernetesWorker struct {
+		InCluster  bool      `long:"in-cluster"`
+		Kubeconfig flag.File `long:"kubeconfig"`
+	} `group:"Kubernetes Worker" namespace:"kubernetes-worker"`
 
 	Metrics struct {
 		HostName            string            `long:"metrics-host-name" description:"Host string to attach to emitted metrics."`
@@ -813,7 +819,18 @@ func (cmd *RunCommand) constructBackendMembers(
 	)
 
 	pool := worker.NewPool(workerProvider)
-	workerClient := worker.NewClient(pool, workerProvider)
+
+	// cc: forcibly disabling these for now
+	//
+	// workerClient := worker.NewClient(pool, workerProvider)
+
+	workerClient, err := kubernetes.NewClient(
+		cmd.KubernetesWorker.InCluster,
+		cmd.KubernetesWorker.Kubeconfig.Path(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed configuring kubernetes worker client: %w", err)
+	}
 
 	defaultLimits, err := cmd.parseDefaultLimits()
 	if err != nil {
