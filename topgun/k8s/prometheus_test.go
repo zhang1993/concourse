@@ -37,7 +37,7 @@ var _ = Describe("Prometheus integration", func() {
 	})
 
 	AfterEach(func() {
-		helmDestroy(prometheusReleaseName)
+		helmDestroy(prometheusReleaseName, namespace)
 		cleanup(releaseName, namespace)
 	})
 
