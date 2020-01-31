@@ -13,6 +13,7 @@ import (
 	"github.com/concourse/concourse"
 	"github.com/concourse/concourse/atc/worker/gclient"
 	concourseCmd "github.com/concourse/concourse/cmd"
+	"github.com/concourse/concourse/metrics"
 	"github.com/concourse/concourse/worker"
 	"github.com/concourse/flag"
 	"github.com/tedsuo/ifrit"
@@ -47,6 +48,12 @@ type WorkerCommand struct {
 	RebalanceInterval time.Duration `long:"rebalance-interval" description:"Duration after which the registration should be swapped to another random SSH gateway."`
 
 	ConnectionDrainTimeout time.Duration `long:"connection-drain-timeout" default:"1h" description:"Duration after which a worker should give up draining forwarded connections on shutdown."`
+
+	Metric struct {
+		Prometheus metrics.Prometheus
+		Dogstatsd  metrics.Dogstatsd
+		Stdout     metrics.Stdout
+	} `group:"metrics" namespace:"metrics"`
 
 	Garden GardenBackend `group:"Garden Configuration" namespace:"garden"`
 
@@ -85,6 +92,18 @@ func (cmd *WorkerCommand) Runner(args []string) (ifrit.Runner, error) {
 	baggageclaimRunner, err := cmd.baggageclaimRunner(logger.Session("baggageclaim"))
 	if err != nil {
 		return nil, err
+	}
+
+	switch {
+	case cmd.Metric.Prometheus.IsConfigured():
+		err = cmd.Metric.Prometheus.Init()
+	case cmd.Metric.Dogstatsd.IsConfigured():
+		err = cmd.Metric.Dogstatsd.Init()
+	case cmd.Metric.Stdout.IsConfigured():
+		err = cmd.Metric.Stdout.Init()
+	}
+	if err != nil {
+		return nil, fmt.Errorf("configuring metrics exporter: %w", err)
 	}
 
 	healthChecker := worker.NewHealthChecker(

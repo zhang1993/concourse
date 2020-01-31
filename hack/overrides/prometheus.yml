@@ -13,6 +13,11 @@ services:
       CONCOURSE_PROMETHEUS_BIND_IP: "0.0.0.0"
       CONCOURSE_PROMETHEUS_BIND_PORT: "9100"
 
+   worker:
+     environment:
+       CONCOURSE_METRICS_PROMETHEUS_BIND_IP: "0.0.0.0"
+       CONCOURSE_METRICS_PROMETHEUS_BIND_PORT: "9100"
+
   prometheus:
     image: prom/prometheus
     entrypoint:
@@ -29,6 +34,7 @@ services:
             static_configs:
               - targets:
                 - 'web:9100'
+                - 'worker:9100'
         " > config.yml
 
           exec prometheus \
