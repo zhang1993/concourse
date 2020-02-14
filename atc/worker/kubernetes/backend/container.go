@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"runtime"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -46,8 +45,6 @@ func (c *Container) RunScript(
 	logDest io.Writer,
 	recoverable bool,
 ) (err error) {
-	runtime.Breakpoint()
-
 	procSpec := garden.ProcessSpec{
 		Path: path,
 		Args: args,
@@ -124,6 +121,10 @@ func (c *Container) Handle() (handle string) {
 	return
 }
 
+func (c *Container) Attach(processID string, io garden.ProcessIO) (process garden.Process, err error) {
+	return
+}
+
 func (c *Container) Stop(kill bool) (err error)                                                { return }
 func (c *Container) Info() (info garden.ContainerInfo, err error)                              { return }
 func (c *Container) StreamIn(spec garden.StreamInSpec) (err error)                             { return }
@@ -141,6 +142,3 @@ func (c *Container) Properties() (properties garden.Properties, err error)      
 func (c *Container) Property(name string) (value string, err error)                            { return }
 func (c *Container) SetProperty(name string, value string) (err error)                         { return }
 func (c *Container) RemoveProperty(name string) (err error)                                    { return }
-func (c *Container) Attach(processID string, io garden.ProcessIO) (process garden.Process, err error) {
-	return
-}
