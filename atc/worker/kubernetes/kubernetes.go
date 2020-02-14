@@ -95,23 +95,21 @@ func (c Kubernetes) RunTaskStep(
 	processSpec runtime.ProcessSpec,
 	eventDelegate runtime.StartingEventDelegate,
 	lockFactory lock.LockFactory,
-) (result worker.TaskResult) {
+) (result worker.TaskResult, err error) {
 	// TODO inputs
 	// TODO caches
 	// TODO non-(docker-image|resgistry-image) image resource
 	// TODO image from artifact
-	var err error
 
 	if containerSpec.ImageSpec.ImageArtifact != nil {
 		err = fmt.Errorf("imageartifact: unsupported")
-		result.Err = err
 		return
 	}
 
-	err = c.createContainer(ctx, containerSpec)
-	if err != nil {
-		return
-	}
+	// err = c.createContainer(ctx, containerSpec)
+	// if err != nil {
+	// 	return
+	// }
 
 	return
 }
@@ -128,7 +126,7 @@ func (c Kubernetes) RunPutStep(
 	runtime.ProcessSpec,
 	runtime.StartingEventDelegate,
 	resource.Resource,
-) (result worker.PutResult) {
+) (result worker.PutResult, err error) {
 	return
 }
 
