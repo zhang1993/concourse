@@ -150,6 +150,7 @@ type RunCommand struct {
 
 	KubernetesWorker struct {
 		InCluster  bool      `long:"in-cluster"`
+		Namespace  string    `long:"namespace"`
 		Kubeconfig flag.File `long:"kubeconfig"`
 	} `group:"Kubernetes Worker" namespace:"kubernetes-worker"`
 
@@ -824,9 +825,10 @@ func (cmd *RunCommand) constructBackendMembers(
 	//
 	// workerClient := worker.NewClient(pool, workerProvider)
 
-	workerClient, err := kubernetes.NewClient(
+	k8sWorkerClient, err := kubernetes.NewClient(
 		cmd.KubernetesWorker.InCluster,
 		cmd.KubernetesWorker.Kubeconfig.Path(),
+		cmd.KubernetesWorker.Namespace,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed configuring kubernetes worker client: %w", err)
@@ -844,7 +846,7 @@ func (cmd *RunCommand) constructBackendMembers(
 
 	engine := cmd.constructEngine(
 		pool,
-		workerClient,
+		k8sWorkerClient,
 		resourceFactory,
 		teamFactory,
 		dbResourceCacheFactory,
@@ -965,9 +967,15 @@ func (cmd *RunCommand) constructBackendMembers(
 			)},
 		)
 	}
+
+	// cc: k8s worker
+	//
+	members = cmd.appendKubernetesWorker(logger, dbWorkerFactory, members)
+
 	if cmd.Worker.GardenURL.URL != nil {
 		members = cmd.appendStaticWorker(logger, dbWorkerFactory, members)
 	}
+
 	return members, nil
 }
 
@@ -1651,6 +1659,40 @@ func (h tlsRedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		h.baseHandler.ServeHTTP(w, r)
 	}
+}
+
+func (cmd *RunCommand) appendKubernetesWorker(
+	logger lager.Logger,
+	workerFactory db.WorkerFactory,
+	members []grouper.Member,
+) []grouper.Member {
+	var resourceTypes []atc.WorkerResourceType
+
+	mapping := map[string]string{
+		"git":            "concourse/git-resource",
+		"registry-image": "concourse/registry-image-resource",
+	}
+
+	for t, resourcePath := range mapping {
+		resourceTypes = append(resourceTypes, atc.WorkerResourceType{
+			Type:  t,
+			Image: resourcePath,
+		})
+	}
+
+	return append(members,
+		grouper.Member{
+			Name: "static-worker",
+			Runner: worker.NewHardcoded(
+				logger,
+				workerFactory,
+				clock.NewClock(),
+				"garden",
+				"baggageclaim",
+				resourceTypes,
+			),
+		},
+	)
 }
 
 func (cmd *RunCommand) appendStaticWorker(
