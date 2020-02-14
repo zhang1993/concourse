@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -38,6 +39,27 @@ func New(namespace string, config *rest.Config) (backend *Backend, err error) {
 	return
 }
 
+// Lookup returns the container with the specified handle.
+//
+func (b *Backend) Lookup(handle string) (container *Container, err error) {
+	_, err = b.cs.CoreV1().Pods(b.ns).Get(handle, metav1.GetOptions{})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			err = fmt.Errorf("fetching pod: %w", err)
+			return
+		}
+
+		err = garden.ContainerNotFoundError{handle}
+		return
+	}
+
+	// TODO - perhaps wait for the pod to be ready, right here?
+	// 	  this way we block (for a max period) until it's ready ... ?
+
+	container = NewContainer(b.ns, handle, b.cs, b.cfg)
+	return
+}
+
 func (b *Backend) Destroy(handle string) (err error) {
 	err = b.cs.CoreV1().Pods(b.ns).Delete(handle, &metav1.DeleteOptions{
 		GracePeriodSeconds: int64Ref(10),
@@ -46,6 +68,26 @@ func (b *Backend) Destroy(handle string) (err error) {
 		err = fmt.Errorf("destroy: %w", err)
 		return
 	}
+
+	return
+}
+
+func (b *Backend) Create(spec garden.ContainerSpec) (container *Container, err error) {
+	podDefinition := toPod(spec)
+
+	_, err = b.cs.CoreV1().Pods(b.ns).Create(podDefinition)
+	if err != nil {
+		err = fmt.Errorf("pod creation: %w", err)
+		return
+	}
+
+	err = b.waitForPod(context.TODO(), spec.Handle)
+	if err != nil {
+		err = fmt.Errorf("wait for pod: %w", err)
+		return
+	}
+
+	container = NewContainer(b.ns, spec.Handle, b.cs, b.cfg)
 
 	return
 }
@@ -90,37 +132,20 @@ func (b *Backend) waitForPod(ctx context.Context, handle string) (err error) {
 	}
 }
 
-func (b *Backend) Create(spec garden.ContainerSpec) (container garden.Container, err error) {
-	podDefinition := toPod(spec)
-
-	_, err = b.cs.CoreV1().Pods(b.ns).Create(podDefinition)
-	if err != nil {
-		err = fmt.Errorf("pod creation: %w", err)
-		return
-	}
-
-	err = b.waitForPod(context.TODO(), spec.Handle)
-	if err != nil {
-		err = fmt.Errorf("wait for pod: %w", err)
-		return
-	}
-
-	container = NewContainer(b.ns, spec.Handle, "step", b.cs, b.cfg)
-
-	return
-}
-
 const (
-	baggageclaimImage      = "cirocosta/baggageclaim"
-	baggageclaimVolumeName = "baggageclaim"
+	baggageclaimContainerName = "baggageclaim"
+	baggageclaimImage         = "cirocosta/baggageclaim"
+	baggageclaimVolumeName    = "baggageclaim"
 )
 
 func bcContainer() apiv1.Container {
 	return apiv1.Container{
-		Name:  "baggageclaim",
+		Name:  baggageclaimContainerName,
 		Image: baggageclaimImage,
 		Command: []string{
-			"baggageclaim", "--volumes=/tmp", "--driver=naive",
+			"/usr/local/concourse/bin/baggageclaim",
+			"--volumes=/tmp",
+			"--driver=naive",
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
@@ -140,6 +165,8 @@ func bcVolume() apiv1.Volume {
 	}
 }
 
+// toPod converts a garden container specfiication to a pod.
+//
 func toPod(spec garden.ContainerSpec) (pod *apiv1.Pod) {
 	pod = &apiv1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -152,7 +179,7 @@ func toPod(spec garden.ContainerSpec) (pod *apiv1.Pod) {
 			Containers: []apiv1.Container{
 				bcContainer(),
 				{
-					Name:    "step",
+					Name:    mainContainer,
 					Image:   spec.Image.URI,
 					Command: []string{"/pause"},
 					VolumeMounts: []apiv1.VolumeMount{
@@ -165,6 +192,7 @@ func toPod(spec garden.ContainerSpec) (pod *apiv1.Pod) {
 				},
 			},
 			Volumes: []apiv1.Volume{
+				bcVolume(),
 				{
 					Name: "pause",
 					VolumeSource: apiv1.VolumeSource{

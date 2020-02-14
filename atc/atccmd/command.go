@@ -150,8 +150,8 @@ type RunCommand struct {
 
 	KubernetesWorker struct {
 		InCluster  bool      `long:"in-cluster"`
-		Namespace  string    `long:"namespace"`
-		Kubeconfig flag.File `long:"kubeconfig"`
+		Namespace  string    `long:"namespace" default:"concourse"`
+		Kubeconfig flag.File `long:"kubeconfig" required:"true"`
 	} `group:"Kubernetes Worker" namespace:"kubernetes-worker"`
 
 	Metrics struct {
@@ -829,6 +829,7 @@ func (cmd *RunCommand) constructBackendMembers(
 		cmd.KubernetesWorker.InCluster,
 		cmd.KubernetesWorker.Kubeconfig.Path(),
 		cmd.KubernetesWorker.Namespace,
+		dbWorkerFactory,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed configuring kubernetes worker client: %w", err)
@@ -1687,7 +1688,7 @@ func (cmd *RunCommand) appendKubernetesWorker(
 				logger,
 				workerFactory,
 				clock.NewClock(),
-				"garden",
+				"k8s",
 				"baggageclaim",
 				resourceTypes,
 			),
