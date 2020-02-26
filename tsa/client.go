@@ -353,7 +353,7 @@ func (client *Client) dial(ctx context.Context, idleTimeout time.Duration) (*ssh
 
 	tsaConn := tcpConn
 	if idleTimeout != 0 {
-		tsaConn = &timeoutConn{
+		tsaConn = &IdleTimeoutConn{
 			Conn:        tcpConn,
 			IdleTimeout: idleTimeout,
 		}
