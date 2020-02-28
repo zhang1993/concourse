@@ -414,7 +414,7 @@ func (t *team) SavePipeline(
 			Scan(&pipelineID)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return nil, false, ErrConfigComparisonFailed
+				return nil, false, nil
 			}
 
 			return nil, false, err

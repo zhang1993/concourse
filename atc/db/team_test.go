@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Team", func() {
+var _ = FDescribe("Team", func() {
 	var (
 		team      db.Team
 		otherTeam db.Team
@@ -2563,6 +2563,15 @@ var _ = Describe("Team", func() {
 		})
 
 		Context("updating an existing pipeline", func() {
+			Context("with an identical config", func() {
+				It("does not fail", func() {
+					_, _, err := team.SavePipeline(pipelineName, config, 0, true)
+					Expect(err).ToNot(HaveOccurred())
+					_, _, err = team.SavePipeline(pipelineName, config, 0, true)
+					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+
 			It("maintains paused if the pipeline is paused", func() {
 				_, _, err := team.SavePipeline(pipelineName, config, 0, true)
 				Expect(err).ToNot(HaveOccurred())
