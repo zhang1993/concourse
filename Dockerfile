@@ -36,6 +36,12 @@ RUN go build -gcflags=all="-N -l" -o /usr/local/concourse/bin/concourse \
       ./cmd/concourse
 VOLUME /src
 
+ARG GOARCH=amd64
+
+# build Fly into fly-assets
+RUN rm /usr/local/concourse/fly-assets/*
+RUN GOOS=linux go build -gcflags=all="-N -l" -o fly-linux/fly ./fly
+RUN cd fly-linux && tar -czf "/usr/local/concourse/fly-assets/fly-linux-$GOARCH.tgz" fly
 
 # build the init executable for containerd
 RUN  set -x && \
