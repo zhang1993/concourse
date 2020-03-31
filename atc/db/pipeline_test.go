@@ -217,7 +217,7 @@ var _ = Describe("Pipeline", func() {
 		})
 	})
 
-	Describe("Archive", func() {
+	FDescribe("Archive", func() {
 		JustBeforeEach(func() {
 			pipeline.Archive()
 			pipeline.Reload()
@@ -225,6 +225,28 @@ var _ = Describe("Pipeline", func() {
 
 		It("archives the pipeline", func() {
 			Expect(pipeline.Archived()).To(BeTrue(), "pipeline was not archived")
+		})
+
+		It("removes the config of each job", func() {
+			jobs, err := pipeline.Jobs()
+			Expect(err).ToNot(HaveOccurred())
+
+			jobConfigs, err := jobs.Configs()
+			emptyJobConfigs := make(atc.JobConfigs, 9)
+			Expect(jobConfigs).To(Equal(emptyJobConfigs))
+		})
+
+		It("removes the config of each resource", func() {
+			resources, err := pipeline.Resources()
+			Expect(err).ToNot(HaveOccurred())
+
+			resourceConfigs := resources.Configs()
+
+			emptyResourceConfigs := atc.ResourceConfigs{
+				{Name: "some-other-resource", Type: "some-type"},
+				{Name: "some-resource", Type: "some-type"},
+			}
+			Expect(resourceConfigs).To(Equal(emptyResourceConfigs))
 		})
 
 		Context("when the pipeline is unpaused", func() {

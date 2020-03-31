@@ -15,6 +15,7 @@ import (
 
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
+	"github.com/concourse/concourse/atc/db/encryption"
 	"github.com/concourse/concourse/atc/db/lock"
 	"github.com/concourse/concourse/atc/event"
 	"github.com/concourse/concourse/vars"
@@ -632,16 +633,43 @@ func (p *pipeline) Unpause() error {
 }
 
 func (p *pipeline) Archive() error {
-	_, err := psql.Update("pipelines").
+	tx, err := p.conn.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer Rollback(tx)
+
+	_, err = psql.Update("pipelines").
 		Set("archived", true).
 		Set("paused", true).
 		Where(sq.Eq{
 			"id": p.id,
 		}).
-		RunWith(p.conn).
+		RunWith(tx).
 		Exec()
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	es := p.conn.EncryptionStrategy()
+
+	err = clearConfigForJobsInPipeline(tx, es, p.id)
+	if err != nil {
+		return err
+	}
+
+	err = clearConfigForResourcesInPipeline(tx, es, p.id)
+	if err != nil {
+		return err
+	}
+
+	// TODO: clear resource types?
+	// and whats the deal with that resource_config table? Should we clear
+	// that too?
+
+	return tx.Commit()
 }
 
 func (p *pipeline) Hide() error {
@@ -1185,6 +1213,55 @@ func requestScheduleForJobsInPipeline(tx Tx, pipelineID int) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func clearConfigForJobsInPipeline(tx Tx, es encryption.Strategy, pipelineID int) error {
+	var emptyConfig atc.JobConfig
+
+	configPayload, err := json.Marshal(emptyConfig)
+	if err != nil {
+		return err
+	}
+	encryptedPayload, nonce, err := es.Encrypt(configPayload)
+	if err != nil {
+		return err
+	}
+
+	_, err = psql.Update("jobs").
+		Set("config", encryptedPayload).
+		Set("nonce", nonce).
+		Where(sq.Eq{"pipeline_id": pipelineID}).
+		RunWith(tx).
+		Exec()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func clearConfigForResourcesInPipeline(tx Tx, es encryption.Strategy, pipelineID int) error {
+	var emptyConfig atc.ResourceConfig
+
+	configPayload, err := json.Marshal(emptyConfig)
+	if err != nil {
+		return err
+	}
+	encryptedPayload, nonce, err := es.Encrypt(configPayload)
+	if err != nil {
+		return err
+	}
+
+	_, err = psql.Update("resources").
+		Set("config", encryptedPayload).
+		Set("nonce", nonce).
+		Where(sq.Eq{"pipeline_id": pipelineID}).
+		RunWith(tx).
+		Exec()
+	if err != nil {
+		return err
 	}
 
 	return nil
