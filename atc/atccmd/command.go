@@ -30,7 +30,6 @@ import (
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/db/encryption"
 	"github.com/concourse/concourse/atc/db/lock"
-	"github.com/concourse/concourse/atc/db/migration"
 	"github.com/concourse/concourse/atc/engine"
 	"github.com/concourse/concourse/atc/engine/builder"
 	"github.com/concourse/concourse/atc/gc"
@@ -84,8 +83,8 @@ var defaultDriverName = "postgres"
 var retryingDriverName = "too-many-connections-retrying"
 
 type ATCCommand struct {
-	RunCommand RunCommand `command:"run"`
-	Migration  Migration  `command:"migrate"`
+	RunCommand     RunCommand     `command:"run"`
+	MigrateCommand MigrateCommand `command:"migrate"`
 }
 
 type RunCommand struct {
@@ -219,93 +218,6 @@ type RunCommand struct {
 	EnableRedactSecrets bool `long:"enable-redact-secrets" description:"Enable redacting secrets in build logs."`
 
 	ConfigRBAC string `long:"config-rbac" description:"Customize RBAC role-action mapping."`
-}
-
-type Migration struct {
-	Postgres           flag.PostgresConfig `group:"PostgreSQL Configuration" namespace:"postgres"`
-	EncryptionKey      flag.Cipher         `long:"encryption-key"     description:"A 16 or 32 length key used to encrypt sensitive information before storing it in the database."`
-	CurrentDBVersion   bool                `long:"current-db-version" description:"Print the current database version and exit"`
-	SupportedDBVersion bool                `long:"supported-db-version" description:"Print the max supported database version and exit"`
-	MigrateDBToVersion int                 `long:"migrate-db-to-version" description:"Migrate to the specified database version and exit"`
-}
-
-func (m *Migration) Execute(args []string) error {
-	if m.CurrentDBVersion {
-		return m.currentDBVersion()
-	}
-	if m.SupportedDBVersion {
-		return m.supportedDBVersion()
-	}
-	if m.MigrateDBToVersion > 0 {
-		return m.migrateDBToVersion()
-	}
-	return errors.New("must specify one of `--current-db-version`, `--supported-db-version`, or `--migrate-db-to-version`")
-
-}
-
-func (cmd *Migration) currentDBVersion() error {
-	helper := migration.NewOpenHelper(
-		defaultDriverName,
-		cmd.Postgres.ConnectionString(),
-		nil,
-		encryption.NewNoEncryption(),
-	)
-
-	version, err := helper.CurrentVersion()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(version)
-	return nil
-}
-
-func (cmd *Migration) supportedDBVersion() error {
-	helper := migration.NewOpenHelper(
-		defaultDriverName,
-		cmd.Postgres.ConnectionString(),
-		nil,
-		encryption.NewNoEncryption(),
-	)
-
-	version, err := helper.SupportedVersion()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(version)
-	return nil
-}
-
-func (cmd *Migration) migrateDBToVersion() error {
-	version := cmd.MigrateDBToVersion
-
-	var newKey *encryption.Key
-	if cmd.EncryptionKey.AEAD != nil {
-		newKey = encryption.NewKey(cmd.EncryptionKey.AEAD)
-	}
-
-	var strategy encryption.Strategy
-	if newKey != nil {
-		strategy = newKey
-	} else {
-		strategy = encryption.NewNoEncryption()
-	}
-
-	helper := migration.NewOpenHelper(
-		defaultDriverName,
-		cmd.Postgres.ConnectionString(),
-		nil,
-		strategy,
-	)
-
-	err := helper.MigrateToVersion(version)
-	if err != nil {
-		return fmt.Errorf("Could not migrate to version: %d Reason: %s", version, err.Error())
-	}
-
-	fmt.Println("Successfully migrated to version:", version)
-	return nil
 }
 
 func (cmd *ATCCommand) WireDynamicFlags(commandFlags *flags.Command) {
