@@ -1,11 +1,12 @@
 package builder
 
 import (
-	"code.cloudfoundry.org/lager"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"code.cloudfoundry.org/lager"
 
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
@@ -44,7 +45,6 @@ func NewStepBuilder(
 	delegateFactory DelegateFactory,
 	externalURL string,
 	secrets creds.Secrets,
-	varSourcePool creds.VarSourcePool,
 	redactSecrets bool,
 ) *stepBuilder {
 	return &stepBuilder{
@@ -52,7 +52,6 @@ func NewStepBuilder(
 		delegateFactory: delegateFactory,
 		externalURL:     externalURL,
 		globalSecrets:   secrets,
-		varSourcePool:   varSourcePool,
 		redactSecrets:   redactSecrets,
 	}
 }
@@ -62,7 +61,6 @@ type stepBuilder struct {
 	delegateFactory DelegateFactory
 	externalURL     string
 	globalSecrets   creds.Secrets
-	varSourcePool   creds.VarSourcePool
 	redactSecrets   bool
 }
 
@@ -90,7 +88,7 @@ func (builder *stepBuilder) BuildStep(logger lager.Logger, build db.Build) (exec
 			return exec.IdentityStep{}, errors.New("pipeline not found")
 		}
 
-		varss, err := pipeline.Variables(logger, builder.globalSecrets, builder.varSourcePool)
+		varss, err := pipeline.Variables(logger, builder.globalSecrets)
 		if err != nil {
 			return exec.IdentityStep{}, err
 		}
@@ -122,7 +120,7 @@ func (builder *stepBuilder) CheckStep(logger lager.Logger, check db.Check) (exec
 		return exec.IdentityStep{}, errors.New("pipeline not found")
 	}
 
-	varss, err := pipeline.Variables(logger, builder.globalSecrets, builder.varSourcePool)
+	varss, err := pipeline.Variables(logger, builder.globalSecrets)
 	if err != nil {
 		return exec.IdentityStep{}, fmt.Errorf("failed to create pipeline variables: %s", err.Error())
 	}

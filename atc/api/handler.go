@@ -68,7 +68,6 @@ func NewHandler(
 	version string,
 	workerVersion string,
 	secretManager creds.Secrets,
-	varSourcePool creds.VarSourcePool,
 	credsManagers creds.Managers,
 	interceptTimeoutFactory containerserver.InterceptTimeoutFactory,
 	interceptUpdateInterval time.Duration,
@@ -88,7 +87,7 @@ func NewHandler(
 	buildServer := buildserver.NewServer(logger, externalURL, dbTeamFactory, dbBuildFactory, eventHandlerFactory)
 	checkServer := checkserver.NewServer(logger, dbCheckFactory)
 	jobServer := jobserver.NewServer(logger, externalURL, secretManager, dbJobFactory, dbCheckFactory)
-	resourceServer := resourceserver.NewServer(logger, secretManager, varSourcePool, dbCheckFactory, dbResourceFactory, dbResourceConfigFactory)
+	resourceServer := resourceserver.NewServer(logger, secretManager, dbCheckFactory, dbResourceFactory, dbResourceConfigFactory)
 
 	versionServer := versionserver.NewServer(logger, externalURL)
 	pipelineServer := pipelineserver.NewServer(logger, dbTeamFactory, dbPipelineFactory, externalURL)
@@ -97,7 +96,7 @@ func NewHandler(
 	workerServer := workerserver.NewServer(logger, dbTeamFactory, dbWorkerFactory)
 	logLevelServer := loglevelserver.NewServer(logger, sink)
 	cliServer := cliserver.NewServer(logger, absCLIDownloadsDir)
-	containerServer := containerserver.NewServer(logger, workerClient, secretManager, varSourcePool, interceptTimeoutFactory, interceptUpdateInterval, containerRepository, destroyer, clock)
+	containerServer := containerserver.NewServer(logger, workerClient, secretManager, interceptTimeoutFactory, interceptUpdateInterval, containerRepository, destroyer, clock)
 	volumesServer := volumeserver.NewServer(logger, volumeRepository, destroyer)
 	teamServer := teamserver.NewServer(logger, dbTeamFactory, externalURL)
 	infoServer := infoserver.NewServer(logger, version, workerVersion, externalURL, clusterName, credsManagers)

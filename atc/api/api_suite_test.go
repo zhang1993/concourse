@@ -55,7 +55,6 @@ var (
 	dbTeam                  *dbfakes.FakeTeam
 	dbWall                  *dbfakes.FakeWall
 	fakeSecretManager       *credsfakes.FakeSecrets
-	fakeVarSourcePool       *credsfakes.FakeVarSourcePool
 	credsManagers           creds.Managers
 	interceptTimeoutFactory *containerserverfakes.FakeInterceptTimeoutFactory
 	interceptTimeout        *containerserverfakes.FakeInterceptTimeout
@@ -127,7 +126,6 @@ var _ = BeforeEach(func() {
 	fakeDestroyer = new(gcfakes.FakeDestroyer)
 
 	fakeSecretManager = new(credsfakes.FakeSecrets)
-	fakeVarSourcePool = new(credsfakes.FakeVarSourcePool)
 	credsManagers = make(creds.Managers)
 
 	fakeClock = fakeclock.NewFakeClock(time.Unix(123, 456))
@@ -192,7 +190,6 @@ var _ = BeforeEach(func() {
 		"1.2.3",
 		"4.5.6",
 		fakeSecretManager,
-		fakeVarSourcePool,
 		credsManagers,
 		interceptTimeoutFactory,
 		time.Second,

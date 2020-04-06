@@ -32,7 +32,6 @@ var (
 
 	dbConn                              db.Conn
 	fakeSecrets                         *credsfakes.FakeSecrets
-	fakeVarSourcePool                   *credsfakes.FakeVarSourcePool
 	componentFactory                    db.ComponentFactory
 	buildFactory                        db.BuildFactory
 	volumeRepository                    db.VolumeRepository
@@ -103,7 +102,6 @@ var _ = BeforeEach(func() {
 	lockFactory = lock.NewLockFactory(postgresRunner.OpenSingleton(), metric.LogLockAcquired, metric.LogLockReleased)
 
 	fakeSecrets = new(credsfakes.FakeSecrets)
-	fakeVarSourcePool = new(credsfakes.FakeVarSourcePool)
 	componentFactory = db.NewComponentFactory(dbConn)
 	buildFactory = db.NewBuildFactory(dbConn, lockFactory, 5*time.Minute)
 	volumeRepository = db.NewVolumeRepository(dbConn)
@@ -115,7 +113,7 @@ var _ = BeforeEach(func() {
 	resourceConfigFactory = db.NewResourceConfigFactory(dbConn, lockFactory)
 	resourceCacheFactory = db.NewResourceCacheFactory(dbConn, lockFactory)
 	taskCacheFactory = db.NewTaskCacheFactory(dbConn)
-	checkFactory = db.NewCheckFactory(dbConn, lockFactory, fakeSecrets, fakeVarSourcePool, time.Minute)
+	checkFactory = db.NewCheckFactory(dbConn, lockFactory, fakeSecrets, time.Minute)
 	workerBaseResourceTypeFactory = db.NewWorkerBaseResourceTypeFactory(dbConn)
 	workerTaskCacheFactory = db.NewWorkerTaskCacheFactory(dbConn)
 	userFactory = db.NewUserFactory(dbConn)

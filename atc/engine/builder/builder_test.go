@@ -30,7 +30,6 @@ var _ = Describe("Builder", func() {
 			fakeStepFactory     *builderfakes.FakeStepFactory
 			fakeDelegateFactory *builderfakes.FakeDelegateFactory
 			fakeSecretManager   *credsfakes.FakeSecrets
-			fakeVarSourcePool   *credsfakes.FakeVarSourcePool
 
 			planFactory atc.PlanFactory
 			stepBuilder StepBuilder
@@ -42,14 +41,12 @@ var _ = Describe("Builder", func() {
 			fakeStepFactory = new(builderfakes.FakeStepFactory)
 			fakeDelegateFactory = new(builderfakes.FakeDelegateFactory)
 			fakeSecretManager = new(credsfakes.FakeSecrets)
-			fakeVarSourcePool = new(credsfakes.FakeVarSourcePool)
 
 			stepBuilder = builder.NewStepBuilder(
 				fakeStepFactory,
 				fakeDelegateFactory,
 				"http://example.com",
 				fakeSecretManager,
-				fakeVarSourcePool,
 				false,
 			)
 
@@ -808,7 +805,6 @@ var _ = Describe("Builder", func() {
 			fakeStepFactory     *builderfakes.FakeStepFactory
 			fakeDelegateFactory *builderfakes.FakeDelegateFactory
 			fakeSecretManager   *credsfakes.FakeSecrets
-			fakeVarSourcePool   *credsfakes.FakeVarSourcePool
 
 			planFactory atc.PlanFactory
 			stepBuilder StepBuilder
@@ -820,14 +816,12 @@ var _ = Describe("Builder", func() {
 			fakeStepFactory = new(builderfakes.FakeStepFactory)
 			fakeDelegateFactory = new(builderfakes.FakeDelegateFactory)
 			fakeSecretManager = new(credsfakes.FakeSecrets)
-			fakeVarSourcePool = new(credsfakes.FakeVarSourcePool)
 
 			stepBuilder = builder.NewStepBuilder(
 				fakeStepFactory,
 				fakeDelegateFactory,
 				"http://example.com",
 				fakeSecretManager,
-				fakeVarSourcePool,
 				false,
 			)
 

@@ -4,8 +4,6 @@ import (
 	"strconv"
 	"time"
 
-	"code.cloudfoundry.org/clock"
-	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/creds/credsfakes"
 	"github.com/concourse/concourse/vars"
 
@@ -2024,8 +2022,7 @@ var _ = Describe("Pipeline", func() {
 				}
 				return nil, nil, false, nil
 			}
-			varSourcePool := creds.NewVarSourcePool(1*time.Minute, clock.NewClock())
-			pvars, err = pipeline.Variables(logger, fakeSecrets, varSourcePool)
+			pvars, err = pipeline.Variables(logger, fakeSecrets)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

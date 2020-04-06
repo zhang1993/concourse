@@ -88,7 +88,7 @@ type Pipeline interface {
 	Destroy() error
 	Rename(string) error
 
-	Variables(lager.Logger, creds.Secrets, creds.VarSourcePool) (vars.Variables, error)
+	Variables(lager.Logger, creds.Secrets) (vars.Variables, error)
 }
 
 type pipeline struct {
@@ -1042,7 +1042,7 @@ func (p *pipeline) getBuildsFrom(tx Tx, col string) (map[string]Build, error) {
 // Variables creates variables for this pipeline. If this pipeline has its own
 // var_sources, a vars.MultiVars containing all pipeline specific var_sources
 // plug the global variables, otherwise just return the global variables.
-func (p *pipeline) Variables(logger lager.Logger, globalSecrets creds.Secrets, varSourcePool creds.VarSourcePool) (vars.Variables, error) {
+func (p *pipeline) Variables(logger lager.Logger, globalSecrets creds.Secrets) (vars.Variables, error) {
 	globalVars := creds.NewVariables(globalSecrets, p.TeamName(), p.Name(), false)
 	namedVarsMap := vars.NamedVariables{}
 	// It's safe to add NamedVariables to allVars via an array here, because
@@ -1070,11 +1070,23 @@ func (p *pipeline) Variables(logger lager.Logger, globalSecrets creds.Secrets, v
 		if !ok {
 			return nil, fmt.Errorf("var_source '%s' invalid config", cm.Name)
 		}
-		secrets, err := varSourcePool.FindOrCreate(logger, config, factory)
+
+		manager, err := factory.NewInstance(config)
 		if err != nil {
-			return nil, errors.Wrapf(err, "create var_source '%s' error", cm.Name)
+			return nil, err
 		}
-		namedVarsMap[cm.Name] = creds.NewVariables(secrets, p.TeamName(), p.Name(), true)
+
+		err = manager.Init(logger)
+		if err != nil {
+			return nil, err
+		}
+
+		secretsFactory, err := manager.NewSecretsFactory(logger)
+		if err != nil {
+			return nil, err
+		}
+
+		namedVarsMap[cm.Name] = creds.NewVariables(secretsFactory.NewSecrets(), p.TeamName(), p.Name(), true)
 	}
 
 	// If there is no var_source from the pipeline, then just return the global
