@@ -277,7 +277,7 @@ all =
                     |> Tuple.first
                     |> Common.queryView
                     |> Query.has [ text "experiencing turbulence" ]
-        , test "shows turbulence view if the all jobs call gives a bad status error" <|
+        , test "shows turbulence view if the all jobs call gives an unexpected bad status error" <|
             \_ ->
                 Common.init "/"
                     |> Application.handleCallback
@@ -296,6 +296,50 @@ all =
                     |> Tuple.first
                     |> Common.queryView
                     |> Query.has [ text "experiencing turbulence" ]
+        , test "does not show turbulence if all jobs call gives 501" <|
+            \_ ->
+                Common.init "/"
+                    |> Application.handleCallback
+                        (Callback.AllJobsFetched <|
+                            Err <|
+                                Http.BadStatus
+                                    { url = "http://example.com"
+                                    , status =
+                                        { code = 501
+                                        , message = "not implemented"
+                                        }
+                                    , headers = Dict.empty
+                                    , body = ""
+                                    }
+                        )
+                    |> Tuple.first
+                    |> Common.queryView
+                    |> Query.hasNot [ text "experiencing turbulence" ]
+        , test "shows pipeline cards with no jobs if all jobs call gives 501" <|
+            \_ ->
+                Common.init "/"
+                    |> Application.handleCallback
+                        (Callback.AllPipelinesFetched <|
+                            Ok
+                                [ Data.pipeline "team" 0 |> Data.withName "pipeline" ]
+                        )
+                    |> Tuple.first
+                    |> Application.handleCallback
+                        (Callback.AllJobsFetched <|
+                            Err <|
+                                Http.BadStatus
+                                    { url = "http://example.com"
+                                    , status =
+                                        { code = 501
+                                        , message = "not implemented"
+                                        }
+                                    , headers = Dict.empty
+                                    , body = ""
+                                    }
+                        )
+                    |> Tuple.first
+                    |> Common.queryView
+                    |> Query.hasNot [ class "pipeline-grid", containing [ tag "div" ] ]
         , test "shows turbulence view if the all pipelines call gives a bad status error" <|
             \_ ->
                 Common.init "/"

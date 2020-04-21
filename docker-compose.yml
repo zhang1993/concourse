@@ -31,6 +31,8 @@ services:
       CONCOURSE_MAIN_TEAM_LOCAL_USER: test
       CONCOURSE_CLUSTER_NAME: dev
       CONCOURSE_ENABLE_ARCHIVE_PIPELINE: "true"
+      CONCOURSE_CLIENT_SECRET: Y29uY291cnNlLXdlYgo=
+      CONCOURSE_TSA_CLIENT_SECRET: Y29uY291cnNlLXdvcmtlcgo=
 
   worker:
     build: .

@@ -44,6 +44,7 @@ import Html.Events
         ( onMouseEnter
         , onMouseLeave
         )
+import Http
 import List.Extra
 import Login.Login as Login
 import Message.Callback exposing (Callback(..), TooltipPolicy(..))
@@ -234,6 +235,14 @@ handleCallback callback ( model, effects ) =
 
             else
                 ( newModel, effects )
+
+        AllJobsFetched (Err (Http.BadStatus response)) ->
+            case response.status.code of
+                501 ->
+                    ( { model | jobs = Fetched <| Dict.empty }, effects )
+
+                _ ->
+                    ( { model | showTurbulence = True }, effects )
 
         AllJobsFetched (Err _) ->
             ( { model | showTurbulence = True }, effects )
