@@ -59,7 +59,7 @@ var _ = Describe("Pipeline", func() {
 
 					SerialGroups: []string{"serial-group"},
 
-					Plan: atc.PlanSequence{
+					PlanSequence: atc.PlanSequence{
 						{
 							Put: "some-resource",
 							Params: atc.Params{
@@ -513,7 +513,7 @@ var _ = Describe("Pipeline", func() {
 
 						SerialGroups: []string{"serial-group"},
 
-						Plan: atc.PlanSequence{
+						PlanSequence: atc.PlanSequence{
 							{
 								Put: "some-resource",
 								Params: atc.Params{

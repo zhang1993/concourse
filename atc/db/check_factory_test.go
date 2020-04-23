@@ -1,10 +1,11 @@
 package db_test
 
 import (
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 	"errors"
 	"time"
+
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/db"
@@ -444,12 +445,12 @@ var _ = Describe("CheckFactory", func() {
 
 		Context("when the resources are used", func() {
 
-			BeforeEach(func(){
+			BeforeEach(func() {
 				defaultPipeline, _, err = defaultTeam.SavePipeline("default-pipeline", atc.Config{
 					Jobs: atc.JobConfigs{
 						{
 							Name: "some-job",
-							Plan: atc.PlanSequence{
+							PlanSequence: atc.PlanSequence{
 								atc.PlanConfig{Get: "some-resource"},
 								atc.PlanConfig{Put: "some-resource-put-only"},
 							},
