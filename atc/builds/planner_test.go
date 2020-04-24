@@ -1,4 +1,4 @@
-package factory_test
+package builds_test
 
 import (
 	"encoding/json"
@@ -6,19 +6,19 @@ import (
 	"strings"
 
 	"github.com/concourse/concourse/atc"
+	"github.com/concourse/concourse/atc/builds"
 	"github.com/concourse/concourse/atc/db"
-	"github.com/concourse/concourse/atc/scheduler/factory"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"sigs.k8s.io/yaml"
 )
 
-type BuildFactorySuite struct {
+type PlannerSuite struct {
 	suite.Suite
 	*require.Assertions
 }
 
-type FactoryTest struct {
+type PlannerTest struct {
 	Title string
 
 	ConfigYAML string
@@ -47,7 +47,7 @@ var resourceTypes = atc.VersionedResourceTypes{
 	},
 }
 
-var factoryTests = []FactoryTest{
+var factoryTests = []PlannerTest{
 	{
 		Title: "get step",
 		ConfigYAML: `
@@ -482,7 +482,7 @@ var factoryTests = []FactoryTest{
 
 func init() {
 	for _, hookType := range []string{"on_success", "on_failure", "on_abort", "ensure"} {
-		factoryTests = append(factoryTests, FactoryTest{
+		factoryTests = append(factoryTests, PlannerTest{
 			Title: hookType + " hook",
 
 			ConfigYAML: fmt.Sprintf(`
@@ -509,7 +509,7 @@ func init() {
 					}
 				}
 			}`, hookType, hookType),
-		}, FactoryTest{
+		}, PlannerTest{
 			Title: hookType + " hook with timeout",
 
 			ConfigYAML: fmt.Sprintf(`
@@ -543,7 +543,7 @@ func init() {
 					}
 				}
 			}`, hookType, hookType),
-		}, FactoryTest{
+		}, PlannerTest{
 			Title: hookType + " hook with attempts",
 
 			ConfigYAML: fmt.Sprintf(`
@@ -592,7 +592,7 @@ func init() {
 	}
 
 	for _, hookType := range []string{"on_success", "on_failure", "on_abort"} {
-		factoryTests = append(factoryTests, FactoryTest{
+		factoryTests = append(factoryTests, PlannerTest{
 			Title: hookType + " hook with ensure",
 
 			ConfigYAML: fmt.Sprintf(`
@@ -636,8 +636,8 @@ func init() {
 	}
 }
 
-func (test FactoryTest) Run(s *BuildFactorySuite) {
-	factory := factory.NewBuildFactory(atc.NewPlanFactory(0))
+func (test PlannerTest) Run(s *PlannerSuite) {
+	factory := builds.NewPlanner(atc.NewPlanFactory(0))
 
 	// thank goodness gofmt makes this a reasonable assumption
 	cleanIndents := strings.ReplaceAll(test.ConfigYAML, "\t", "")
@@ -670,7 +670,7 @@ func (test FactoryTest) Run(s *BuildFactorySuite) {
 	s.JSONEq(test.PlanJSON, string(actualJSON))
 }
 
-func (s *BuildFactorySuite) TestFactory() {
+func (s *PlannerSuite) TestFactory() {
 	for _, test := range factoryTests {
 		s.Run(test.Title, func() {
 			test.Run(s)
