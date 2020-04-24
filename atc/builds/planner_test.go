@@ -26,6 +26,7 @@ type PlannerTest struct {
 
 	CompareIDs bool
 	PlanJSON   string
+	Err        error
 }
 
 var resources = atc.ResourceConfigs{
@@ -82,6 +83,22 @@ var factoryTests = []PlannerTest{
 				]
 			}
 		}`,
+	},
+	{
+		Title: "get step with unknown resource",
+		ConfigYAML: `
+			get: some-name
+			resource: bogus-resource
+		`,
+		Err: builds.UnknownResourceError{Resource: "bogus-resource"},
+	},
+	{
+		Title: "get step with no available version",
+		ConfigYAML: `
+			get: some-name
+			resource: some-resource
+		`,
+		Err: builds.VersionNotProvidedError{Input: "some-name"},
 	},
 	{
 		Title: "put step",
@@ -647,7 +664,13 @@ func (test PlannerTest) Run(s *PlannerSuite) {
 	s.NoError(err)
 
 	actualPlan, actualErr := factory.Create(config, resources, resourceTypes, test.Inputs)
-	s.NoError(actualErr)
+
+	if test.Err != nil {
+		s.Equal(test.Err, actualErr)
+		return
+	} else {
+		s.NoError(actualErr)
+	}
 
 	seenIDs := map[atc.PlanID]bool{}
 	actualPlan.Each(func(p *atc.Plan) {
