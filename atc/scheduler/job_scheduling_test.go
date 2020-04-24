@@ -287,11 +287,11 @@ type Result struct {
 }
 
 func (example Example) Run() {
-	fakeFactory := new(schedulerfakes.FakeBuildFactory)
+	fakePlanner := new(schedulerfakes.FakeBuildPlanner)
 	fakeAlgorithm := new(schedulerfakes.FakeAlgorithm)
 	fakeAlgorithm.ComputeReturns(nil, true, false, nil)
 
-	buildStarter := scheduler.NewBuildStarter(fakeFactory, fakeAlgorithm)
+	buildStarter := scheduler.NewBuildStarter(fakePlanner, fakeAlgorithm)
 
 	fakeDBResourceType := new(dbfakes.FakeResourceType)
 	fakeDBResourceType.NameReturns("fake-resource-type")
@@ -357,9 +357,9 @@ func (example Example) Run() {
 		}
 
 		if build.CreatingBuildPlanFails {
-			fakeFactory.CreateReturns(atc.Plan{}, errors.New("disaster"))
+			fakePlanner.CreateReturns(atc.Plan{}, errors.New("disaster"))
 		} else {
-			fakeFactory.CreateReturns(atc.Plan{}, nil)
+			fakePlanner.CreateReturns(atc.Plan{}, nil)
 		}
 
 		if build.UnableToStart {
