@@ -20,6 +20,7 @@ var _ = Describe("Scheduler", func() {
 	var (
 		fakeAlgorithm    *schedulerfakes.FakeAlgorithm
 		fakeBuildStarter *schedulerfakes.FakeBuildStarter
+		fakeBuildCreator *dbfakes.FakeBuildCreator
 
 		scheduler *Scheduler
 
@@ -29,10 +30,12 @@ var _ = Describe("Scheduler", func() {
 	BeforeEach(func() {
 		fakeAlgorithm = new(schedulerfakes.FakeAlgorithm)
 		fakeBuildStarter = new(schedulerfakes.FakeBuildStarter)
+		fakeBuildCreator = new(dbfakes.FakeBuildCreator)
 
 		scheduler = &Scheduler{
 			Algorithm:    fakeAlgorithm,
 			BuildStarter: fakeBuildStarter,
+			BuildCreator: fakeBuildCreator,
 		}
 
 		disaster = errors.New("bad thing")
@@ -210,7 +213,7 @@ var _ = Describe("Scheduler", func() {
 
 							It("didn't create a pending build", func() {
 								//TODO: create a positive test case for this
-								Expect(fakeJob.EnsurePendingBuildExistsCallCount()).To(BeZero())
+								Expect(fakeBuildCreator.EnsurePendingBuildExistsCallCount()).To(BeZero())
 							})
 						})
 					})
@@ -258,7 +261,7 @@ var _ = Describe("Scheduler", func() {
 				})
 
 				It("didn't create a pending build", func() {
-					Expect(fakeJob.EnsurePendingBuildExistsCallCount()).To(BeZero())
+					Expect(fakeBuildCreator.EnsurePendingBuildExistsCallCount()).To(BeZero())
 				})
 
 				It("didn't mark the job as having new inputs", func() {
@@ -290,7 +293,7 @@ var _ = Describe("Scheduler", func() {
 				})
 
 				It("didn't create a pending build", func() {
-					Expect(fakeJob.EnsurePendingBuildExistsCallCount()).To(BeZero())
+					Expect(fakeBuildCreator.EnsurePendingBuildExistsCallCount()).To(BeZero())
 				})
 
 				Context("when the job does not have new inputs since before", func() {
@@ -351,7 +354,7 @@ var _ = Describe("Scheduler", func() {
 
 				Context("when creating a pending build fails", func() {
 					BeforeEach(func() {
-						fakeJob.EnsurePendingBuildExistsReturns(disaster)
+						fakeBuildCreator.EnsurePendingBuildExistsReturns(disaster)
 					})
 
 					It("returns the error", func() {
@@ -359,13 +362,13 @@ var _ = Describe("Scheduler", func() {
 					})
 
 					It("created a pending build for the right job", func() {
-						Expect(fakeJob.EnsurePendingBuildExistsCallCount()).To(Equal(1))
+						Expect(fakeBuildCreator.EnsurePendingBuildExistsCallCount()).To(Equal(1))
 					})
 				})
 
 				Context("when creating a pending build succeeds", func() {
 					BeforeEach(func() {
-						fakeJob.EnsurePendingBuildExistsReturns(nil)
+						fakeBuildCreator.EnsurePendingBuildExistsReturns(nil)
 					})
 
 					It("starts all pending builds and returns no error", func() {

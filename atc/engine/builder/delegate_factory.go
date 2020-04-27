@@ -3,7 +3,6 @@ package builder
 import (
 	"io"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"code.cloudfoundry.org/clock"
@@ -17,22 +16,26 @@ import (
 	"github.com/concourse/concourse/vars"
 )
 
-func NewDelegateFactory() *delegateFactory {
-	return &delegateFactory{}
+func NewDelegateFactory(eventProcessor db.EventProcessor) *delegateFactory {
+	return &delegateFactory{
+		eventProcessor: eventProcessor,
+	}
 }
 
-type delegateFactory struct{}
+type delegateFactory struct {
+	eventProcessor db.EventProcessor
+}
 
 func (delegate *delegateFactory) GetDelegate(build db.Build, planID atc.PlanID, credVarsTracker vars.CredVarsTracker) exec.GetDelegate {
-	return NewGetDelegate(build, planID, credVarsTracker, clock.NewClock())
+	return NewGetDelegate(build, planID, credVarsTracker, clock.NewClock(), delegate.eventProcessor)
 }
 
 func (delegate *delegateFactory) PutDelegate(build db.Build, planID atc.PlanID, credVarsTracker vars.CredVarsTracker) exec.PutDelegate {
-	return NewPutDelegate(build, planID, credVarsTracker, clock.NewClock())
+	return NewPutDelegate(build, planID, credVarsTracker, clock.NewClock(), delegate.eventProcessor)
 }
 
 func (delegate *delegateFactory) TaskDelegate(build db.Build, planID atc.PlanID, credVarsTracker vars.CredVarsTracker) exec.TaskDelegate {
-	return NewTaskDelegate(build, planID, credVarsTracker, clock.NewClock())
+	return NewTaskDelegate(build, planID, credVarsTracker, clock.NewClock(), delegate.eventProcessor)
 }
 
 func (delegate *delegateFactory) CheckDelegate(check db.Check, planID atc.PlanID, credVarsTracker vars.CredVarsTracker) exec.CheckDelegate {
@@ -40,31 +43,33 @@ func (delegate *delegateFactory) CheckDelegate(check db.Check, planID atc.PlanID
 }
 
 func (delegate *delegateFactory) BuildStepDelegate(build db.Build, planID atc.PlanID, credVarsTracker vars.CredVarsTracker) exec.BuildStepDelegate {
-	return NewBuildStepDelegate(build, planID, credVarsTracker, clock.NewClock())
+	return NewBuildStepDelegate(build, planID, credVarsTracker, clock.NewClock(), delegate.eventProcessor)
 }
 
-func NewGetDelegate(build db.Build, planID atc.PlanID, credVarsTracker vars.CredVarsTracker, clock clock.Clock) exec.GetDelegate {
+func NewGetDelegate(build db.Build, planID atc.PlanID, credVarsTracker vars.CredVarsTracker, clock clock.Clock, eventProcessor db.EventProcessor) exec.GetDelegate {
 	return &getDelegate{
-		BuildStepDelegate: NewBuildStepDelegate(build, planID, credVarsTracker, clock),
+		BuildStepDelegate: NewBuildStepDelegate(build, planID, credVarsTracker, clock, eventProcessor),
 
-		eventOrigin: event.Origin{ID: event.OriginID(planID)},
-		build:       build,
-		clock:       clock,
+		eventProcessor: eventProcessor,
+		eventOrigin:    event.Origin{ID: event.OriginID(planID)},
+		build:          build,
+		clock:          clock,
 	}
 }
 
 type getDelegate struct {
 	exec.BuildStepDelegate
 
-	build       db.Build
-	eventOrigin event.Origin
-	clock       clock.Clock
+	eventProcessor db.EventProcessor
+	build          db.Build
+	eventOrigin    event.Origin
+	clock          clock.Clock
 }
 
 func (d *getDelegate) Initializing(logger lager.Logger) {
-	err := d.build.SaveEvent(event.InitializeGet{
+	err := d.eventProcessor.Process(d.build, event.InitializeGet{
 		Origin: d.eventOrigin,
-		Time:   time.Now().Unix(),
+		Time:   d.clock.Now().Unix(),
 	})
 	if err != nil {
 		logger.Error("failed-to-save-initialize-get-event", err)
@@ -75,8 +80,8 @@ func (d *getDelegate) Initializing(logger lager.Logger) {
 }
 
 func (d *getDelegate) Starting(logger lager.Logger) {
-	err := d.build.SaveEvent(event.StartGet{
-		Time:   time.Now().Unix(),
+	err := d.eventProcessor.Process(d.build, event.StartGet{
+		Time:   d.clock.Now().Unix(),
 		Origin: d.eventOrigin,
 	})
 	if err != nil {
@@ -92,7 +97,7 @@ func (d *getDelegate) Finished(logger lager.Logger, exitStatus exec.ExitStatus, 
 	d.Stdout().(io.Closer).Close()
 	d.Stderr().(io.Closer).Close()
 
-	err := d.build.SaveEvent(event.FinishGet{
+	err := d.eventProcessor.Process(d.build, event.FinishGet{
 		Origin:          d.eventOrigin,
 		Time:            d.clock.Now().Unix(),
 		ExitStatus:      int(exitStatus),
@@ -145,28 +150,30 @@ func (d *getDelegate) UpdateVersion(log lager.Logger, plan atc.GetPlan, info run
 	}
 }
 
-func NewPutDelegate(build db.Build, planID atc.PlanID, credVarsTracker vars.CredVarsTracker, clock clock.Clock) exec.PutDelegate {
+func NewPutDelegate(build db.Build, planID atc.PlanID, credVarsTracker vars.CredVarsTracker, clock clock.Clock, eventProcessor db.EventProcessor) exec.PutDelegate {
 	return &putDelegate{
-		BuildStepDelegate: NewBuildStepDelegate(build, planID, credVarsTracker, clock),
+		BuildStepDelegate: NewBuildStepDelegate(build, planID, credVarsTracker, clock, eventProcessor),
 
-		eventOrigin: event.Origin{ID: event.OriginID(planID)},
-		build:       build,
-		clock:       clock,
+		eventProcessor: eventProcessor,
+		eventOrigin:    event.Origin{ID: event.OriginID(planID)},
+		build:          build,
+		clock:          clock,
 	}
 }
 
 type putDelegate struct {
 	exec.BuildStepDelegate
 
-	build       db.Build
-	eventOrigin event.Origin
-	clock       clock.Clock
+	eventProcessor db.EventProcessor
+	build          db.Build
+	eventOrigin    event.Origin
+	clock          clock.Clock
 }
 
 func (d *putDelegate) Initializing(logger lager.Logger) {
-	err := d.build.SaveEvent(event.InitializePut{
+	err := d.eventProcessor.Process(d.build, event.InitializePut{
 		Origin: d.eventOrigin,
-		Time:   time.Now().Unix(),
+		Time:   d.clock.Now().Unix(),
 	})
 	if err != nil {
 		logger.Error("failed-to-save-initialize-put-event", err)
@@ -177,8 +184,8 @@ func (d *putDelegate) Initializing(logger lager.Logger) {
 }
 
 func (d *putDelegate) Starting(logger lager.Logger) {
-	err := d.build.SaveEvent(event.StartPut{
-		Time:   time.Now().Unix(),
+	err := d.eventProcessor.Process(d.build, event.StartPut{
+		Time:   d.clock.Now().Unix(),
 		Origin: d.eventOrigin,
 	})
 	if err != nil {
@@ -194,7 +201,7 @@ func (d *putDelegate) Finished(logger lager.Logger, exitStatus exec.ExitStatus, 
 	d.Stdout().(io.Closer).Close()
 	d.Stderr().(io.Closer).Close()
 
-	err := d.build.SaveEvent(event.FinishPut{
+	err := d.eventProcessor.Process(d.build, event.FinishPut{
 		Origin:          d.eventOrigin,
 		Time:            d.clock.Now().Unix(),
 		ExitStatus:      int(exitStatus),
@@ -232,20 +239,24 @@ func (d *putDelegate) SaveOutput(log lager.Logger, plan atc.PutPlan, source atc.
 	}
 }
 
-func NewTaskDelegate(build db.Build, planID atc.PlanID, credVarsTracker vars.CredVarsTracker, clock clock.Clock) exec.TaskDelegate {
+func NewTaskDelegate(build db.Build, planID atc.PlanID, credVarsTracker vars.CredVarsTracker, clock clock.Clock, eventProcessor db.EventProcessor) exec.TaskDelegate {
 	return &taskDelegate{
-		BuildStepDelegate: NewBuildStepDelegate(build, planID, credVarsTracker, clock),
+		BuildStepDelegate: NewBuildStepDelegate(build, planID, credVarsTracker, clock, eventProcessor),
 
-		eventOrigin: event.Origin{ID: event.OriginID(planID)},
-		build:       build,
+		eventProcessor: eventProcessor,
+		eventOrigin:    event.Origin{ID: event.OriginID(planID)},
+		build:          build,
+		clock:          clock,
 	}
 }
 
 type taskDelegate struct {
 	exec.BuildStepDelegate
-	config      atc.TaskConfig
-	build       db.Build
-	eventOrigin event.Origin
+	eventProcessor db.EventProcessor
+	config         atc.TaskConfig
+	build          db.Build
+	eventOrigin    event.Origin
+	clock          clock.Clock
 }
 
 func (d *taskDelegate) SetTaskConfig(config atc.TaskConfig) {
@@ -253,9 +264,9 @@ func (d *taskDelegate) SetTaskConfig(config atc.TaskConfig) {
 }
 
 func (d *taskDelegate) Initializing(logger lager.Logger) {
-	err := d.build.SaveEvent(event.InitializeTask{
+	err := d.eventProcessor.Process(d.build, event.InitializeTask{
 		Origin:     d.eventOrigin,
-		Time:       time.Now().Unix(),
+		Time:       d.clock.Now().Unix(),
 		TaskConfig: event.ShadowTaskConfig(d.config),
 	})
 	if err != nil {
@@ -267,9 +278,9 @@ func (d *taskDelegate) Initializing(logger lager.Logger) {
 }
 
 func (d *taskDelegate) Starting(logger lager.Logger) {
-	err := d.build.SaveEvent(event.StartTask{
+	err := d.eventProcessor.Process(d.build, event.StartTask{
 		Origin:     d.eventOrigin,
-		Time:       time.Now().Unix(),
+		Time:       d.clock.Now().Unix(),
 		TaskConfig: event.ShadowTaskConfig(d.config),
 	})
 	if err != nil {
@@ -285,9 +296,9 @@ func (d *taskDelegate) Finished(logger lager.Logger, exitStatus exec.ExitStatus)
 	d.Stdout().(io.Closer).Close()
 	d.Stderr().(io.Closer).Close()
 
-	err := d.build.SaveEvent(event.FinishTask{
+	err := d.eventProcessor.Process(d.build, event.FinishTask{
 		ExitStatus: int(exitStatus),
-		Time:       time.Now().Unix(),
+		Time:       d.clock.Now().Unix(),
 		Origin:     d.eventOrigin,
 	})
 	if err != nil {
@@ -300,7 +311,7 @@ func (d *taskDelegate) Finished(logger lager.Logger, exitStatus exec.ExitStatus)
 
 func NewCheckDelegate(check db.Check, planID atc.PlanID, credVarsTracker vars.CredVarsTracker, clock clock.Clock) exec.CheckDelegate {
 	return &checkDelegate{
-		BuildStepDelegate: NewBuildStepDelegate(nil, planID, credVarsTracker, clock),
+		BuildStepDelegate: NewBuildStepDelegate(nil, planID, credVarsTracker, clock, nil),
 
 		eventOrigin: event.Origin{ID: event.OriginID(planID)},
 		check:       check,
@@ -341,8 +352,10 @@ func NewBuildStepDelegate(
 	planID atc.PlanID,
 	credVarsTracker vars.CredVarsTracker,
 	clock clock.Clock,
+	eventProcessor db.EventProcessor,
 ) *buildStepDelegate {
 	return &buildStepDelegate{
+		eventProcessor:  eventProcessor,
 		build:           build,
 		planID:          planID,
 		clock:           clock,
@@ -353,6 +366,7 @@ func NewBuildStepDelegate(
 }
 
 type buildStepDelegate struct {
+	eventProcessor  db.EventProcessor
 	build           db.Build
 	planID          atc.PlanID
 	clock           clock.Clock
@@ -392,7 +406,8 @@ func (delegate *buildStepDelegate) buildOutputFilter(str string) string {
 func (delegate *buildStepDelegate) Stdout() io.Writer {
 	if delegate.stdout == nil {
 		if delegate.credVarsTracker.Enabled() {
-			delegate.stdout = newDBEventWriterWithSecretRedaction(
+			delegate.stdout = newLogEventWriterWithSecretRedaction(
+				delegate.eventProcessor,
 				delegate.build,
 				event.Origin{
 					Source: event.OriginSourceStdout,
@@ -402,7 +417,8 @@ func (delegate *buildStepDelegate) Stdout() io.Writer {
 				delegate.buildOutputFilter,
 			)
 		} else {
-			delegate.stdout = newDBEventWriter(
+			delegate.stdout = newLogEventWriter(
+				delegate.eventProcessor,
 				delegate.build,
 				event.Origin{
 					Source: event.OriginSourceStdout,
@@ -418,7 +434,8 @@ func (delegate *buildStepDelegate) Stdout() io.Writer {
 func (delegate *buildStepDelegate) Stderr() io.Writer {
 	if delegate.stderr == nil {
 		if delegate.credVarsTracker.Enabled() {
-			delegate.stderr = newDBEventWriterWithSecretRedaction(
+			delegate.stderr = newLogEventWriterWithSecretRedaction(
+				delegate.eventProcessor,
 				delegate.build,
 				event.Origin{
 					Source: event.OriginSourceStderr,
@@ -428,7 +445,8 @@ func (delegate *buildStepDelegate) Stderr() io.Writer {
 				delegate.buildOutputFilter,
 			)
 		} else {
-			delegate.stderr = newDBEventWriter(
+			delegate.stderr = newLogEventWriter(
+				delegate.eventProcessor,
 				delegate.build,
 				event.Origin{
 					Source: event.OriginSourceStderr,
@@ -442,11 +460,11 @@ func (delegate *buildStepDelegate) Stderr() io.Writer {
 }
 
 func (delegate *buildStepDelegate) Initializing(logger lager.Logger) {
-	err := delegate.build.SaveEvent(event.Initialize{
+	err := delegate.eventProcessor.Process(delegate.build, event.Initialize{
 		Origin: event.Origin{
 			ID: event.OriginID(delegate.planID),
 		},
-		Time: time.Now().Unix(),
+		Time: delegate.clock.Now().Unix(),
 	})
 	if err != nil {
 		logger.Error("failed-to-save-initialize-event", err)
@@ -457,11 +475,11 @@ func (delegate *buildStepDelegate) Initializing(logger lager.Logger) {
 }
 
 func (delegate *buildStepDelegate) Starting(logger lager.Logger) {
-	err := delegate.build.SaveEvent(event.Start{
+	err := delegate.eventProcessor.Process(delegate.build, event.Start{
 		Origin: event.Origin{
 			ID: event.OriginID(delegate.planID),
 		},
-		Time: time.Now().Unix(),
+		Time: delegate.clock.Now().Unix(),
 	})
 	if err != nil {
 		logger.Error("failed-to-save-start-event", err)
@@ -476,11 +494,11 @@ func (delegate *buildStepDelegate) Finished(logger lager.Logger, succeeded bool)
 	delegate.Stdout().(io.Closer).Close()
 	delegate.Stderr().(io.Closer).Close()
 
-	err := delegate.build.SaveEvent(event.Finish{
+	err := delegate.eventProcessor.Process(delegate.build, event.Finish{
 		Origin: event.Origin{
 			ID: event.OriginID(delegate.planID),
 		},
-		Time:      time.Now().Unix(),
+		Time:      delegate.clock.Now().Unix(),
 		Succeeded: succeeded,
 	})
 	if err != nil {
@@ -492,7 +510,7 @@ func (delegate *buildStepDelegate) Finished(logger lager.Logger, succeeded bool)
 }
 
 func (delegate *buildStepDelegate) Errored(logger lager.Logger, message string) {
-	err := delegate.build.SaveEvent(event.Error{
+	err := delegate.eventProcessor.Process(delegate.build, event.Error{
 		Message: message,
 		Origin: event.Origin{
 			ID: event.OriginID(delegate.planID),
@@ -504,22 +522,24 @@ func (delegate *buildStepDelegate) Errored(logger lager.Logger, message string) 
 	}
 }
 
-func newDBEventWriter(build db.Build, origin event.Origin, clock clock.Clock) io.WriteCloser {
-	return &dbEventWriter{
-		build:  build,
-		origin: origin,
-		clock:  clock,
+func newLogEventWriter(eventProcessor db.EventProcessor, build db.Build, origin event.Origin, clock clock.Clock) io.WriteCloser {
+	return &logEventWriter{
+		eventProcessor: eventProcessor,
+		build:          build,
+		origin:         origin,
+		clock:          clock,
 	}
 }
 
-type dbEventWriter struct {
-	build    db.Build
-	origin   event.Origin
-	clock    clock.Clock
-	dangling []byte
+type logEventWriter struct {
+	eventProcessor db.EventProcessor
+	build          db.Build
+	origin         event.Origin
+	clock          clock.Clock
+	dangling       []byte
 }
 
-func (writer *dbEventWriter) Write(data []byte) (int, error) {
+func (writer *logEventWriter) Write(data []byte) (int, error) {
 	text := writer.writeDangling(data)
 	if text == nil {
 		return len(data), nil
@@ -533,7 +553,7 @@ func (writer *dbEventWriter) Write(data []byte) (int, error) {
 	return len(data), nil
 }
 
-func (writer *dbEventWriter) writeDangling(data []byte) []byte {
+func (writer *logEventWriter) writeDangling(data []byte) []byte {
 	text := append(writer.dangling, data...)
 
 	checkEncoding, _ := utf8.DecodeLastRune(text)
@@ -546,35 +566,37 @@ func (writer *dbEventWriter) writeDangling(data []byte) []byte {
 	return text
 }
 
-func (writer *dbEventWriter) saveLog(text string) error {
-	return writer.build.SaveEvent(event.Log{
+func (writer *logEventWriter) saveLog(text string) error {
+	return writer.eventProcessor.Process(writer.build, event.Log{
 		Time:    writer.clock.Now().Unix(),
 		Payload: text,
 		Origin:  writer.origin,
 	})
 }
 
-func (writer *dbEventWriter) Close() error {
+func (writer *logEventWriter) Close() error {
 	return nil
 }
 
-func newDBEventWriterWithSecretRedaction(build db.Build, origin event.Origin, clock clock.Clock, filter exec.BuildOutputFilter) io.Writer {
-	return &dbEventWriterWithSecretRedaction{
-		dbEventWriter: dbEventWriter{
-			build:  build,
-			origin: origin,
-			clock:  clock,
+// TODO: turn secret redaction into a decorator-type deal (if feasible)
+func newLogEventWriterWithSecretRedaction(eventProcessor db.EventProcessor, build db.Build, origin event.Origin, clock clock.Clock, filter exec.BuildOutputFilter) io.Writer {
+	return &logEventWriterWithSecretRedaction{
+		logEventWriter: logEventWriter{
+			eventProcessor: eventProcessor,
+			build:          build,
+			origin:         origin,
+			clock:          clock,
 		},
 		filter: filter,
 	}
 }
 
-type dbEventWriterWithSecretRedaction struct {
-	dbEventWriter
+type logEventWriterWithSecretRedaction struct {
+	logEventWriter
 	filter exec.BuildOutputFilter
 }
 
-func (writer *dbEventWriterWithSecretRedaction) Write(data []byte) (int, error) {
+func (writer *logEventWriterWithSecretRedaction) Write(data []byte) (int, error) {
 	var text []byte
 
 	if data != nil {
@@ -613,7 +635,7 @@ func (writer *dbEventWriterWithSecretRedaction) Write(data []byte) (int, error) 
 	return len(data), nil
 }
 
-func (writer *dbEventWriterWithSecretRedaction) Close() error {
+func (writer *logEventWriterWithSecretRedaction) Close() error {
 	writer.Write(nil)
 	return nil
 }

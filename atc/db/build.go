@@ -124,13 +124,12 @@ type Build interface {
 	Interceptible() (bool, error)
 	Preparation() (BuildPreparation, bool, error)
 
-	Start(atc.Plan) (bool, error)
-	Finish(BuildStatus) error
+	Start(atc.Plan, EventProcessor) (bool, error)
+	Finish(BuildStatus, EventProcessor) error
 
 	SetInterceptible(bool) error
 
 	Events(uint) (EventSource, error)
-	SaveEvent(event atc.Event) error
 
 	Artifacts() ([]WorkerArtifact, error)
 	Artifact(artifactID int) (WorkerArtifact, error)
@@ -289,7 +288,7 @@ func (b *build) SetInterceptible(i bool) error {
 	return nil
 }
 
-func (b *build) Start(plan atc.Plan) (bool, error) {
+func (b *build) Start(plan atc.Plan, eventProcessor EventProcessor) (bool, error) {
 	tx, err := b.conn.Begin()
 	if err != nil {
 		return false, err
@@ -332,7 +331,12 @@ func (b *build) Start(plan atc.Plan) (bool, error) {
 		return false, err
 	}
 
-	err = b.saveEvent(tx, event.Status{
+	err = tx.Commit()
+	if err != nil {
+		return false, err
+	}
+
+	err = eventProcessor.Process(b, event.Status{
 		Status: atc.StatusStarted,
 		Time:   startTime.Unix(),
 	})
@@ -340,20 +344,10 @@ func (b *build) Start(plan atc.Plan) (bool, error) {
 		return false, err
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		return false, err
-	}
-
-	err = b.conn.Bus().Notify(buildEventsChannel(b.id))
-	if err != nil {
-		return false, err
-	}
-
 	return true, nil
 }
 
-func (b *build) Finish(status BuildStatus) error {
+func (b *build) Finish(status BuildStatus, eventProcessor EventProcessor) error {
 	tx, err := b.conn.Begin()
 	if err != nil {
 		return err
@@ -374,21 +368,6 @@ func (b *build) Finish(status BuildStatus) error {
 		RunWith(tx).
 		QueryRow().
 		Scan(&endTime)
-	if err != nil {
-		return err
-	}
-
-	err = b.saveEvent(tx, event.Status{
-		Status: atc.BuildStatus(status),
-		Time:   endTime.Unix(),
-	})
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(fmt.Sprintf(`
-		DROP SEQUENCE %s
-	`, buildEventSeq(b.id)))
 	if err != nil {
 		return err
 	}
@@ -528,12 +507,15 @@ func (b *build) Finish(status BuildStatus) error {
 		return err
 	}
 
-	err = b.conn.Bus().Notify(buildEventsChannel(b.id))
+	err = eventProcessor.Process(b, event.Status{
+		Status: atc.BuildStatus(status),
+		Time:   endTime.Unix(),
+	})
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return eventProcessor.Finalize(b)
 }
 
 func (b *build) SetDrained(drained bool) error {
@@ -822,27 +804,6 @@ func (b *build) Events(from uint) (EventSource, error) {
 		notifier,
 		from,
 	), nil
-}
-
-func (b *build) SaveEvent(event atc.Event) error {
-	tx, err := b.conn.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer Rollback(tx)
-
-	err = b.saveEvent(tx, event)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
-
-	return b.conn.Bus().Notify(buildEventsChannel(b.id))
 }
 
 func (b *build) Artifact(artifactID int) (WorkerArtifact, error) {
@@ -1405,17 +1366,6 @@ func (b *build) Resources() ([]BuildInput, []BuildOutput, error) {
 	return inputs, outputs, nil
 }
 
-func createBuildEventSeq(tx Tx, buildid int) error {
-	_, err := tx.Exec(fmt.Sprintf(`
-		CREATE SEQUENCE %s MINVALUE 0
-	`, buildEventSeq(buildid)))
-	return err
-}
-
-func buildEventSeq(buildid int) string {
-	return fmt.Sprintf("build_event_id_seq_%d", buildid)
-}
-
 func scanBuild(b *build, row scannable, encryptionStrategy encryption.Strategy) error {
 	var (
 		jobID, pipelineID, rerunOf, rerunNumber                             sql.NullInt64
@@ -1507,63 +1457,8 @@ func scanBuild(b *build, row scannable, encryptionStrategy encryption.Strategy) 
 	return nil
 }
 
-func (b *build) saveEvent(tx Tx, event atc.Event) error {
-	payload, err := json.Marshal(event)
-	if err != nil {
-		return err
-	}
-
-	table := fmt.Sprintf("team_build_events_%d", b.teamID)
-	if b.pipelineID != 0 {
-		table = fmt.Sprintf("pipeline_build_events_%d", b.pipelineID)
-	}
-	_, err = psql.Insert(table).
-		Columns("event_id", "build_id", "type", "version", "payload").
-		Values(sq.Expr("nextval('"+buildEventSeq(b.id)+"')"), b.id, string(event.EventType()), string(event.Version()), payload).
-		RunWith(tx).
-		Exec()
-	return err
-}
-
-func createBuild(tx Tx, build *build, vals map[string]interface{}) error {
-	var buildID int
-
-	buildVals := make(map[string]interface{})
-	for name, value := range vals {
-		buildVals[name] = value
-	}
-
-	buildVals["needs_v6_migration"] = false
-
-	err := psql.Insert("builds").
-		SetMap(buildVals).
-		Suffix("RETURNING id").
-		RunWith(tx).
-		QueryRow().
-		Scan(&buildID)
-	if err != nil {
-		return err
-	}
-
-	err = scanBuild(build, buildsQuery.
-		Where(sq.Eq{"b.id": buildID}).
-		RunWith(tx).
-		QueryRow(),
-		build.conn.EncryptionStrategy(),
-	)
-	if err != nil {
-		return err
-	}
-
-	return createBuildEventSeq(tx, buildID)
-}
-
 func buildStartedChannel() string {
 	return atc.ComponentBuildTracker
-}
-
-func buildEventsChannel(buildID int) string {
-	return fmt.Sprintf("build_events_%d", buildID)
 }
 
 func buildAbortChannel(buildID int) string {

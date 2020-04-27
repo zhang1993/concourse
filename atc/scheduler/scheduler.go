@@ -25,6 +25,7 @@ type Algorithm interface {
 type Scheduler struct {
 	Algorithm    Algorithm
 	BuildStarter BuildStarter
+	BuildCreator db.BuildCreator
 }
 
 func (s *Scheduler) Schedule(
@@ -94,7 +95,7 @@ func (s *Scheduler) ensurePendingBuildExists(
 		if ok && inputSource.FirstOccurrence {
 			hasNewInputs = true
 			if inputConfig.Trigger {
-				err := job.EnsurePendingBuildExists()
+				err := s.BuildCreator.EnsurePendingBuildExists(job)
 				if err != nil {
 					return fmt.Errorf("ensure pending build exists: %w", err)
 				}

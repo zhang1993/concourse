@@ -16,7 +16,6 @@ import (
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db/lock"
-	"github.com/concourse/concourse/atc/event"
 	"github.com/concourse/concourse/vars"
 )
 
@@ -58,9 +57,6 @@ type Pipeline interface {
 	GetBuildsWithVersionAsInput(int, int) ([]Build, error)
 	GetBuildsWithVersionAsOutput(int, int) ([]Build, error)
 	Builds(page Page) ([]Build, Pagination, error)
-
-	CreateOneOffBuild() (Build, error)
-	CreateStartedBuild(plan atc.Plan) (Build, error)
 
 	BuildsWithTime(page Page) ([]Build, Pagination, error)
 
@@ -261,55 +257,6 @@ func (p *pipeline) Config() (atc.Config, error) {
 	}
 
 	return config, nil
-}
-
-func (p *pipeline) CreateJobBuild(jobName string) (Build, error) {
-	tx, err := p.conn.Begin()
-	if err != nil {
-		return nil, err
-	}
-
-	defer Rollback(tx)
-
-	buildName, jobID, err := getNewBuildNameForJob(tx, jobName, p.id)
-	if err != nil {
-		return nil, err
-	}
-
-	var buildID int
-	err = psql.Insert("builds").
-		Columns("name", "job_id", "team_id", "status", "manually_triggered").
-		Values(buildName, jobID, p.teamID, "pending", true).
-		Suffix("RETURNING id").
-		RunWith(tx).
-		QueryRow().
-		Scan(&buildID)
-	if err != nil {
-		return nil, err
-	}
-
-	build := newEmptyBuild(p.conn, p.lockFactory)
-	err = scanBuild(build, buildsQuery.
-		Where(sq.Eq{"b.id": buildID}).
-		RunWith(tx).
-		QueryRow(),
-		p.conn.EncryptionStrategy(),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	err = createBuildEventSeq(tx, buildID)
-	if err != nil {
-		return nil, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
-	}
-
-	return build, nil
 }
 
 // ResourceVersion is given a resource config version id and returns the
@@ -976,91 +923,6 @@ func (p *pipeline) DeleteBuildEventsByBuildIDs(buildIDs []int) error {
 
 	err = tx.Commit()
 	return err
-}
-
-func (p *pipeline) CreateOneOffBuild() (Build, error) {
-	tx, err := p.conn.Begin()
-	if err != nil {
-		return nil, err
-	}
-
-	defer Rollback(tx)
-
-	build := newEmptyBuild(p.conn, p.lockFactory)
-	err = createBuild(tx, build, map[string]interface{}{
-		"name":        sq.Expr("nextval('one_off_name')"),
-		"pipeline_id": p.id,
-		"team_id":     p.teamID,
-		"status":      BuildStatusPending,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
-	}
-
-	return build, nil
-}
-
-func (p *pipeline) CreateStartedBuild(plan atc.Plan) (Build, error) {
-	tx, err := p.conn.Begin()
-	if err != nil {
-		return nil, err
-	}
-
-	defer Rollback(tx)
-
-	metadata, err := json.Marshal(plan)
-	if err != nil {
-		return nil, err
-	}
-
-	encryptedPlan, nonce, err := p.conn.EncryptionStrategy().Encrypt(metadata)
-	if err != nil {
-		return nil, err
-	}
-
-	build := newEmptyBuild(p.conn, p.lockFactory)
-	err = createBuild(tx, build, map[string]interface{}{
-		"name":         sq.Expr("nextval('one_off_name')"),
-		"pipeline_id":  p.id,
-		"team_id":      p.teamID,
-		"status":       BuildStatusStarted,
-		"start_time":   sq.Expr("now()"),
-		"schema":       schema,
-		"private_plan": encryptedPlan,
-		"public_plan":  plan.Public(),
-		"nonce":        nonce,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = build.saveEvent(tx, event.Status{
-		Status: atc.StatusStarted,
-		Time:   build.StartTime().Unix(),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
-	}
-
-	if err = p.conn.Bus().Notify(buildStartedChannel()); err != nil {
-		return nil, err
-	}
-
-	if err = p.conn.Bus().Notify(buildEventsChannel(build.id)); err != nil {
-		return nil, err
-	}
-
-	return build, nil
 }
 
 func (p *pipeline) getBuildsFrom(tx Tx, col string) (map[string]Build, error) {

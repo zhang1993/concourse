@@ -655,6 +655,7 @@ func (cmd *RunCommand) constructAPIMembers(
 	dbCheckFactory := db.NewCheckFactory(dbConn, lockFactory, secretManager, cmd.varSourcePool, cmd.GlobalResourceCheckTimeout)
 	dbClock := db.NewClock()
 	dbWall := db.NewWall(dbConn, &dbClock)
+	dbBuildCreator := db.NewBuildCreator(dbConn, lockFactory, cmd.constructEventProcessor(dbConn))
 
 	tokenVerifier := cmd.constructTokenVerifier(httpClient)
 
@@ -687,6 +688,7 @@ func (cmd *RunCommand) constructAPIMembers(
 		dbWall,
 		tokenVerifier,
 		dbConn.Bus(),
+		dbBuildCreator,
 	)
 	if err != nil {
 		return nil, err
@@ -883,6 +885,7 @@ func (cmd *RunCommand) constructBackendMembers(
 		return nil, err
 	}
 
+	eventProcessor := cmd.constructEventProcessor(dbConn)
 	engine := cmd.constructEngine(
 		pool,
 		workerClient,
@@ -894,12 +897,14 @@ func (cmd *RunCommand) constructBackendMembers(
 		defaultLimits,
 		buildContainerStrategy,
 		lockFactory,
+		eventProcessor,
 	)
 
 	dbBuildFactory := db.NewBuildFactory(dbConn, lockFactory, cmd.GC.OneOffBuildGracePeriod, cmd.GC.FailedGracePeriod)
 	dbCheckFactory := db.NewCheckFactory(dbConn, lockFactory, secretManager, cmd.varSourcePool, cmd.GlobalResourceCheckTimeout)
 	dbPipelineFactory := db.NewPipelineFactory(dbConn, lockFactory)
 	dbJobFactory := db.NewJobFactory(dbConn, lockFactory)
+	dbBuildCreator := db.NewBuildCreator(dbConn, lockFactory, eventProcessor)
 
 	componentFactory := db.NewComponentFactory(dbConn)
 
@@ -961,7 +966,10 @@ func (cmd *RunCommand) constructBackendMembers(
 						factory.NewBuildFactory(
 							atc.NewPlanFactory(time.Now().Unix()),
 						),
-						alg),
+						alg,
+						eventProcessor,
+					),
+					BuildCreator: dbBuildCreator,
 				},
 				cmd.JobSchedulingMaxInFlight,
 			),
@@ -1075,6 +1083,10 @@ func (cmd *RunCommand) constructGCMember(
 	}
 
 	return members, nil
+}
+
+func (cmd *RunCommand) constructEventProcessor(dbConn db.Conn) db.EventProcessor {
+	return db.NewBuildEventStore(dbConn)
 }
 
 func (cmd *RunCommand) validateCustomRoles() error {
@@ -1566,6 +1578,7 @@ func (cmd *RunCommand) constructEngine(
 	defaultLimits atc.ContainerLimits,
 	strategy worker.ContainerPlacementStrategy,
 	lockFactory lock.LockFactory,
+	eventProcessor db.EventProcessor,
 ) engine.Engine {
 
 	stepFactory := builder.NewStepFactory(
@@ -1582,14 +1595,14 @@ func (cmd *RunCommand) constructEngine(
 
 	stepBuilder := builder.NewStepBuilder(
 		stepFactory,
-		builder.NewDelegateFactory(),
+		builder.NewDelegateFactory(eventProcessor),
 		cmd.ExternalURL.String(),
 		secretManager,
 		cmd.varSourcePool,
 		cmd.EnableRedactSecrets,
 	)
 
-	return engine.NewEngine(stepBuilder)
+	return engine.NewEngine(stepBuilder, eventProcessor)
 }
 
 func (cmd *RunCommand) constructHTTPHandler(
@@ -1750,6 +1763,7 @@ func (cmd *RunCommand) constructAPIHandler(
 	dbWall db.Wall,
 	tokenVerifier accessor.TokenVerifier,
 	notifications db.NotificationsBus,
+	dbBuildCreator db.BuildCreator,
 ) (http.Handler, error) {
 
 	checkPipelineAccessHandlerFactory := auth.NewCheckPipelineAccessHandlerFactory(teamFactory)
@@ -1833,6 +1847,7 @@ func (cmd *RunCommand) constructAPIHandler(
 		dbCheckFactory,
 		resourceConfigFactory,
 		dbUserFactory,
+		dbBuildCreator,
 
 		buildserver.NewEventHandler,
 

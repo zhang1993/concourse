@@ -11,6 +11,7 @@ type Server struct {
 	teamFactory           db.TeamFactory
 	rejector              auth.Rejector
 	pipelineFactory       db.PipelineFactory
+	buildCreator          db.BuildCreator
 	externalURL           string
 	enableArchivePipeline bool
 }
@@ -19,6 +20,7 @@ func NewServer(
 	logger lager.Logger,
 	teamFactory db.TeamFactory,
 	pipelineFactory db.PipelineFactory,
+	buildCreator db.BuildCreator,
 	externalURL string,
 	enableArchivePipeline bool,
 ) *Server {
@@ -27,6 +29,7 @@ func NewServer(
 		teamFactory:           teamFactory,
 		rejector:              auth.UnauthorizedRejector{},
 		pipelineFactory:       pipelineFactory,
+		buildCreator:          buildCreator,
 		externalURL:           externalURL,
 		enableArchivePipeline: enableArchivePipeline,
 	}

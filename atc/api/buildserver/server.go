@@ -17,6 +17,7 @@ type Server struct {
 
 	teamFactory         db.TeamFactory
 	buildFactory        db.BuildFactory
+	buildCreator        db.BuildCreator
 	eventHandlerFactory EventHandlerFactory
 	rejector            auth.Rejector
 }
@@ -26,6 +27,7 @@ func NewServer(
 	externalURL string,
 	teamFactory db.TeamFactory,
 	buildFactory db.BuildFactory,
+	buildCreator db.BuildCreator,
 	eventHandlerFactory EventHandlerFactory,
 ) *Server {
 	return &Server{
@@ -35,6 +37,7 @@ func NewServer(
 
 		teamFactory:         teamFactory,
 		buildFactory:        buildFactory,
+		buildCreator:        buildCreator,
 		eventHandlerFactory: eventHandlerFactory,
 
 		rejector: auth.UnauthorizedRejector{},

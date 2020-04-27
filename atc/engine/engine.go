@@ -40,20 +40,22 @@ type StepBuilder interface {
 	BuildStepErrored(lager.Logger, db.Build, error)
 }
 
-func NewEngine(builder StepBuilder) Engine {
+func NewEngine(builder StepBuilder, eventProcessor db.EventProcessor) Engine {
 	return &engine{
-		builder:       builder,
-		release:       make(chan bool),
-		trackedStates: new(sync.Map),
-		waitGroup:     new(sync.WaitGroup),
+		builder:        builder,
+		eventProcessor: eventProcessor,
+		release:        make(chan bool),
+		trackedStates:  new(sync.Map),
+		waitGroup:      new(sync.WaitGroup),
 	}
 }
 
 type engine struct {
-	builder       StepBuilder
-	release       chan bool
-	trackedStates *sync.Map
-	waitGroup     *sync.WaitGroup
+	builder        StepBuilder
+	eventProcessor db.EventProcessor
+	release        chan bool
+	trackedStates  *sync.Map
+	waitGroup      *sync.WaitGroup
 }
 
 func (engine *engine) ReleaseAll(logger lager.Logger) {
@@ -80,6 +82,7 @@ func (engine *engine) NewBuild(build db.Build) Runnable {
 		engine.release,
 		engine.trackedStates,
 		engine.waitGroup,
+		engine.eventProcessor,
 	)
 }
 
@@ -106,6 +109,7 @@ func NewBuild(
 	release chan bool,
 	trackedStates *sync.Map,
 	waitGroup *sync.WaitGroup,
+	eventProcessor db.EventProcessor,
 ) Runnable {
 	return &engineBuild{
 		ctx:    ctx,
@@ -114,9 +118,10 @@ func NewBuild(
 		build:   build,
 		builder: builder,
 
-		release:       release,
-		trackedStates: trackedStates,
-		waitGroup:     waitGroup,
+		release:        release,
+		trackedStates:  trackedStates,
+		waitGroup:      waitGroup,
+		eventProcessor: eventProcessor,
 	}
 }
 
@@ -127,9 +132,10 @@ type engineBuild struct {
 	build   db.Build
 	builder StepBuilder
 
-	release       chan bool
-	trackedStates *sync.Map
-	waitGroup     *sync.WaitGroup
+	release        chan bool
+	trackedStates  *sync.Map
+	waitGroup      *sync.WaitGroup
+	eventProcessor db.EventProcessor
 
 	pipelineCredMgrs []creds.Manager
 }
@@ -258,7 +264,7 @@ func (b *engineBuild) finish(logger lager.Logger, err error, succeeded bool) {
 }
 
 func (b *engineBuild) saveStatus(logger lager.Logger, status atc.BuildStatus) {
-	if err := b.build.Finish(db.BuildStatus(status)); err != nil {
+	if err := b.build.Finish(db.BuildStatus(status), b.eventProcessor); err != nil {
 		logger.Error("failed-to-finish-build", err)
 	}
 }

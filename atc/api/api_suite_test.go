@@ -52,6 +52,7 @@ var (
 	dbBuildFactory          *dbfakes.FakeBuildFactory
 	dbUserFactory           *dbfakes.FakeUserFactory
 	dbCheckFactory          *dbfakes.FakeCheckFactory
+	dbBuildCreator          *dbfakes.FakeBuildCreator
 	dbTeam                  *dbfakes.FakeTeam
 	dbWall                  *dbfakes.FakeWall
 	fakeSecretManager       *credsfakes.FakeSecrets
@@ -99,6 +100,7 @@ var _ = BeforeEach(func() {
 	dbBuildFactory = new(dbfakes.FakeBuildFactory)
 	dbUserFactory = new(dbfakes.FakeUserFactory)
 	dbCheckFactory = new(dbfakes.FakeCheckFactory)
+	dbBuildCreator = new(dbfakes.FakeBuildCreator)
 	dbWall = new(dbfakes.FakeWall)
 
 	interceptTimeoutFactory = new(containerserverfakes.FakeInterceptTimeoutFactory)
@@ -179,6 +181,7 @@ var _ = BeforeEach(func() {
 		dbCheckFactory,
 		dbResourceConfigFactory,
 		dbUserFactory,
+		dbBuildCreator,
 
 		constructedEventHandler.Construct,
 

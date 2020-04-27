@@ -1,7 +1,6 @@
 package builder_test
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"time"
@@ -24,12 +23,13 @@ import (
 
 var _ = Describe("DelegateFactory", func() {
 	var (
-		logger          *lagertest.TestLogger
-		fakeBuild       *dbfakes.FakeBuild
-		fakePipeline    *dbfakes.FakePipeline
-		fakeResource    *dbfakes.FakeResource
-		fakeClock       *fakeclock.FakeClock
-		credVarsTracker vars.CredVarsTracker
+		logger             *lagertest.TestLogger
+		fakeBuild          *dbfakes.FakeBuild
+		fakePipeline       *dbfakes.FakePipeline
+		fakeResource       *dbfakes.FakeResource
+		fakeClock          *fakeclock.FakeClock
+		fakeEventProcessor *dbfakes.FakeEventProcessor
+		credVarsTracker    vars.CredVarsTracker
 	)
 
 	BeforeEach(func() {
@@ -39,6 +39,7 @@ var _ = Describe("DelegateFactory", func() {
 		fakePipeline = new(dbfakes.FakePipeline)
 		fakeResource = new(dbfakes.FakeResource)
 		fakeClock = fakeclock.NewFakeClock(time.Unix(123456789, 0))
+		fakeEventProcessor = new(dbfakes.FakeEventProcessor)
 		credVars := vars.StaticVariables{
 			"source-param": "super-secret-source",
 			"git-key":      "{\n123\n456\n789\n}\n",
@@ -59,7 +60,7 @@ var _ = Describe("DelegateFactory", func() {
 				Metadata: []atc.MetadataField{{Name: "baz", Value: "shmaz"}},
 			}
 
-			delegate = builder.NewGetDelegate(fakeBuild, "some-plan-id", credVarsTracker, fakeClock)
+			delegate = builder.NewGetDelegate(fakeBuild, "some-plan-id", credVarsTracker, fakeClock, fakeEventProcessor)
 		})
 
 		Describe("Finished", func() {
@@ -67,9 +68,11 @@ var _ = Describe("DelegateFactory", func() {
 				delegate.Finished(logger, exitStatus, info)
 			})
 
-			It("saves an event", func() {
-				Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-				Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.FinishGet{
+			It("processes an event", func() {
+				Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+				build, evt := fakeEventProcessor.ProcessArgsForCall(0)
+				Expect(build).To(BeIdenticalTo(fakeBuild))
+				Expect(evt).To(Equal(event.FinishGet{
 					Origin:          event.Origin{ID: event.OriginID("some-plan-id")},
 					Time:            123456789,
 					ExitStatus:      int(exitStatus),
@@ -169,7 +172,7 @@ var _ = Describe("DelegateFactory", func() {
 				Metadata: []atc.MetadataField{{Name: "baz", Value: "shmaz"}},
 			}
 
-			delegate = builder.NewPutDelegate(fakeBuild, "some-plan-id", credVarsTracker, fakeClock)
+			delegate = builder.NewPutDelegate(fakeBuild, "some-plan-id", credVarsTracker, fakeClock, fakeEventProcessor)
 		})
 
 		Describe("Finished", func() {
@@ -178,8 +181,9 @@ var _ = Describe("DelegateFactory", func() {
 			})
 
 			It("saves an event", func() {
-				Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-				Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.FinishPut{
+				Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+				_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+				Expect(evt).To(Equal(event.FinishPut{
 					Origin:          event.Origin{ID: event.OriginID("some-plan-id")},
 					Time:            123456789,
 					ExitStatus:      int(exitStatus),
@@ -228,7 +232,7 @@ var _ = Describe("DelegateFactory", func() {
 		)
 
 		BeforeEach(func() {
-			delegate = builder.NewTaskDelegate(fakeBuild, "some-plan-id", credVarsTracker, fakeClock)
+			delegate = builder.NewTaskDelegate(fakeBuild, "some-plan-id", credVarsTracker, fakeClock, fakeEventProcessor)
 			someConfig = atc.TaskConfig{
 				Platform: "some-platform",
 				Run: atc.TaskRunConfig{
@@ -245,16 +249,15 @@ var _ = Describe("DelegateFactory", func() {
 			})
 
 			It("saves an event", func() {
-				Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-				event := fakeBuild.SaveEventArgsForCall(0)
-				Expect(event.EventType()).To(Equal(atc.EventType("initialize-task")))
-			})
-
-			It("calls SaveEvent with the taskConfig", func() {
-				Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-				event := fakeBuild.SaveEventArgsForCall(0)
-				b := `{"time":.*,"origin":{"id":"some-plan-id"},"config":{"platform":"some-platform","image":"","run":{"path":"some-foo-path","args":null,"dir":"some-bar-dir"},"inputs":null}}`
-				Expect(json.Marshal(event)).To(MatchRegexp(b))
+				Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+				_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+				Expect(evt).To(Equal(event.InitializeTask{
+					Origin: event.Origin{
+						ID: "some-plan-id",
+					},
+					Time: 123456789,
+					TaskConfig: event.ShadowTaskConfig(someConfig),
+				}))
 			})
 		})
 
@@ -264,16 +267,15 @@ var _ = Describe("DelegateFactory", func() {
 			})
 
 			It("saves an event", func() {
-				Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-				event := fakeBuild.SaveEventArgsForCall(0)
-				Expect(event.EventType()).To(Equal(atc.EventType("start-task")))
-			})
-
-			It("calls SaveEvent with the taskConfig", func() {
-				Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-				event := fakeBuild.SaveEventArgsForCall(0)
-				b := `{"time":.*,"origin":{"id":"some-plan-id"},"config":{"platform":"some-platform","image":"","run":{"path":"some-foo-path","args":null,"dir":"some-bar-dir"},"inputs":null}}`
-				Expect(json.Marshal(event)).To(MatchRegexp(b))
+				Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+				_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+				Expect(evt).To(Equal(event.StartTask{
+					Origin: event.Origin{
+						ID: "some-plan-id",
+					},
+					Time: 123456789,
+					TaskConfig: event.ShadowTaskConfig(someConfig),
+				}))
 			})
 		})
 
@@ -283,9 +285,15 @@ var _ = Describe("DelegateFactory", func() {
 			})
 
 			It("saves an event", func() {
-				Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-				event := fakeBuild.SaveEventArgsForCall(0)
-				Expect(event.EventType()).To(Equal(atc.EventType("finish-task")))
+				Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+				_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+				Expect(evt).To(Equal(event.FinishTask{
+					Origin: event.Origin{
+						ID: "some-plan-id",
+					},
+					Time: 123456789,
+					ExitStatus: int(exitStatus),
+				}))
 			})
 		})
 	})
@@ -323,7 +331,7 @@ var _ = Describe("DelegateFactory", func() {
 		)
 
 		BeforeEach(func() {
-			delegate = builder.NewBuildStepDelegate(fakeBuild, "some-plan-id", credVarsTracker, fakeClock)
+			delegate = builder.NewBuildStepDelegate(fakeBuild, "some-plan-id", credVarsTracker, fakeClock, fakeEventProcessor)
 		})
 
 		Describe("Initializing", func() {
@@ -332,9 +340,14 @@ var _ = Describe("DelegateFactory", func() {
 			})
 
 			It("saves an event", func() {
-				Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-				event := fakeBuild.SaveEventArgsForCall(0)
-				Expect(event.EventType()).To(Equal(atc.EventType("initialize")))
+				Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+				_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+				Expect(evt).To(Equal(event.Initialize{
+					Origin: event.Origin{
+						ID: "some-plan-id",
+					},
+					Time: 123456789,
+				}))
 			})
 		})
 
@@ -344,9 +357,15 @@ var _ = Describe("DelegateFactory", func() {
 			})
 
 			It("saves an event", func() {
-				Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-				event := fakeBuild.SaveEventArgsForCall(0)
-				Expect(event.EventType()).To(Equal(atc.EventType("finish")))
+				Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+				_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+				Expect(evt).To(Equal(event.Finish{
+					Origin:    event.Origin{
+						ID: "some-plan-id",
+					},
+					Time:      123456789,
+					Succeeded: true,
+				}))
 			})
 		})
 
@@ -386,7 +405,7 @@ var _ = Describe("DelegateFactory", func() {
 
 				Context("when saving the event succeeds", func() {
 					BeforeEach(func() {
-						fakeBuild.SaveEventReturns(nil)
+						fakeEventProcessor.ProcessReturns(nil)
 					})
 
 					It("returns the length of the string, and no error", func() {
@@ -395,8 +414,9 @@ var _ = Describe("DelegateFactory", func() {
 					})
 
 					It("saves a log event", func() {
-						Expect(fakeBuild.SaveEventCallCount()).To(Equal(2))
-						Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.Log{
+						Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(2))
+						_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+						Expect(evt).To(Equal(event.Log{
 							Time:    123456789,
 							Payload: "hello\n",
 							Origin: event.Origin{
@@ -404,7 +424,8 @@ var _ = Describe("DelegateFactory", func() {
 								ID:     "some-plan-id",
 							},
 						}))
-						Expect(fakeBuild.SaveEventArgsForCall(1)).To(Equal(event.Log{
+						_, evt = fakeEventProcessor.ProcessArgsForCall(1)
+						Expect(evt).To(Equal(event.Log{
 							Time:    123456789,
 							Payload: "world",
 							Origin: event.Origin{
@@ -419,7 +440,7 @@ var _ = Describe("DelegateFactory", func() {
 					disaster := errors.New("nope")
 
 					BeforeEach(func() {
-						fakeBuild.SaveEventReturns(disaster)
+						fakeEventProcessor.ProcessReturns(disaster)
 					})
 
 					It("returns 0 length, and the error", func() {
@@ -448,7 +469,7 @@ var _ = Describe("DelegateFactory", func() {
 
 				Context("when saving the event succeeds", func() {
 					BeforeEach(func() {
-						fakeBuild.SaveEventReturns(nil)
+						fakeEventProcessor.ProcessReturns(nil)
 					})
 
 					It("returns the length of the string, and no error", func() {
@@ -457,8 +478,9 @@ var _ = Describe("DelegateFactory", func() {
 					})
 
 					It("saves a log event", func() {
-						Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-						Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.Log{
+						Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+						_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+						Expect(evt).To(Equal(event.Log{
 							Time:    123456789,
 							Payload: "hello\n",
 							Origin: event.Origin{
@@ -473,7 +495,7 @@ var _ = Describe("DelegateFactory", func() {
 					disaster := errors.New("nope")
 
 					BeforeEach(func() {
-						fakeBuild.SaveEventReturns(disaster)
+						fakeEventProcessor.ProcessReturns(disaster)
 					})
 
 					It("returns 0 length, and the error", func() {
@@ -491,12 +513,13 @@ var _ = Describe("DelegateFactory", func() {
 
 			Context("when saving the event succeeds", func() {
 				BeforeEach(func() {
-					fakeBuild.SaveEventReturns(nil)
+					fakeEventProcessor.ProcessReturns(nil)
 				})
 
 				It("saves it with the current time", func() {
-					Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-					Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.Error{
+					Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+					_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+					Expect(evt).To(Equal(event.Error{
 						Time:    123456789,
 						Message: "fake error message",
 						Origin: event.Origin{
@@ -510,7 +533,7 @@ var _ = Describe("DelegateFactory", func() {
 				disaster := errors.New("nope")
 
 				BeforeEach(func() {
-					fakeBuild.SaveEventReturns(disaster)
+					fakeEventProcessor.ProcessReturns(disaster)
 				})
 
 				It("logs an error", func() {
@@ -526,7 +549,7 @@ var _ = Describe("DelegateFactory", func() {
 			BeforeEach(func() {
 				credVars := vars.StaticVariables{}
 				credVarsTracker = vars.NewCredVarsTracker(credVars, false)
-				delegate = builder.NewBuildStepDelegate(fakeBuild, "some-plan-id", credVarsTracker, fakeClock)
+				delegate = builder.NewBuildStepDelegate(fakeBuild, "some-plan-id", credVarsTracker, fakeClock, fakeEventProcessor)
 			})
 
 			Context("Stdout", func() {
@@ -544,8 +567,9 @@ var _ = Describe("DelegateFactory", func() {
 					writeErr = writer.(io.Closer).Close()
 					Expect(writeErr).To(BeNil())
 
-					Expect(fakeBuild.SaveEventCallCount()).To(Equal(3))
-					Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.Log{
+					Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(3))
+					_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+					Expect(evt).To(Equal(event.Log{
 						Time:    123456789,
 						Payload: "1\r",
 						Origin: event.Origin{
@@ -553,7 +577,8 @@ var _ = Describe("DelegateFactory", func() {
 							ID:     "some-plan-id",
 						},
 					}))
-					Expect(fakeBuild.SaveEventArgsForCall(1)).To(Equal(event.Log{
+					_, evt = fakeEventProcessor.ProcessArgsForCall(1)
+					Expect(evt).To(Equal(event.Log{
 						Time:    123456789,
 						Payload: "2\r",
 						Origin: event.Origin{
@@ -561,7 +586,8 @@ var _ = Describe("DelegateFactory", func() {
 							ID:     "some-plan-id",
 						},
 					}))
-					Expect(fakeBuild.SaveEventArgsForCall(2)).To(Equal(event.Log{
+					_, evt = fakeEventProcessor.ProcessArgsForCall(2)
+					Expect(evt).To(Equal(event.Log{
 						Time:    123456789,
 						Payload: "3\r",
 						Origin: event.Origin{
@@ -587,8 +613,9 @@ var _ = Describe("DelegateFactory", func() {
 					writeErr = writer.(io.Closer).Close()
 					Expect(writeErr).To(BeNil())
 
-					Expect(fakeBuild.SaveEventCallCount()).To(Equal(3))
-					Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.Log{
+					Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(3))
+					_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+					Expect(evt).To(Equal(event.Log{
 						Time:    123456789,
 						Payload: "1\r",
 						Origin: event.Origin{
@@ -596,7 +623,8 @@ var _ = Describe("DelegateFactory", func() {
 							ID:     "some-plan-id",
 						},
 					}))
-					Expect(fakeBuild.SaveEventArgsForCall(1)).To(Equal(event.Log{
+					_, evt = fakeEventProcessor.ProcessArgsForCall(1)
+					Expect(evt).To(Equal(event.Log{
 						Time:    123456789,
 						Payload: "2\r",
 						Origin: event.Origin{
@@ -604,7 +632,8 @@ var _ = Describe("DelegateFactory", func() {
 							ID:     "some-plan-id",
 						},
 					}))
-					Expect(fakeBuild.SaveEventArgsForCall(2)).To(Equal(event.Log{
+					_, evt = fakeEventProcessor.ProcessArgsForCall(2)
+					Expect(evt).To(Equal(event.Log{
 						Time:    123456789,
 						Payload: "3\r",
 						Origin: event.Origin{
@@ -639,8 +668,9 @@ var _ = Describe("DelegateFactory", func() {
 					It("should be redacted", func() {
 						Expect(writeErr).To(BeNil())
 						Expect(writtenBytes).To(Equal(len("ok super-secret-source ok")))
-						Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-						Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.Log{
+						Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+						_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+						Expect(evt).To(Equal(event.Log{
 							Time:    123456789,
 							Payload: "ok ((redacted)) ok",
 							Origin: event.Origin{
@@ -664,8 +694,9 @@ var _ = Describe("DelegateFactory", func() {
 					It("should be redacted", func() {
 						Expect(writeErr).To(BeNil())
 						Expect(writtenBytes).To(Equal(len(logLines)))
-						Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-						Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.Log{
+						Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+						_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+						Expect(evt).To(Equal(event.Log{
 							Time:    123456789,
 							Payload: "ok((redacted))ok\nok((redacted))ok\nok((redacted))ok\n",
 							Origin: event.Origin{
@@ -685,8 +716,9 @@ var _ = Describe("DelegateFactory", func() {
 					})
 
 					It("should be redacted", func() {
-						Expect(fakeBuild.SaveEventCallCount()).To(Equal(2))
-						Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.Log{
+						Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(2))
+						_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+						Expect(evt).To(Equal(event.Log{
 							Time:    123456789,
 							Payload: "ok((redacted))ok\n",
 							Origin: event.Origin{
@@ -694,7 +726,8 @@ var _ = Describe("DelegateFactory", func() {
 								ID:     "some-plan-id",
 							},
 						}))
-						Expect(fakeBuild.SaveEventArgsForCall(1)).To(Equal(event.Log{
+						_, evt = fakeEventProcessor.ProcessArgsForCall(1)
+						Expect(evt).To(Equal(event.Log{
 							Time:    123456789,
 							Payload: "ok((redacted))ok\nok((redacted))ok\n",
 							Origin: event.Origin{
@@ -717,8 +750,9 @@ var _ = Describe("DelegateFactory", func() {
 					It("should be redacted", func() {
 						Expect(writeErr).To(BeNil())
 						Expect(writtenBytes).To(Equal(len("ok super-secret-source ok")))
-						Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-						Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.Log{
+						Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+						_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+						Expect(evt).To(Equal(event.Log{
 							Time:    123456789,
 							Payload: "ok ((redacted)) ok",
 							Origin: event.Origin{
@@ -742,8 +776,9 @@ var _ = Describe("DelegateFactory", func() {
 					It("should be redacted", func() {
 						Expect(writeErr).To(BeNil())
 						Expect(writtenBytes).To(Equal(len(logLines)))
-						Expect(fakeBuild.SaveEventCallCount()).To(Equal(1))
-						Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.Log{
+						Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(1))
+						_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+						Expect(evt).To(Equal(event.Log{
 							Time:    123456789,
 							Payload: "{\nok((redacted))ok\nok((redacted))ok\nok((redacted))ok\n}\n",
 							Origin: event.Origin{
@@ -763,8 +798,9 @@ var _ = Describe("DelegateFactory", func() {
 					})
 
 					It("should be redacted", func() {
-						Expect(fakeBuild.SaveEventCallCount()).To(Equal(2))
-						Expect(fakeBuild.SaveEventArgsForCall(0)).To(Equal(event.Log{
+						Expect(fakeEventProcessor.ProcessCallCount()).To(Equal(2))
+						_, evt := fakeEventProcessor.ProcessArgsForCall(0)
+						Expect(evt).To(Equal(event.Log{
 							Time:    123456789,
 							Payload: "ok((redacted))ok\n",
 							Origin: event.Origin{
@@ -772,7 +808,8 @@ var _ = Describe("DelegateFactory", func() {
 								ID:     "some-plan-id",
 							},
 						}))
-						Expect(fakeBuild.SaveEventArgsForCall(1)).To(Equal(event.Log{
+						_, evt = fakeEventProcessor.ProcessArgsForCall(1)
+						Expect(evt).To(Equal(event.Log{
 							Time:    123456789,
 							Payload: "ok((redacted))ok\nok((redacted))ok\n",
 							Origin: event.Origin{

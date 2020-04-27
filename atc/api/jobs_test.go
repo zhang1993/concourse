@@ -1471,7 +1471,7 @@ var _ = Describe("Jobs API", func() {
 					})
 
 					It("does not trigger the build", func() {
-						Expect(fakeJob.CreateBuildCallCount()).To(Equal(0))
+						Expect(dbBuildCreator.CreateBuildCallCount()).To(Equal(0))
 					})
 				})
 
@@ -1482,7 +1482,7 @@ var _ = Describe("Jobs API", func() {
 
 					Context("when triggering the build fails", func() {
 						BeforeEach(func() {
-							fakeJob.CreateBuildReturns(nil, errors.New("nopers"))
+							dbBuildCreator.CreateBuildReturns(nil, errors.New("nopers"))
 						})
 						It("returns a 500", func() {
 							Expect(response.StatusCode).To(Equal(http.StatusInternalServerError))
@@ -1501,11 +1501,12 @@ var _ = Describe("Jobs API", func() {
 							build.StartTimeReturns(time.Unix(1, 0))
 							build.EndTimeReturns(time.Unix(100, 0))
 
-							fakeJob.CreateBuildReturns(build, nil)
+							dbBuildCreator.CreateBuildReturns(build, nil)
 						})
 
 						It("triggers the build", func() {
-							Expect(fakeJob.CreateBuildCallCount()).To(Equal(1))
+							Expect(dbBuildCreator.CreateBuildCallCount()).To(Equal(1))
+							Expect(dbBuildCreator.CreateBuildArgsForCall(0)).To(BeIdenticalTo(fakeJob))
 						})
 
 						Context("when finding the pipeline resources fails", func() {
@@ -2101,7 +2102,7 @@ var _ = Describe("Jobs API", func() {
 						})
 						Context("when creating the rerun build fails", func() {
 							BeforeEach(func() {
-								fakeJob.RerunBuildReturns(nil, errors.New("nopers"))
+								dbBuildCreator.RerunBuildReturns(nil, errors.New("nopers"))
 							})
 
 							It("returns a 500", func() {
@@ -2121,7 +2122,7 @@ var _ = Describe("Jobs API", func() {
 								build.StartTimeReturns(time.Unix(1, 0))
 								build.EndTimeReturns(time.Unix(100, 0))
 
-								fakeJob.RerunBuildReturns(build, nil)
+								dbBuildCreator.RerunBuildReturns(build, nil)
 							})
 
 							It("returns 200 OK", func() {

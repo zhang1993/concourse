@@ -58,7 +58,7 @@ var _ = Describe("Builds API", func() {
 			})
 
 			It("does not trigger a build", func() {
-				Expect(dbTeam.CreateStartedBuildCallCount()).To(BeZero())
+				Expect(dbBuildCreator.CreateStartedBuildCallCount()).To(BeZero())
 			})
 		})
 
@@ -84,7 +84,7 @@ var _ = Describe("Builds API", func() {
 
 				Context("when creating a started build fails", func() {
 					BeforeEach(func() {
-						dbTeam.CreateStartedBuildReturns(nil, errors.New("oh no!"))
+						dbBuildCreator.CreateStartedBuildReturns(nil, errors.New("oh no!"))
 					})
 
 					It("returns 500 Internal Server Error", func() {
@@ -105,7 +105,7 @@ var _ = Describe("Builds API", func() {
 						fakeBuild.EndTimeReturns(time.Unix(100, 0))
 						fakeBuild.ReapTimeReturns(time.Unix(200, 0))
 
-						dbTeam.CreateStartedBuildReturns(fakeBuild, nil)
+						dbBuildCreator.CreateStartedBuildReturns(fakeBuild, nil)
 					})
 
 					It("returns 201 Created", func() {
@@ -120,8 +120,11 @@ var _ = Describe("Builds API", func() {
 					})
 
 					It("creates a started build", func() {
-						Expect(dbTeam.CreateStartedBuildCallCount()).To(Equal(1))
-						Expect(dbTeam.CreateStartedBuildArgsForCall(0)).To(Equal(plan))
+						Expect(dbBuildCreator.CreateStartedBuildCallCount()).To(Equal(1))
+						teamID, pipelineID, actualPlan := dbBuildCreator.CreateStartedBuildArgsForCall(0)
+						Expect(actualPlan).To(Equal(plan))
+						Expect(teamID).To(Equal(dbTeam.ID()))
+						Expect(pipelineID).To(BeZero())
 					})
 
 					It("returns the created build", func() {

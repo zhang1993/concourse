@@ -27,6 +27,8 @@ var _ = Describe("Engine", func() {
 		fakeBuild       *dbfakes.FakeBuild
 		fakeCheck       *dbfakes.FakeCheck
 		fakeStepBuilder *enginefakes.FakeStepBuilder
+
+		dummyEventProcessor *dbfakes.FakeEventProcessor
 	)
 
 	BeforeEach(func() {
@@ -35,6 +37,8 @@ var _ = Describe("Engine", func() {
 
 		fakeCheck = new(dbfakes.FakeCheck)
 		fakeCheck.IDReturns(128)
+
+		dummyEventProcessor = new(dbfakes.FakeEventProcessor)
 
 		fakeStepBuilder = new(enginefakes.FakeStepBuilder)
 	})
@@ -46,7 +50,7 @@ var _ = Describe("Engine", func() {
 		)
 
 		BeforeEach(func() {
-			engine = NewEngine(fakeStepBuilder)
+			engine = NewEngine(fakeStepBuilder, dummyEventProcessor)
 		})
 
 		JustBeforeEach(func() {
@@ -65,7 +69,7 @@ var _ = Describe("Engine", func() {
 		)
 
 		BeforeEach(func() {
-			engine = NewEngine(fakeStepBuilder)
+			engine = NewEngine(fakeStepBuilder, dummyEventProcessor)
 		})
 
 		JustBeforeEach(func() {
@@ -101,6 +105,7 @@ var _ = Describe("Engine", func() {
 				release,
 				trackedStates,
 				waitGroup,
+				dummyEventProcessor,
 			)
 		})
 
@@ -219,7 +224,9 @@ var _ = Describe("Engine", func() {
 									It("finishes the build", func() {
 										waitGroup.Wait()
 										Expect(fakeBuild.FinishCallCount()).To(Equal(1))
-										Expect(fakeBuild.FinishArgsForCall(0)).To(Equal(db.BuildStatusSucceeded))
+										status, eventProcessor := fakeBuild.FinishArgsForCall(0)
+										Expect(status).To(Equal(db.BuildStatusSucceeded))
+										Expect(eventProcessor).To(BeIdenticalTo(dummyEventProcessor))
 									})
 								})
 
@@ -231,7 +238,8 @@ var _ = Describe("Engine", func() {
 									It("finishes the build", func() {
 										waitGroup.Wait()
 										Expect(fakeBuild.FinishCallCount()).To(Equal(1))
-										Expect(fakeBuild.FinishArgsForCall(0)).To(Equal(db.BuildStatusFailed))
+										status, _ := fakeBuild.FinishArgsForCall(0)
+										Expect(status).To(Equal(db.BuildStatusFailed))
 									})
 								})
 							})
@@ -244,7 +252,8 @@ var _ = Describe("Engine", func() {
 								It("finishes the build", func() {
 									waitGroup.Wait()
 									Expect(fakeBuild.FinishCallCount()).To(Equal(1))
-									Expect(fakeBuild.FinishArgsForCall(0)).To(Equal(db.BuildStatusErrored))
+									status, _ := fakeBuild.FinishArgsForCall(0)
+									Expect(status).To(Equal(db.BuildStatusErrored))
 								})
 							})
 
@@ -256,7 +265,8 @@ var _ = Describe("Engine", func() {
 								It("finishes the build", func() {
 									waitGroup.Wait()
 									Expect(fakeBuild.FinishCallCount()).To(Equal(1))
-									Expect(fakeBuild.FinishArgsForCall(0)).To(Equal(db.BuildStatusAborted))
+									status, _ := fakeBuild.FinishArgsForCall(0)
+									Expect(status).To(Equal(db.BuildStatusAborted))
 								})
 							})
 						})

@@ -19,10 +19,11 @@ import (
 
 var _ = Describe("BuildStarter", func() {
 	var (
-		fakePipeline  *dbfakes.FakePipeline
-		fakeFactory   *schedulerfakes.FakeBuildFactory
-		pendingBuilds []db.Build
-		fakeAlgorithm *schedulerfakes.FakeAlgorithm
+		fakePipeline        *dbfakes.FakePipeline
+		fakeFactory         *schedulerfakes.FakeBuildFactory
+		pendingBuilds       []db.Build
+		fakeAlgorithm       *schedulerfakes.FakeAlgorithm
+		dummyEventProcessor *dbfakes.FakeEventProcessor
 
 		buildStarter scheduler.BuildStarter
 
@@ -35,8 +36,9 @@ var _ = Describe("BuildStarter", func() {
 		fakePipeline = new(dbfakes.FakePipeline)
 		fakeFactory = new(schedulerfakes.FakeBuildFactory)
 		fakeAlgorithm = new(schedulerfakes.FakeAlgorithm)
+		dummyEventProcessor = new(dbfakes.FakeEventProcessor)
 
-		buildStarter = scheduler.NewBuildStarter(fakeFactory, fakeAlgorithm)
+		buildStarter = scheduler.NewBuildStarter(fakeFactory, fakeAlgorithm, dummyEventProcessor)
 
 		disaster = errors.New("bad thing")
 	})
@@ -625,8 +627,9 @@ var _ = Describe("BuildStarter", func() {
 
 										It("marked the right build as errored", func() {
 											Expect(pendingBuild1.FinishCallCount()).To(Equal(1))
-											actualStatus := pendingBuild1.FinishArgsForCall(0)
+											actualStatus, eventProcessor := pendingBuild1.FinishArgsForCall(0)
 											Expect(actualStatus).To(Equal(db.BuildStatusErrored))
+											Expect(eventProcessor).To(BeIdenticalTo(dummyEventProcessor))
 										})
 									})
 
@@ -717,7 +720,9 @@ var _ = Describe("BuildStarter", func() {
 
 										It("finishes the build with aborted status", func() {
 											Expect(pendingBuild1.FinishCallCount()).To(Equal(1))
-											Expect(pendingBuild1.FinishArgsForCall(0)).To(Equal(db.BuildStatusAborted))
+											status, eventProcessor := pendingBuild1.FinishArgsForCall(0)
+											Expect(status).To(Equal(db.BuildStatusAborted))
+											Expect(eventProcessor).To(BeIdenticalTo(dummyEventProcessor))
 										})
 
 										Context("when marking the build as errored fails", func() {
@@ -736,8 +741,9 @@ var _ = Describe("BuildStarter", func() {
 
 											It("marked the right build as errored", func() {
 												Expect(pendingBuild1.FinishCallCount()).To(Equal(1))
-												actualStatus := pendingBuild1.FinishArgsForCall(0)
+												actualStatus, eventProcessor := pendingBuild1.FinishArgsForCall(0)
 												Expect(actualStatus).To(Equal(db.BuildStatusAborted))
+												Expect(eventProcessor).To(BeIdenticalTo(dummyEventProcessor))
 											})
 										})
 
@@ -773,13 +779,17 @@ var _ = Describe("BuildStarter", func() {
 
 										It("starts the build with the right plan", func() {
 											Expect(pendingBuild1.StartCallCount()).To(Equal(1))
-											Expect(pendingBuild1.StartArgsForCall(0)).To(Equal(atc.Plan{Task: &atc.TaskPlan{ConfigPath: "some-task-1.yml"}}))
+											plan, eventProcessor := pendingBuild1.StartArgsForCall(0)
+											Expect(plan).To(Equal(atc.Plan{Task: &atc.TaskPlan{ConfigPath: "some-task-1.yml"}}))
+											Expect(eventProcessor).To(BeIdenticalTo(dummyEventProcessor))
 
 											Expect(pendingBuild2.StartCallCount()).To(Equal(1))
-											Expect(pendingBuild2.StartArgsForCall(0)).To(Equal(atc.Plan{Task: &atc.TaskPlan{ConfigPath: "some-task-1.yml"}}))
+											plan, _ = pendingBuild2.StartArgsForCall(0)
+											Expect(plan).To(Equal(atc.Plan{Task: &atc.TaskPlan{ConfigPath: "some-task-1.yml"}}))
 
 											Expect(rerunBuild.StartCallCount()).To(Equal(1))
-											Expect(rerunBuild.StartArgsForCall(0)).To(Equal(atc.Plan{Task: &atc.TaskPlan{ConfigPath: "some-task-1.yml"}}))
+											plan, _ = rerunBuild.StartArgsForCall(0)
+											Expect(plan).To(Equal(atc.Plan{Task: &atc.TaskPlan{ConfigPath: "some-task-1.yml"}}))
 										})
 									})
 								})

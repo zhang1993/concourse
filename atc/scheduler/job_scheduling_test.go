@@ -289,9 +289,10 @@ type Result struct {
 func (example Example) Run() {
 	fakeFactory := new(schedulerfakes.FakeBuildFactory)
 	fakeAlgorithm := new(schedulerfakes.FakeAlgorithm)
+	fakeEventProcessor := new(dbfakes.FakeEventProcessor)
 	fakeAlgorithm.ComputeReturns(nil, true, false, nil)
 
-	buildStarter := scheduler.NewBuildStarter(fakeFactory, fakeAlgorithm)
+	buildStarter := scheduler.NewBuildStarter(fakeFactory, fakeAlgorithm, fakeEventProcessor)
 
 	fakeDBResourceType := new(dbfakes.FakeResourceType)
 	fakeDBResourceType.NameReturns("fake-resource-type")

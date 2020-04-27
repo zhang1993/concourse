@@ -15,6 +15,7 @@ type Server struct {
 	secretManager creds.Secrets
 	jobFactory    db.JobFactory
 	checkFactory  db.CheckFactory
+	buildCreator  db.BuildCreator
 }
 
 func NewServer(
@@ -23,6 +24,7 @@ func NewServer(
 	secretManager creds.Secrets,
 	jobFactory db.JobFactory,
 	checkFactory db.CheckFactory,
+	buildCreator db.BuildCreator,
 ) *Server {
 	return &Server{
 		logger:        logger,
@@ -31,5 +33,6 @@ func NewServer(
 		secretManager: secretManager,
 		jobFactory:    jobFactory,
 		checkFactory:  checkFactory,
+		buildCreator:  buildCreator,
 	}
 }

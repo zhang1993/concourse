@@ -33,8 +33,11 @@ var (
 	dbConn                              db.Conn
 	fakeSecrets                         *credsfakes.FakeSecrets
 	fakeVarSourcePool                   *credsfakes.FakeVarSourcePool
+	fakeEventProcessor                  *dbfakes.FakeEventProcessor
 	componentFactory                    db.ComponentFactory
 	buildFactory                        db.BuildFactory
+	buildEventStore                     db.EventProcessor
+	buildCreator                        db.BuildCreator
 	volumeRepository                    db.VolumeRepository
 	containerRepository                 db.ContainerRepository
 	teamFactory                         db.TeamFactory
@@ -104,8 +107,11 @@ var _ = BeforeEach(func() {
 
 	fakeSecrets = new(credsfakes.FakeSecrets)
 	fakeVarSourcePool = new(credsfakes.FakeVarSourcePool)
+	fakeEventProcessor = new(dbfakes.FakeEventProcessor)
 	componentFactory = db.NewComponentFactory(dbConn)
 	buildFactory = db.NewBuildFactory(dbConn, lockFactory, 5*time.Minute, 5*time.Minute)
+	buildEventStore = db.NewBuildEventStore(dbConn)
+	buildCreator = db.NewBuildCreator(dbConn, lockFactory, buildEventStore)
 	volumeRepository = db.NewVolumeRepository(dbConn)
 	containerRepository = db.NewContainerRepository(dbConn)
 	teamFactory = db.NewTeamFactory(dbConn, lockFactory)
@@ -197,6 +203,14 @@ var _ = BeforeEach(func() {
 
 	logger = lagertest.NewTestLogger("test")
 })
+
+func startBuild(build db.Build, plan atc.Plan) (bool, error) {
+	return build.Start(plan, buildEventStore)
+}
+
+func finishBuild(build db.Build, status db.BuildStatus) error {
+	return build.Finish(status, buildEventStore)
+}
 
 var _ = AfterEach(func() {
 	err := dbConn.Close()
