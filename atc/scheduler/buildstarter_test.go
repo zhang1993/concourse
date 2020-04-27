@@ -75,7 +75,21 @@ var _ = Describe("BuildStarter", func() {
 				job.GetPendingBuildsReturns(pendingBuilds, nil)
 				job.NameReturns("some-job")
 				job.IDReturns(1)
-				job.ConfigReturns(atc.JobConfig{PlanSequence: atc.PlanSequence{{Get: "input-1", Resource: "some-resource"}, {Get: "input-2", Resource: "some-resource"}}}, nil)
+				job.ConfigReturns(atc.JobConfig{
+					PlanSequence: []atc.Step{
+						{
+							Config: &atc.GetStep{
+								Name:     "input-1",
+								Resource: "some-resource",
+							},
+						}, {
+							Config: &atc.GetStep{
+								Name:     "input-2",
+								Resource: "some-resource",
+							},
+						},
+					},
+				}, nil)
 
 				relatedJobs = algorithm.NameToIDMap{"some-job": 1}
 
@@ -254,7 +268,20 @@ var _ = Describe("BuildStarter", func() {
 
 							fakePipeline.ResourceTypesReturns(db.ResourceTypes{fakeDBResourceType}, nil)
 
-							job.ConfigReturns(atc.JobConfig{PlanSequence: atc.PlanSequence{{Get: "input-1", Resource: "some-resource"}, {Get: "input-2", Resource: "other-resource"}}}, nil)
+							job.ConfigReturns(atc.JobConfig{PlanSequence: []atc.Step{
+								{
+									Config: &atc.GetStep{
+										Name:     "input-1",
+										Resource: "some-resource",
+									},
+								}, {
+									Config: &atc.GetStep{
+										Name:     "input-2",
+										Resource: "other-resource",
+									},
+								},
+							},
+							}, nil)
 
 							createdBuild.IsNewerThanLastCheckOfReturns(false)
 
@@ -415,8 +442,12 @@ var _ = Describe("BuildStarter", func() {
 
 				var jobConfig = atc.JobConfig{
 					Name: "some-job",
-					PlanSequence: atc.PlanSequence{
-						{Get: "some-input"},
+					PlanSequence: []atc.Step{
+						{
+							Config: &atc.GetStep{
+								Name: "some-input",
+							},
+						},
 					},
 				}
 
@@ -678,19 +709,19 @@ var _ = Describe("BuildStarter", func() {
 										Expect(fakePlanner.CreateCallCount()).To(Equal(3))
 
 										actualPlanConfig, actualResourceConfigs, actualResourceTypes, actualBuildInputs := fakePlanner.CreateArgsForCall(0)
-										Expect(actualPlanConfig).To(Equal(atc.PlanConfig{Do: &jobConfig.PlanSequence}))
+										Expect(actualPlanConfig).To(Equal(&atc.DoStep{Steps: jobConfig.PlanSequence}))
 										Expect(actualResourceConfigs).To(Equal(atc.ResourceConfigs{{Name: "some-resource"}}))
 										Expect(actualResourceTypes).To(Equal(versionedResourceTypes))
 										Expect(actualBuildInputs).To(Equal([]db.BuildInput{{Name: "some-input"}}))
 
 										actualPlanConfig, actualResourceConfigs, actualResourceTypes, actualBuildInputs = fakePlanner.CreateArgsForCall(1)
-										Expect(actualPlanConfig).To(Equal(atc.PlanConfig{Do: &jobConfig.PlanSequence}))
+										Expect(actualPlanConfig).To(Equal(&atc.DoStep{Steps: jobConfig.PlanSequence}))
 										Expect(actualResourceConfigs).To(Equal(atc.ResourceConfigs{{Name: "some-resource"}}))
 										Expect(actualResourceTypes).To(Equal(versionedResourceTypes))
 										Expect(actualBuildInputs).To(Equal([]db.BuildInput{{Name: "some-input"}}))
 
 										actualPlanConfig, actualResourceConfigs, actualResourceTypes, actualBuildInputs = fakePlanner.CreateArgsForCall(2)
-										Expect(actualPlanConfig).To(Equal(atc.PlanConfig{Do: &jobConfig.PlanSequence}))
+										Expect(actualPlanConfig).To(Equal(&atc.DoStep{Steps: jobConfig.PlanSequence}))
 										Expect(actualResourceConfigs).To(Equal(atc.ResourceConfigs{{Name: "some-resource"}}))
 										Expect(actualResourceTypes).To(Equal(versionedResourceTypes))
 										Expect(actualBuildInputs).To(Equal([]db.BuildInput{{Name: "some-input"}}))

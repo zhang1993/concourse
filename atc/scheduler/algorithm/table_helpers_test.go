@@ -175,7 +175,7 @@ func (example Example) Run() {
 	}
 
 	var jobInputs []atc.JobInput
-	inputs := atc.PlanSequence{}
+	inputs := []atc.Step{}
 	for _, input := range inputConfigs {
 		var version *atc.VersionConfig
 		if input.UseEveryVersion {
@@ -191,11 +191,13 @@ func (example Example) Run() {
 			passed = append(passed, setup.jobIDs.Name(job))
 		}
 
-		inputs = append(inputs, atc.PlanConfig{
-			Get:      input.Name,
-			Resource: setup.resourceIDs.Name(input.ResourceID),
-			Passed:   passed,
-			Version:  version,
+		inputs = append(inputs, atc.Step{
+			Config: &atc.GetStep{
+				Name:     input.Name,
+				Resource: setup.resourceIDs.Name(input.ResourceID),
+				Passed:   passed,
+				Version:  version,
+			},
 		})
 
 		jobInputs = append(jobInputs, atc.JobInput{
