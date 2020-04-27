@@ -1331,17 +1331,13 @@ func (t *team) insertJobPipes(tx Tx, jobConfigs atc.JobConfigs, resourceNameToID
 	}
 
 	for _, jobConfig := range jobConfigs {
-		var err error
-		jobConfig.PlanConfig().Each(func(plan atc.PlanConfig) {
-			if err != nil {
-				return
-			}
-
-			if plan.Get != "" {
-				err = insertJobInput(tx, plan, jobConfig.Name, resourceNameToID, jobNameToID)
-			} else if plan.Put != "" {
-				err = insertJobOutput(tx, plan, jobConfig.Name, resourceNameToID, jobNameToID)
-			}
+		err := jobConfig.StepConfig().Visit(atc.StepRecursor{
+			OnGet: func(step *atc.GetStep) error {
+				return insertJobInput(tx, step, jobConfig.Name, resourceNameToID, jobNameToID)
+			},
+			OnPut: func(step *atc.PutStep) error {
+				return insertJobOutput(tx, step, jobConfig.Name, resourceNameToID, jobNameToID)
+			},
 		})
 		if err != nil {
 			return err
@@ -1351,19 +1347,12 @@ func (t *team) insertJobPipes(tx Tx, jobConfigs atc.JobConfigs, resourceNameToID
 	return nil
 }
 
-func insertJobInput(tx Tx, plan atc.PlanConfig, jobName string, resourceNameToID map[string]int, jobNameToID map[string]int) error {
-	if len(plan.Passed) != 0 {
-		for _, passedJob := range plan.Passed {
-			var resourceID int
-			if plan.Resource != "" {
-				resourceID = resourceNameToID[plan.Resource]
-			} else {
-				resourceID = resourceNameToID[plan.Get]
-			}
-
+func insertJobInput(tx Tx, step *atc.GetStep, jobName string, resourceNameToID map[string]int, jobNameToID map[string]int) error {
+	if len(step.Passed) != 0 {
+		for _, passedJob := range step.Passed {
 			var version sql.NullString
-			if plan.Version != nil {
-				versionJSON, err := plan.Version.MarshalJSON()
+			if step.Version != nil {
+				versionJSON, err := step.Version.MarshalJSON()
 				if err != nil {
 					return err
 				}
@@ -1373,7 +1362,7 @@ func insertJobInput(tx Tx, plan atc.PlanConfig, jobName string, resourceNameToID
 
 			_, err := psql.Insert("job_inputs").
 				Columns("name", "job_id", "resource_id", "passed_job_id", "trigger", "version").
-				Values(plan.Get, jobNameToID[jobName], resourceID, jobNameToID[passedJob], plan.Trigger, version).
+				Values(step.Name, jobNameToID[jobName], resourceNameToID[step.ResourceName()], jobNameToID[passedJob], step.Trigger, version).
 				RunWith(tx).
 				Exec()
 			if err != nil {
@@ -1381,16 +1370,9 @@ func insertJobInput(tx Tx, plan atc.PlanConfig, jobName string, resourceNameToID
 			}
 		}
 	} else {
-		var resourceID int
-		if plan.Resource != "" {
-			resourceID = resourceNameToID[plan.Resource]
-		} else {
-			resourceID = resourceNameToID[plan.Get]
-		}
-
 		var version sql.NullString
-		if plan.Version != nil {
-			versionJSON, err := plan.Version.MarshalJSON()
+		if step.Version != nil {
+			versionJSON, err := step.Version.MarshalJSON()
 			if err != nil {
 				return err
 			}
@@ -1400,7 +1382,7 @@ func insertJobInput(tx Tx, plan atc.PlanConfig, jobName string, resourceNameToID
 
 		_, err := psql.Insert("job_inputs").
 			Columns("name", "job_id", "resource_id", "trigger", "version").
-			Values(plan.Get, jobNameToID[jobName], resourceID, plan.Trigger, version).
+			Values(step.Name, jobNameToID[jobName], resourceNameToID[step.ResourceName()], step.Trigger, version).
 			RunWith(tx).
 			Exec()
 		if err != nil {
@@ -1411,17 +1393,10 @@ func insertJobInput(tx Tx, plan atc.PlanConfig, jobName string, resourceNameToID
 	return nil
 }
 
-func insertJobOutput(tx Tx, plan atc.PlanConfig, jobName string, resourceNameToID map[string]int, jobNameToID map[string]int) error {
-	var resourceID int
-	if plan.Resource != "" {
-		resourceID = resourceNameToID[plan.Resource]
-	} else {
-		resourceID = resourceNameToID[plan.Put]
-	}
-
+func insertJobOutput(tx Tx, step *atc.PutStep, jobName string, resourceNameToID map[string]int, jobNameToID map[string]int) error {
 	_, err := psql.Insert("job_outputs").
 		Columns("name", "job_id", "resource_id").
-		Values(plan.Put, jobNameToID[jobName], resourceID).
+		Values(step.Name, jobNameToID[jobName], resourceNameToID[step.ResourceName()]).
 		RunWith(tx).
 		Exec()
 	if err != nil {
