@@ -12,6 +12,7 @@ module SideBar.Styles exposing
     , pipeline
     , pipelineIcon
     , pipelineLink
+    , pipelineFavourite 
     , sideBar
     , team
     , teamHeader
@@ -248,6 +249,26 @@ pipelineIcon opacity =
     , style "margin-left" "28px"
     , style "flex-shrink" "0"
     , opacityAttr opacity
+    ]
+
+
+pipelineFavourite : { opacity : Opacity, filled : Bool } -> List (Html.Attribute msg)
+pipelineFavourite fav =
+    [ style "background-image" <|
+        Assets.backgroundImage <|
+            Just <|
+                if fav.filled then
+                    Assets.StarIconFilled
+
+                else
+                    Assets.StarIconUnfilled
+    , style "background-repeat" "no-repeat"
+    , style "height" "16px"
+    , style "width" "32px"
+    , style "background-size" "contain"
+    , style "margin-left" "28px"
+    , style "flex-shrink" "0"
+    , opacityAttr fav.opacity
     ]
 
 

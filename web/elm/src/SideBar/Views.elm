@@ -62,6 +62,10 @@ type alias Pipeline =
         , href : String
         , domID : DomID
         }
+    , favIcon :
+        { opacity : Styles.Opacity
+        , filled : Bool
+        }
     }
 
 
@@ -80,4 +84,6 @@ viewPipeline p =
                    ]
             )
             [ Html.text p.link.text ]
+            , Html.div (Styles.pipelineFavourite p.favIcon) []
+           
         ]

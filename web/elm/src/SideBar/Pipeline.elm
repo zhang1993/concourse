@@ -19,6 +19,7 @@ pipeline :
     { a
         | hovered : HoverState.HoverState
         , currentPipeline : Maybe (PipelineScoped b)
+        , isFavorited : Bool 
     }
     -> Concourse.Pipeline
     -> Views.Pipeline
@@ -65,5 +66,14 @@ pipeline session p =
                 Routes.Pipeline { id = pipelineId, groups = [] }
         , text = p.name
         , domID = SideBarPipeline pipelineId
+        }
+    , favIcon =
+        { opacity =
+            if isCurrent || isHovered then
+                Styles.Bright
+
+            else
+                Styles.Dim
+        , filled = session.isFavorited
         }
     }
