@@ -16,6 +16,7 @@ type buildLogCollector struct {
 	batchSize                   int
 	drainerConfigured           bool
 	buildLogRetentionCalculator BuildLogRetentionCalculator
+	eventStore                  db.EventStore
 }
 
 func NewBuildLogCollector(
@@ -23,12 +24,14 @@ func NewBuildLogCollector(
 	batchSize int,
 	buildLogRetentionCalculator BuildLogRetentionCalculator,
 	drainerConfigured bool,
+	eventStore db.EventStore,
 ) *buildLogCollector {
 	return &buildLogCollector{
 		pipelineFactory:             pipelineFactory,
 		batchSize:                   batchSize,
 		drainerConfigured:           drainerConfigured,
 		buildLogRetentionCalculator: buildLogRetentionCalculator,
+		eventStore:                  eventStore,
 	}
 }
 
@@ -56,7 +59,7 @@ func (br *buildLogCollector) Run(ctx context.Context) error {
 		}
 
 		for _, job := range jobs {
-			err = br.reapLogsOfJob(pipeline, job, logger)
+			err = br.reapLogsOfJob(job, logger)
 			if err != nil {
 				return err
 			}
@@ -66,10 +69,7 @@ func (br *buildLogCollector) Run(ctx context.Context) error {
 	return nil
 }
 
-func (br *buildLogCollector) reapLogsOfJob(pipeline db.Pipeline,
-	job db.Job,
-	logger lager.Logger) error {
-
+func (br *buildLogCollector) reapLogsOfJob(job db.Job, logger lager.Logger) error {
 	jobConfig, err := job.Config()
 	if err != nil {
 		logger.Error("failed-to-get-job-config", err)
@@ -206,7 +206,7 @@ func (br *buildLogCollector) reapLogsOfJob(pipeline db.Pipeline,
 		"build-ids": buildIDsToDelete,
 	})
 
-	err = pipeline.DeleteBuildEventsByBuildIDs(buildIDsToDelete)
+	err = br.eventStore.Delete(buildIDsToDelete...)
 	if err != nil {
 		logger.Error("failed-to-delete-build-events", err)
 		return err

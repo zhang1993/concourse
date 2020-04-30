@@ -19,12 +19,14 @@ var _ = Describe("BuildLogCollector", func() {
 	var (
 		buildLogCollector   GcCollector
 		fakePipelineFactory *dbfakes.FakePipelineFactory
+		fakeEventStore      *dbfakes.FakeEventStore
 		batchSize           int
 		buildLogRetainCalc  BuildLogRetentionCalculator
 	)
 
 	BeforeEach(func() {
 		fakePipelineFactory = new(dbfakes.FakePipelineFactory)
+		fakeEventStore = new(dbfakes.FakeEventStore)
 		batchSize = 5
 		buildLogRetainCalc = NewBuildLogRetentionCalculator(0, 0, 0, 0)
 	})
@@ -35,6 +37,7 @@ var _ = Describe("BuildLogCollector", func() {
 			batchSize,
 			buildLogRetainCalc,
 			false,
+			fakeEventStore,
 		)
 	})
 
@@ -83,6 +86,7 @@ var _ = Describe("BuildLogCollector", func() {
 						batchSize,
 						buildLogRetainCalc,
 						true,
+						fakeEventStore,
 					)
 				})
 				BeforeEach(func() {
@@ -96,7 +100,7 @@ var _ = Describe("BuildLogCollector", func() {
 						return []db.Build{}, db.Pagination{}, nil
 					}
 
-					fakePipeline.DeleteBuildEventsByBuildIDsReturns(nil)
+					fakeEventStore.DeleteReturns(nil)
 					fakeJob.UpdateFirstLoggedBuildIDReturns(nil)
 				})
 
@@ -106,21 +110,21 @@ var _ = Describe("BuildLogCollector", func() {
 				})
 
 				It("should not reap builds which have not been drained", func() {
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(1))
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(1))
 
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(6)))
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(8)))
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(9)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(6)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(8)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(9)))
 				})
 
 				It("should reap builds which have been drained", func() {
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(1))
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(1))
 
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).To(ConsistOf(7))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).To(ConsistOf(7))
 				})
 
 				It("should update first logged build id to the earliest non-drained build", func() {
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(1))
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(1))
 
 					Expect(fakeJob.UpdateFirstLoggedBuildIDCallCount()).To(Equal(1))
 					actualNewFirstLoggedBuildID := fakeJob.UpdateFirstLoggedBuildIDArgsForCall(0)
@@ -135,6 +139,7 @@ var _ = Describe("BuildLogCollector", func() {
 						batchSize,
 						buildLogRetainCalc,
 						false,
+						fakeEventStore,
 					)
 					fakeJob.BuildsStub = func(page db.Page) ([]db.Build, db.Pagination, error) {
 						if page == (db.Page{Until: 4, Limit: 5}) {
@@ -146,15 +151,15 @@ var _ = Describe("BuildLogCollector", func() {
 						return []db.Build{}, db.Pagination{}, nil
 					}
 
-					fakePipeline.DeleteBuildEventsByBuildIDsReturns(nil)
+					fakeEventStore.DeleteReturns(nil)
 					fakeJob.UpdateFirstLoggedBuildIDReturns(nil)
 				})
 				It("should reap builds if draining is not configured", func() {
 					err := buildLogCollector.Run(context.TODO())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(1))
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(1))
 
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).To(ConsistOf(5, 6, 7, 8))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).To(ConsistOf(5, 6, 7, 8))
 
 					Expect(fakeJob.UpdateFirstLoggedBuildIDCallCount()).To(Equal(1))
 					actualNewFirstLoggedBuildID := fakeJob.UpdateFirstLoggedBuildIDArgsForCall(0)
@@ -176,7 +181,7 @@ var _ = Describe("BuildLogCollector", func() {
 
 					disaster = errors.New("major malfunction")
 
-					fakePipeline.DeleteBuildEventsByBuildIDsReturns(disaster)
+					fakeEventStore.DeleteReturns(disaster)
 				})
 
 				It("returns the error", func() {
@@ -236,7 +241,7 @@ var _ = Describe("BuildLogCollector", func() {
 						return nil, db.Pagination{}, nil
 					}
 
-					fakePipeline.DeleteBuildEventsByBuildIDsReturns(nil)
+					fakeEventStore.DeleteReturns(nil)
 
 					fakeJob.UpdateFirstLoggedBuildIDReturns(nil)
 				})
@@ -247,8 +252,8 @@ var _ = Describe("BuildLogCollector", func() {
 				})
 
 				It("reaps only not-running builds", func() {
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(1))
-					actualBuildIDs := fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(1))
+					actualBuildIDs := fakeEventStore.DeleteArgsForCall(0)
 					Expect(actualBuildIDs).To(ConsistOf(6))
 				})
 
@@ -270,7 +275,7 @@ var _ = Describe("BuildLogCollector", func() {
 						return nil, db.Pagination{}, nil
 					}
 
-					fakePipeline.DeleteBuildEventsByBuildIDsReturns(nil)
+					fakeEventStore.DeleteReturns(nil)
 
 					fakeJob.UpdateFirstLoggedBuildIDReturns(nil)
 				})
@@ -281,7 +286,7 @@ var _ = Describe("BuildLogCollector", func() {
 				})
 
 				It("doesn't reap any builds", func() {
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(BeZero())
+					Expect(fakeEventStore.DeleteCallCount()).To(BeZero())
 				})
 
 				It("doesn't update FirstLoggedBuildID", func() {
@@ -293,7 +298,7 @@ var _ = Describe("BuildLogCollector", func() {
 				BeforeEach(func() {
 					fakeJob.BuildsReturns(nil, db.Pagination{}, nil)
 
-					fakePipeline.DeleteBuildEventsByBuildIDsReturns(nil)
+					fakeEventStore.DeleteReturns(nil)
 
 					fakeJob.UpdateFirstLoggedBuildIDReturns(nil)
 				})
@@ -302,7 +307,7 @@ var _ = Describe("BuildLogCollector", func() {
 					err := buildLogCollector.Run(context.TODO())
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(BeZero())
+					Expect(fakeEventStore.DeleteCallCount()).To(BeZero())
 					Expect(fakeJob.UpdateFirstLoggedBuildIDCallCount()).To(BeZero())
 				})
 			})
@@ -339,7 +344,7 @@ var _ = Describe("BuildLogCollector", func() {
 						},
 					}, nil)
 
-					fakePipeline.DeleteBuildEventsByBuildIDsReturns(nil)
+					fakeEventStore.DeleteReturns(nil)
 					fakeJob.UpdateFirstLoggedBuildIDReturns(nil)
 				})
 
@@ -347,8 +352,8 @@ var _ = Describe("BuildLogCollector", func() {
 					err := buildLogCollector.Run(context.TODO())
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(1))
-					actualBuildIDs := fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(1))
+					actualBuildIDs := fakeEventStore.DeleteArgsForCall(0)
 					Expect(actualBuildIDs).To(ConsistOf(6))
 				})
 			})
@@ -372,7 +377,7 @@ var _ = Describe("BuildLogCollector", func() {
 						},
 					}, nil)
 
-					fakePipeline.DeleteBuildEventsByBuildIDsReturns(nil)
+					fakeEventStore.DeleteReturns(nil)
 					fakeJob.UpdateFirstLoggedBuildIDReturns(nil)
 				})
 
@@ -380,7 +385,7 @@ var _ = Describe("BuildLogCollector", func() {
 					err := buildLogCollector.Run(context.TODO())
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(0))
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(0))
 				})
 			})
 
@@ -401,7 +406,7 @@ var _ = Describe("BuildLogCollector", func() {
 						},
 					}, nil)
 
-					fakePipeline.DeleteBuildEventsByBuildIDsReturns(nil)
+					fakeEventStore.DeleteReturns(nil)
 					fakeJob.UpdateFirstLoggedBuildIDReturns(nil)
 				})
 
@@ -409,8 +414,8 @@ var _ = Describe("BuildLogCollector", func() {
 					err := buildLogCollector.Run(context.TODO())
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(1))
-					actualBuildIDs := fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(1))
+					actualBuildIDs := fakeEventStore.DeleteArgsForCall(0)
 					Expect(actualBuildIDs).To(ConsistOf(6))
 				})
 			})
@@ -432,7 +437,7 @@ var _ = Describe("BuildLogCollector", func() {
 						},
 					}, nil)
 
-					fakePipeline.DeleteBuildEventsByBuildIDsReturns(nil)
+					fakeEventStore.DeleteReturns(nil)
 					fakeJob.UpdateFirstLoggedBuildIDReturns(nil)
 				})
 
@@ -440,8 +445,8 @@ var _ = Describe("BuildLogCollector", func() {
 					err := buildLogCollector.Run(context.TODO())
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(1))
-					actualBuildIDs := fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(1))
+					actualBuildIDs := fakeEventStore.DeleteArgsForCall(0)
 					Expect(actualBuildIDs).To(ConsistOf(6))
 				})
 			})
@@ -475,17 +480,17 @@ var _ = Describe("BuildLogCollector", func() {
 				})
 
 				It("should reap non success builds", func() {
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(1))
-					actualBuildIDs := fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(1))
+					actualBuildIDs := fakeEventStore.DeleteArgsForCall(0)
 					Expect(actualBuildIDs).To(ConsistOf(7, 9, 10, 11, 12, 14, 15))
 
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(5)))
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(6)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(5)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(6)))
 				})
 
 				It("should keep at least n success builds, n=MinSuccessBuilds, n=2 ", func() {
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(8)))
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(13)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(8)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(13)))
 				})
 
 				It("should update first logged build id to the earliest success build", func() {
@@ -524,20 +529,20 @@ var _ = Describe("BuildLogCollector", func() {
 				})
 
 				It("should reap non success builds and success builds that exceeds min success build retained number", func() {
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(1))
-					actualBuildIDs := fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(1))
+					actualBuildIDs := fakeEventStore.DeleteArgsForCall(0)
 					Expect(actualBuildIDs).To(ConsistOf(7, 8, 9, 11, 14, 16, 17))
 
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(5)))
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(6)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(5)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(6)))
 				})
 
 				It("should keep at least n success builds, n=MinSuccessBuilds, n=5", func() {
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(10)))
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(12)))
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(13)))
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(15)))
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).Should(Not(ContainElement(18)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(10)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(12)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(13)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(15)))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).Should(Not(ContainElement(18)))
 				})
 
 				It("should update first logged build id to the earliest success build", func() {
@@ -575,14 +580,14 @@ var _ = Describe("BuildLogCollector", func() {
 						return nil, db.Pagination{}, nil
 					}
 
-					fakePipeline.DeleteBuildEventsByBuildIDsReturns(nil)
+					fakeEventStore.DeleteReturns(nil)
 					fakeJob.UpdateFirstLoggedBuildIDReturns(nil)
 				})
 
 				It("uses build log calculator", func() {
 					Expect(buildLogCollector.Run(context.TODO())).NotTo(HaveOccurred())
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(Equal(1))
-					Expect(fakePipeline.DeleteBuildEventsByBuildIDsArgsForCall(0)).To(ConsistOf(1))
+					Expect(fakeEventStore.DeleteCallCount()).To(Equal(1))
+					Expect(fakeEventStore.DeleteArgsForCall(0)).To(ConsistOf(1))
 				})
 			})
 
@@ -622,7 +627,7 @@ var _ = Describe("BuildLogCollector", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeJob.BuildsCallCount()).To(BeZero())
-				Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(BeZero())
+				Expect(fakeEventStore.DeleteCallCount()).To(BeZero())
 				Expect(fakeJob.UpdateFirstLoggedBuildIDCallCount()).To(BeZero())
 			})
 		})
@@ -643,7 +648,7 @@ var _ = Describe("BuildLogCollector", func() {
 			err := buildLogCollector.Run(context.TODO())
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakePipeline.DeleteBuildEventsByBuildIDsCallCount()).To(BeZero())
+			Expect(fakeEventStore.DeleteCallCount()).To(BeZero())
 		})
 	})
 

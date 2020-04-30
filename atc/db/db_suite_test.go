@@ -36,7 +36,7 @@ var (
 	fakeEventProcessor                  *dbfakes.FakeEventProcessor
 	componentFactory                    db.ComponentFactory
 	buildFactory                        db.BuildFactory
-	buildEventStore                     db.EventProcessor
+	buildEventStore                     db.EventStore
 	buildCreator                        db.BuildCreator
 	volumeRepository                    db.VolumeRepository
 	containerRepository                 db.ContainerRepository

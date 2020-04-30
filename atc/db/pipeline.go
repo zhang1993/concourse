@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"code.cloudfoundry.org/lager"
@@ -59,8 +57,6 @@ type Pipeline interface {
 	Builds(page Page) ([]Build, Pagination, error)
 
 	BuildsWithTime(page Page) ([]Build, Pagination, error)
-
-	DeleteBuildEventsByBuildIDs(buildIDs []int) error
 
 	LoadDebugVersionsDB() (*atc.DebugVersionsDB, error)
 
@@ -880,76 +876,6 @@ func (p *pipeline) LoadDebugVersionsDB() (*atc.DebugVersionsDB, error) {
 	}
 
 	return db, nil
-}
-
-func (p *pipeline) DeleteBuildEventsByBuildIDs(buildIDs []int) error {
-	if len(buildIDs) == 0 {
-		return nil
-	}
-
-	interfaceBuildIDs := make([]interface{}, len(buildIDs))
-	for i, buildID := range buildIDs {
-		interfaceBuildIDs[i] = buildID
-	}
-
-	indexStrings := make([]string, len(buildIDs))
-	for i := range indexStrings {
-		indexStrings[i] = "$" + strconv.Itoa(i+1)
-	}
-
-	tx, err := p.conn.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer Rollback(tx)
-
-	_, err = tx.Exec(`
-   DELETE FROM build_events
-	 WHERE build_id IN (`+strings.Join(indexStrings, ",")+`)
-	 `, interfaceBuildIDs...)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(`
-		UPDATE builds
-		SET reap_time = now()
-		WHERE id IN (`+strings.Join(indexStrings, ",")+`)
-	`, interfaceBuildIDs...)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	return err
-}
-
-func (p *pipeline) getBuildsFrom(tx Tx, col string) (map[string]Build, error) {
-	rows, err := buildsQuery.
-		Where(sq.Eq{
-			"b.pipeline_id": p.id,
-		}).
-		Where(sq.Expr("j." + col + " = b.id")).
-		RunWith(tx).Query()
-	if err != nil {
-		return nil, err
-	}
-
-	defer Close(rows)
-
-	nextBuilds := make(map[string]Build)
-
-	for rows.Next() {
-		build := newEmptyBuild(p.conn, p.lockFactory)
-		err := scanBuild(build, rows, p.conn.EncryptionStrategy())
-		if err != nil {
-			return nil, err
-		}
-		nextBuilds[build.JobName()] = build
-	}
-
-	return nextBuilds, nil
 }
 
 // Variables creates variables for this pipeline. If this pipeline has its own

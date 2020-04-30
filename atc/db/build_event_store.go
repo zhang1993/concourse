@@ -5,6 +5,8 @@ import (
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/concourse/concourse/atc"
+	"strconv"
+	"strings"
 )
 
 //go:generate counterfeiter . EventProcessor
@@ -13,6 +15,14 @@ type EventProcessor interface {
 	Initialize(build Build) error
 	Process(build Build, event atc.Event) error
 	Finalize(build Build) error
+}
+
+//go:generate counterfeiter . EventStore
+
+type EventStore interface {
+	EventProcessor
+
+	Delete(buildIDs ...int) error
 }
 
 type buildEventStore struct {
@@ -78,6 +88,48 @@ func (s *buildEventStore) saveEvent(tx Tx, build Build, event atc.Event) error {
 		RunWith(tx).
 		Exec()
 	return err
+}
+
+func (s *buildEventStore) Delete(buildIDs ...int) error {
+	if len(buildIDs) == 0 {
+		return nil
+	}
+
+	interfaceBuildIDs := make([]interface{}, len(buildIDs))
+	for i, buildID := range buildIDs {
+		interfaceBuildIDs[i] = buildID
+	}
+
+	indexStrings := make([]string, len(buildIDs))
+	for i := range indexStrings {
+		indexStrings[i] = "$" + strconv.Itoa(i+1)
+	}
+
+	tx, err := s.conn.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer Rollback(tx)
+
+	_, err = tx.Exec(`
+   DELETE FROM build_events
+	 WHERE build_id IN (`+strings.Join(indexStrings, ",")+`)
+	 `, interfaceBuildIDs...)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(`
+		UPDATE builds
+		SET reap_time = now()
+		WHERE id IN (`+strings.Join(indexStrings, ",")+`)
+	`, interfaceBuildIDs...)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func buildEventSeq(buildid int) string {

@@ -42,6 +42,8 @@ var (
 	resourceCacheLifecycle db.ResourceCacheLifecycle
 	resourceConfigFactory  db.ResourceConfigFactory
 	buildFactory           db.BuildFactory
+	buildCreator           db.BuildCreator
+	buildEventProcessor    db.EventProcessor
 	lockFactory            lock.LockFactory
 
 	teamFactory db.TeamFactory
@@ -76,6 +78,9 @@ var _ = BeforeEach(func() {
 
 	teamFactory = db.NewTeamFactory(dbConn, lockFactory)
 	buildFactory = db.NewBuildFactory(dbConn, lockFactory, 0, time.Hour)
+
+	buildEventProcessor = db.NewBuildEventStore(dbConn)
+	buildCreator = db.NewBuildCreator(dbConn, lockFactory, buildEventProcessor)
 
 	defaultTeam, err = teamFactory.CreateTeam(atc.Team{Name: "default-team"})
 	Expect(err).NotTo(HaveOccurred())
@@ -142,6 +147,10 @@ var _ = BeforeEach(func() {
 	resourceCacheFactory = db.NewResourceCacheFactory(dbConn, lockFactory)
 	resourceConfigFactory = db.NewResourceConfigFactory(dbConn, lockFactory)
 })
+
+func finishBuild(build db.Build, status db.BuildStatus) error {
+	return build.Finish(status, buildEventProcessor)
+}
 
 var _ = AfterEach(func() {
 	Expect(dbConn.Close()).To(Succeed())
