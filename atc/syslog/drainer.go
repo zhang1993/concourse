@@ -23,14 +23,16 @@ type drainer struct {
 	address      string
 	caCerts      []string
 	buildFactory db.BuildFactory
+	eventStore   db.EventStore
 }
 
-func NewDrainer(transport string, address string, hostname string, caCerts []string, buildFactory db.BuildFactory) Drainer {
+func NewDrainer(transport string, address string, hostname string, caCerts []string, buildFactory db.BuildFactory, eventStore db.EventStore) Drainer {
 	return &drainer{
 		hostname:     hostname,
 		transport:    transport,
 		address:      address,
 		buildFactory: buildFactory,
+		eventStore:   eventStore,
 		caCerts:      caCerts,
 	}
 }
@@ -72,7 +74,7 @@ func (d *drainer) drainBuild(logger lager.Logger, build db.Build, syslog *Syslog
 		"build":    build.Name(),
 	})
 
-	events, err := build.Events(0)
+	events, err := d.eventStore.Events(build, 0)
 	if err != nil {
 		return err
 	}
@@ -90,6 +92,7 @@ func (d *drainer) drainBuild(logger lager.Logger, build db.Build, syslog *Syslog
 			return err
 		}
 
+		// TODO: we can implement the "syslog drainer" as a syslog forwarding event processor
 		if ev.Event == event.EventTypeLog {
 			var log event.Log
 

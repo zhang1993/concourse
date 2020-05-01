@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func newFakeBuild(id int) db.Build {
+func newFakeEventSource(id int) db.EventSource {
 	fakeEventSource := new(dbfakes.FakeEventSource)
 
 	msg1 := json.RawMessage(`{"time":1533744538,"payload":"build ` + strconv.Itoa(id) + ` log"}`)
@@ -34,8 +34,11 @@ func newFakeBuild(id int) db.Build {
 
 	fakeEventSource.NextReturns(event.Envelope{}, db.ErrEndOfBuildEventStream)
 
+	return fakeEventSource
+}
+
+func newFakeBuild(id int) db.Build {
 	fakeBuild := new(dbfakes.FakeBuild)
-	fakeBuild.EventsReturns(fakeEventSource, nil)
 	fakeBuild.IDReturns(id)
 
 	return fakeBuild
@@ -43,10 +46,15 @@ func newFakeBuild(id int) db.Build {
 
 var _ = Describe("Drainer", func() {
 	var fakeBuildFactory *dbfakes.FakeBuildFactory
+	var fakeEventStore *dbfakes.FakeEventStore
 	var server *testServer
 
 	BeforeEach(func() {
 		fakeBuildFactory = new(dbfakes.FakeBuildFactory)
+		fakeEventStore = new(dbfakes.FakeEventStore)
+		fakeEventStore.EventsStub = func(build db.Build, from uint) (db.EventSource, error) {
+			return newFakeEventSource(build.ID()), nil
+		}
 		fakeBuildFactory.GetDrainableBuildsReturns([]db.Build{newFakeBuild(123), newFakeBuild(345)}, nil)
 	})
 
@@ -61,7 +69,7 @@ var _ = Describe("Drainer", func() {
 			})
 
 			It("drains all build events by tcp", func() {
-				testDrainer := syslog.NewDrainer("tcp", server.Addr, "test", []string{}, fakeBuildFactory)
+				testDrainer := syslog.NewDrainer("tcp", server.Addr, "test", []string{}, fakeBuildFactory, fakeEventStore)
 				err := testDrainer.Run(context.TODO())
 				Expect(err).NotTo(HaveOccurred())
 

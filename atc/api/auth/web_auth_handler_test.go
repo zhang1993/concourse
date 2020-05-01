@@ -133,14 +133,17 @@ var _ = Describe("WebAuthHandler", func() {
 			Context("the nested handler returns an event stream", func() {
 				BeforeEach(func() {
 					build := new(dbfakes.FakeBuild)
+					eventStore := new(dbfakes.FakeEventStore)
 					fakeEventSource := new(dbfakes.FakeEventSource)
 					fakeEventSource.NextReturns(event.Envelope{}, db.ErrEndOfBuildEventStream)
-					build.EventsReturns(fakeEventSource, nil)
+					eventStore.EventsReturns(fakeEventSource, nil)
+
+					eventHandlerFactory := buildserver.NewEventHandlerFactory(eventStore)
 
 					server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						defer GinkgoRecover()
 						auth.WebAuthHandler{
-							Handler:    buildserver.NewEventHandler(lager.NewLogger("test"), build),
+							Handler:    eventHandlerFactory(lager.NewLogger("test"), build),
 							Middleware: fakeMiddleware,
 						}.ServeHTTP(w, r)
 					}))

@@ -20,6 +20,20 @@ type FakeEventStore struct {
 	deleteReturnsOnCall map[int]struct {
 		result1 error
 	}
+	EventsStub        func(db.Build, uint) (db.EventSource, error)
+	eventsMutex       sync.RWMutex
+	eventsArgsForCall []struct {
+		arg1 db.Build
+		arg2 uint
+	}
+	eventsReturns struct {
+		result1 db.EventSource
+		result2 error
+	}
+	eventsReturnsOnCall map[int]struct {
+		result1 db.EventSource
+		result2 error
+	}
 	FinalizeStub        func(db.Build) error
 	finalizeMutex       sync.RWMutex
 	finalizeArgsForCall []struct {
@@ -116,6 +130,70 @@ func (fake *FakeEventStore) DeleteReturnsOnCall(i int, result1 error) {
 	fake.deleteReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeEventStore) Events(arg1 db.Build, arg2 uint) (db.EventSource, error) {
+	fake.eventsMutex.Lock()
+	ret, specificReturn := fake.eventsReturnsOnCall[len(fake.eventsArgsForCall)]
+	fake.eventsArgsForCall = append(fake.eventsArgsForCall, struct {
+		arg1 db.Build
+		arg2 uint
+	}{arg1, arg2})
+	fake.recordInvocation("Events", []interface{}{arg1, arg2})
+	fake.eventsMutex.Unlock()
+	if fake.EventsStub != nil {
+		return fake.EventsStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	fakeReturns := fake.eventsReturns
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeEventStore) EventsCallCount() int {
+	fake.eventsMutex.RLock()
+	defer fake.eventsMutex.RUnlock()
+	return len(fake.eventsArgsForCall)
+}
+
+func (fake *FakeEventStore) EventsCalls(stub func(db.Build, uint) (db.EventSource, error)) {
+	fake.eventsMutex.Lock()
+	defer fake.eventsMutex.Unlock()
+	fake.EventsStub = stub
+}
+
+func (fake *FakeEventStore) EventsArgsForCall(i int) (db.Build, uint) {
+	fake.eventsMutex.RLock()
+	defer fake.eventsMutex.RUnlock()
+	argsForCall := fake.eventsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeEventStore) EventsReturns(result1 db.EventSource, result2 error) {
+	fake.eventsMutex.Lock()
+	defer fake.eventsMutex.Unlock()
+	fake.EventsStub = nil
+	fake.eventsReturns = struct {
+		result1 db.EventSource
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeEventStore) EventsReturnsOnCall(i int, result1 db.EventSource, result2 error) {
+	fake.eventsMutex.Lock()
+	defer fake.eventsMutex.Unlock()
+	fake.EventsStub = nil
+	if fake.eventsReturnsOnCall == nil {
+		fake.eventsReturnsOnCall = make(map[int]struct {
+			result1 db.EventSource
+			result2 error
+		})
+	}
+	fake.eventsReturnsOnCall[i] = struct {
+		result1 db.EventSource
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeEventStore) Finalize(arg1 db.Build) error {
@@ -304,6 +382,8 @@ func (fake *FakeEventStore) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.deleteMutex.RLock()
 	defer fake.deleteMutex.RUnlock()
+	fake.eventsMutex.RLock()
+	defer fake.eventsMutex.RUnlock()
 	fake.finalizeMutex.RLock()
 	defer fake.finalizeMutex.RUnlock()
 	fake.initializeMutex.RLock()

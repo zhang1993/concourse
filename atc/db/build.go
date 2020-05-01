@@ -129,8 +129,6 @@ type Build interface {
 
 	SetInterceptible(bool) error
 
-	Events(uint) (EventSource, error)
-
 	Artifacts() ([]WorkerArtifact, error)
 	Artifact(artifactID int) (WorkerArtifact, error)
 
@@ -782,28 +780,6 @@ func (b *build) Preparation() (BuildPreparation, bool, error) {
 	}
 
 	return buildPreparation, true, nil
-}
-
-func (b *build) Events(from uint) (EventSource, error) {
-	notifier, err := newConditionNotifier(b.conn.Bus(), buildEventsChannel(b.id), func() (bool, error) {
-		return true, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	table := fmt.Sprintf("team_build_events_%d", b.teamID)
-	if b.pipelineID != 0 {
-		table = fmt.Sprintf("pipeline_build_events_%d", b.pipelineID)
-	}
-
-	return newBuildEventSource(
-		b.id,
-		table,
-		b.conn,
-		notifier,
-		from,
-	), nil
 }
 
 func (b *build) Artifact(artifactID int) (WorkerArtifact, error) {

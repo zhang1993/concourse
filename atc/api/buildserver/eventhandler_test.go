@@ -31,15 +31,19 @@ func fakeEvent(payload string) event.Envelope {
 
 var _ = Describe("Handler", func() {
 	var (
-		build *dbfakes.FakeBuild
+		build      *dbfakes.FakeBuild
+		eventStore *dbfakes.FakeEventStore
 
 		server *httptest.Server
 	)
 
 	BeforeEach(func() {
 		build = new(dbfakes.FakeBuild)
+		eventStore = new(dbfakes.FakeEventStore)
 
-		server = httptest.NewServer(NewEventHandler(lagertest.NewTestLogger("test"), build))
+		eventHandlerFactory := NewEventHandlerFactory(eventStore)
+
+		server = httptest.NewServer(eventHandlerFactory(lagertest.NewTestLogger("test"), build))
 	})
 
 	Describe("GET", func() {
@@ -68,7 +72,7 @@ var _ = Describe("Handler", func() {
 
 				fakeEventSource = new(dbfakes.FakeEventSource)
 
-				build.EventsStub = func(from uint) (db.EventSource, error) {
+				eventStore.EventsStub = func(_ db.Build, from uint) (db.EventSource, error) {
 					fakeEventSource.NextStub = func() (event.Envelope, error) {
 						defer GinkgoRecover()
 
@@ -103,8 +107,9 @@ var _ = Describe("Handler", func() {
 
 			It("gets the events from the right build, starting at 0", func() {
 				_ = response.Body.Close()
-				Eventually(build.EventsCallCount).Should(Equal(1))
-				actualFrom := build.EventsArgsForCall(0)
+				Eventually(eventStore.EventsCallCount).Should(Equal(1))
+				actualBuild, actualFrom := eventStore.EventsArgsForCall(0)
+				Expect(actualBuild).To(BeIdenticalTo(build))
 				Expect(actualFrom).To(BeZero())
 			})
 
@@ -123,7 +128,7 @@ var _ = Describe("Handler", func() {
 				Expect(response).Should(IncludeHeaderEntries(expectedHeaderEntries))
 
 				expectedHeaderEntries = map[string]string{
-					"Connection":        "keep-alive",
+					"Connection": "keep-alive",
 				}
 				Expect(response).ShouldNot(IncludeHeaderEntries(expectedHeaderEntries))
 
@@ -173,8 +178,8 @@ var _ = Describe("Handler", func() {
 
 				It("starts subscribing from after the id", func() {
 					_ = response.Body.Close()
-					Eventually(build.EventsCallCount).Should(Equal(1))
-					actualFrom := build.EventsArgsForCall(0)
+					Eventually(eventStore.EventsCallCount).Should(Equal(1))
+					_, actualFrom := eventStore.EventsArgsForCall(0)
 					Expect(actualFrom).To(Equal(uint(2)))
 				})
 			})
@@ -204,7 +209,7 @@ var _ = Describe("Handler", func() {
 					}
 				}
 
-				build.EventsReturns(fakeEventSource, nil)
+				eventStore.EventsReturns(fakeEventSource, nil)
 			})
 
 			AfterEach(func() {
@@ -241,7 +246,7 @@ var _ = Describe("Handler", func() {
 			BeforeEach(func() {
 				fakeEventSource = new(dbfakes.FakeEventSource)
 				fakeEventSource.NextReturns(fakeEvent(`{"event":1}`), nil)
-				build.EventsReturns(fakeEventSource, nil)
+				eventStore.EventsReturns(fakeEventSource, nil)
 			})
 
 			JustBeforeEach(func() {
@@ -269,7 +274,7 @@ var _ = Describe("Handler", func() {
 
 		Context("when subscribing to it fails", func() {
 			BeforeEach(func() {
-				build.EventsReturns(nil, errors.New("nope"))
+				eventStore.EventsReturns(nil, errors.New("nope"))
 			})
 
 			JustBeforeEach(func() {

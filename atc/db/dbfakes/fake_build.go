@@ -116,19 +116,6 @@ type FakeBuild struct {
 	endTimeReturnsOnCall map[int]struct {
 		result1 time.Time
 	}
-	EventsStub        func(uint) (db.EventSource, error)
-	eventsMutex       sync.RWMutex
-	eventsArgsForCall []struct {
-		arg1 uint
-	}
-	eventsReturns struct {
-		result1 db.EventSource
-		result2 error
-	}
-	eventsReturnsOnCall map[int]struct {
-		result1 db.EventSource
-		result2 error
-	}
 	FinishStub        func(db.BuildStatus, db.EventProcessor) error
 	finishMutex       sync.RWMutex
 	finishArgsForCall []struct {
@@ -1007,69 +994,6 @@ func (fake *FakeBuild) EndTimeReturnsOnCall(i int, result1 time.Time) {
 	fake.endTimeReturnsOnCall[i] = struct {
 		result1 time.Time
 	}{result1}
-}
-
-func (fake *FakeBuild) Events(arg1 uint) (db.EventSource, error) {
-	fake.eventsMutex.Lock()
-	ret, specificReturn := fake.eventsReturnsOnCall[len(fake.eventsArgsForCall)]
-	fake.eventsArgsForCall = append(fake.eventsArgsForCall, struct {
-		arg1 uint
-	}{arg1})
-	fake.recordInvocation("Events", []interface{}{arg1})
-	fake.eventsMutex.Unlock()
-	if fake.EventsStub != nil {
-		return fake.EventsStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	fakeReturns := fake.eventsReturns
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeBuild) EventsCallCount() int {
-	fake.eventsMutex.RLock()
-	defer fake.eventsMutex.RUnlock()
-	return len(fake.eventsArgsForCall)
-}
-
-func (fake *FakeBuild) EventsCalls(stub func(uint) (db.EventSource, error)) {
-	fake.eventsMutex.Lock()
-	defer fake.eventsMutex.Unlock()
-	fake.EventsStub = stub
-}
-
-func (fake *FakeBuild) EventsArgsForCall(i int) uint {
-	fake.eventsMutex.RLock()
-	defer fake.eventsMutex.RUnlock()
-	argsForCall := fake.eventsArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeBuild) EventsReturns(result1 db.EventSource, result2 error) {
-	fake.eventsMutex.Lock()
-	defer fake.eventsMutex.Unlock()
-	fake.EventsStub = nil
-	fake.eventsReturns = struct {
-		result1 db.EventSource
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeBuild) EventsReturnsOnCall(i int, result1 db.EventSource, result2 error) {
-	fake.eventsMutex.Lock()
-	defer fake.eventsMutex.Unlock()
-	fake.EventsStub = nil
-	if fake.eventsReturnsOnCall == nil {
-		fake.eventsReturnsOnCall = make(map[int]struct {
-			result1 db.EventSource
-			result2 error
-		})
-	}
-	fake.eventsReturnsOnCall[i] = struct {
-		result1 db.EventSource
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *FakeBuild) Finish(arg1 db.BuildStatus, arg2 db.EventProcessor) error {
@@ -3158,8 +3082,6 @@ func (fake *FakeBuild) Invocations() map[string][][]interface{} {
 	defer fake.deleteMutex.RUnlock()
 	fake.endTimeMutex.RLock()
 	defer fake.endTimeMutex.RUnlock()
-	fake.eventsMutex.RLock()
-	defer fake.eventsMutex.RUnlock()
 	fake.finishMutex.RLock()
 	defer fake.finishMutex.RUnlock()
 	fake.hasPlanMutex.RLock()

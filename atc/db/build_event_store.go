@@ -22,6 +22,7 @@ type EventProcessor interface {
 type EventStore interface {
 	EventProcessor
 
+	Events(build Build, from uint) (EventSource, error)
 	Delete(buildIDs ...int) error
 }
 
@@ -78,16 +79,29 @@ func (s *buildEventStore) saveEvent(tx Tx, build Build, event atc.Event) error {
 		return err
 	}
 
-	table := fmt.Sprintf("team_build_events_%d", build.TeamID())
-	if build.PipelineID() != 0 {
-		table = fmt.Sprintf("pipeline_build_events_%d", build.PipelineID())
-	}
-	_, err = psql.Insert(table).
+	_, err = psql.Insert(buildEventsTable(build)).
 		Columns("event_id", "build_id", "type", "version", "payload").
 		Values(sq.Expr("nextval('"+buildEventSeq(build.ID())+"')"), build.ID(), string(event.EventType()), string(event.Version()), payload).
 		RunWith(tx).
 		Exec()
 	return err
+}
+
+func (s *buildEventStore) Events(build Build, from uint) (EventSource, error) {
+	notifier, err := newConditionNotifier(s.conn.Bus(), buildEventsChannel(build.ID()), func() (bool, error) {
+		return true, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return newBuildEventSource(
+		build.ID(),
+		buildEventsTable(build),
+		s.conn,
+		notifier,
+		from,
+	), nil
 }
 
 func (s *buildEventStore) Delete(buildIDs ...int) error {
@@ -132,8 +146,15 @@ func (s *buildEventStore) Delete(buildIDs ...int) error {
 	return tx.Commit()
 }
 
-func buildEventSeq(buildid int) string {
-	return fmt.Sprintf("build_event_id_seq_%d", buildid)
+func buildEventsTable(build Build) string {
+	if build.PipelineID() != 0 {
+		return fmt.Sprintf("pipeline_build_events_%d", build.PipelineID())
+	}
+	return fmt.Sprintf("team_build_events_%d", build.TeamID())
+}
+
+func buildEventSeq(buildID int) string {
+	return fmt.Sprintf("build_event_id_seq_%d", buildID)
 }
 
 func buildEventsChannel(buildID int) string {

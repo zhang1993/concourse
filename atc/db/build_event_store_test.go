@@ -14,7 +14,7 @@ var _ = Describe("BuildEventStore", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("allowing you to subscribe when no events have yet occurred")
-			events, err := build.Events(0)
+			events, err := buildEventStore.Events(build, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			defer db.Close(events)
@@ -39,7 +39,7 @@ var _ = Describe("BuildEventStore", func() {
 			})))
 
 			By("allowing you to subscribe from an offset")
-			eventsFrom1, err := build.Events(1)
+			eventsFrom1, err := buildEventStore.Events(build, 1)
 			Expect(err).NotTo(HaveOccurred())
 
 			defer db.Close(eventsFrom1)
@@ -74,7 +74,7 @@ var _ = Describe("BuildEventStore", func() {
 			}))))
 
 			By("returning ErrBuildEventStreamClosed for Next calls after Close")
-			events3, err := build.Events(0)
+			events3, err := buildEventStore.Events(build, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			err = events3.Close()
@@ -132,7 +132,7 @@ var _ = Describe("BuildEventStore", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			By("deleting events for build 1")
-			events1, err := build1DB.Events(0)
+			events1, err := buildEventStore.Events(build1DB, 0)
 			Expect(err).ToNot(HaveOccurred())
 			defer db.Close(events1)
 
@@ -140,7 +140,7 @@ var _ = Describe("BuildEventStore", func() {
 			Expect(err).To(Equal(db.ErrEndOfBuildEventStream))
 
 			By("preserving events for build 2")
-			events2, err := build2DB.Events(0)
+			events2, err := buildEventStore.Events(build2DB, 0)
 			Expect(err).ToNot(HaveOccurred())
 			defer db.Close(events2)
 
@@ -157,7 +157,7 @@ var _ = Describe("BuildEventStore", func() {
 			Expect(err).To(Equal(db.ErrEndOfBuildEventStream))
 
 			By("deleting events for build 3")
-			events3, err := build3DB.Events(0)
+			events3, err := buildEventStore.Events(build3DB, 0)
 			Expect(err).ToNot(HaveOccurred())
 			defer db.Close(events3)
 
@@ -165,7 +165,7 @@ var _ = Describe("BuildEventStore", func() {
 			Expect(err).To(Equal(db.ErrEndOfBuildEventStream))
 
 			By("being unflapped by build 4, which had no events at the time")
-			events4, err := build4DB.Events(0)
+			events4, err := buildEventStore.Events(build4DB, 0)
 			Expect(err).ToNot(HaveOccurred())
 			defer db.Close(events4)
 
