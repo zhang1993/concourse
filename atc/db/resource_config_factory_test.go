@@ -19,13 +19,13 @@ var _ = Describe("ResourceConfigFactory", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err = job.CreateBuild()
+			build, err = buildCreator.CreateBuild(job)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		Context("when the resource config is concurrently deleted and created", func() {
 			BeforeEach(func() {
-				Expect(build.Finish(db.BuildStatusSucceeded)).To(Succeed())
+				Expect(finishBuild(build, db.BuildStatusSucceeded)).To(Succeed())
 				Expect(build.SetInterceptible(false)).To(Succeed())
 			})
 

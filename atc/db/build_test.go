@@ -45,7 +45,7 @@ var _ = Describe("Build", func() {
 		It("updates the model", func() {
 			build, err := team.CreateOneOffBuild()
 			Expect(err).NotTo(HaveOccurred())
-			started, err := build.Start(atc.Plan{})
+			started, err := startBuild(build, atc.Plan{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(started).To(BeTrue())
 
@@ -388,19 +388,19 @@ var _ = Describe("Build", func() {
 
 			Context("when there is a pending build that is not a rerun", func() {
 				BeforeEach(func() {
-					pdBuild, err = job.CreateBuild()
+					pdBuild, err = buildCreator.CreateBuild(job)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				Context("when rerunning the latest completed build", func() {
 					BeforeEach(func() {
-						rrBuild, err = job.RerunBuild(build)
+						rrBuild, err = buildCreator.RerunBuild(job, build)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
 					Context("when the rerun finishes and status changed", func() {
 						BeforeEach(func() {
-							err = rrBuild.Finish(db.BuildStatusFailed)
+							err = finishBuild(rrBuild, db.BuildStatusFailed)
 							Expect(err).NotTo(HaveOccurred())
 						})
 
@@ -419,10 +419,10 @@ var _ = Describe("Build", func() {
 
 					Context("when there is another pending build that is not a rerun and the first pending build finishes", func() {
 						BeforeEach(func() {
-							pdBuild2, err = job.CreateBuild()
+							pdBuild2, err = buildCreator.CreateBuild(job)
 							Expect(err).NotTo(HaveOccurred())
 
-							err = pdBuild.Finish(db.BuildStatusSucceeded)
+							err = finishBuild(pdBuild, db.BuildStatusSucceeded)
 							Expect(err).NotTo(HaveOccurred())
 						})
 
@@ -438,10 +438,10 @@ var _ = Describe("Build", func() {
 
 				Context("when rerunning the pending build and the pending build finished", func() {
 					BeforeEach(func() {
-						rrBuild, err = job.RerunBuild(pdBuild)
+						rrBuild, err = buildCreator.RerunBuild(job, pdBuild)
 						Expect(err).NotTo(HaveOccurred())
 
-						err = pdBuild.Finish(db.BuildStatusSucceeded)
+						err = finishBuild(pdBuild, db.BuildStatusSucceeded)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -457,10 +457,10 @@ var _ = Describe("Build", func() {
 						var rrBuild2 db.Build
 
 						BeforeEach(func() {
-							err = rrBuild.Finish(db.BuildStatusSucceeded)
+							err = finishBuild(rrBuild, db.BuildStatusSucceeded)
 							Expect(err).NotTo(HaveOccurred())
 
-							rrBuild2, err = job.RerunBuild(rrBuild)
+							rrBuild2, err = buildCreator.RerunBuild(job, rrBuild)
 							Expect(err).NotTo(HaveOccurred())
 						})
 
@@ -476,13 +476,13 @@ var _ = Describe("Build", func() {
 
 				Context("when pending build finished and rerunning a non latest build and it finishes", func() {
 					BeforeEach(func() {
-						err = pdBuild.Finish(db.BuildStatusErrored)
+						err = finishBuild(pdBuild, db.BuildStatusErrored)
 						Expect(err).NotTo(HaveOccurred())
 
-						rrBuild, err = job.RerunBuild(build)
+						rrBuild, err = buildCreator.RerunBuild(job, build)
 						Expect(err).NotTo(HaveOccurred())
 
-						err = rrBuild.Finish(db.BuildStatusSucceeded)
+						err = finishBuild(rrBuild, db.BuildStatusSucceeded)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -533,12 +533,12 @@ var _ = Describe("Build", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				newBuild, err := job.CreateBuild()
+				newBuild, err := buildCreator.CreateBuild(job)
 				Expect(err).NotTo(HaveOccurred())
 
 				requestedSchedule := downstreamJob.ScheduleRequestedTime()
 
-				err = newBuild.Finish(db.BuildStatusSucceeded)
+				err = finishBuild(newBuild, db.BuildStatusSucceeded)
 				Expect(err).NotTo(HaveOccurred())
 
 				found, err = downstreamJob.Reload()
@@ -552,12 +552,12 @@ var _ = Describe("Build", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				newBuild, err := job.CreateBuild()
+				newBuild, err := buildCreator.CreateBuild(job)
 				Expect(err).NotTo(HaveOccurred())
 
 				requestedSchedule := noRequestJob.ScheduleRequestedTime()
 
-				err = newBuild.Finish(db.BuildStatusSucceeded)
+				err = finishBuild(newBuild, db.BuildStatusSucceeded)
 				Expect(err).NotTo(HaveOccurred())
 
 				found, err = noRequestJob.Reload()
@@ -594,13 +594,13 @@ var _ = Describe("Build", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("allowing you to subscribe when no events have yet occurred")
-			events, err := build.Events(0)
+			events, err := buildEventStore.Events(build, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			defer db.Close(events)
 
 			By("emitting a status event when started")
-			started, err := build.Start(atc.Plan{})
+			started, err := startBuild(build, atc.Plan{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(started).To(BeTrue())
 
@@ -614,7 +614,7 @@ var _ = Describe("Build", func() {
 			})))
 
 			By("emitting a status event when finished")
-			err = build.Finish(db.BuildStatusSucceeded)
+			err = finishBuild(build, db.BuildStatusSucceeded)
 			Expect(err).NotTo(HaveOccurred())
 
 			found, err = build.Reload()
@@ -689,7 +689,7 @@ var _ = Describe("Build", func() {
 
 		Context("when the version does not exist", func() {
 			It("can save a build's output", func() {
-				build, err := job.CreateBuild()
+				build, err := buildCreator.CreateBuild(job)
 				Expect(err).ToNot(HaveOccurred())
 
 				err = build.SaveOutput("some-type", atc.Source{"some": "explicit-source"}, atc.VersionedResourceTypes{}, atc.Version{"some": "version"}, []db.ResourceConfigMetadataField{
@@ -718,7 +718,7 @@ var _ = Describe("Build", func() {
 			It("requests schedule on all jobs using the resource config", func() {
 				atc.EnableGlobalResources = true
 
-				build, err := job.CreateBuild()
+				build, err := buildCreator.CreateBuild(job)
 				Expect(err).ToNot(HaveOccurred())
 
 				pipelineConfig := atc.Config{
@@ -795,7 +795,7 @@ var _ = Describe("Build", func() {
 			})
 
 			It("does not increment the check order", func() {
-				build, err := job.CreateBuild()
+				build, err := buildCreator.CreateBuild(job)
 				Expect(err).ToNot(HaveOccurred())
 
 				err = build.SaveOutput("some-type", atc.Source{"some": "explicit-source"}, atc.VersionedResourceTypes{}, atc.Version{"some": "version"}, []db.ResourceConfigMetadataField{
@@ -818,7 +818,7 @@ var _ = Describe("Build", func() {
 			})
 
 			It("does not request schedule on all jobs using the resource config", func() {
-				build, err := job.CreateBuild()
+				build, err := buildCreator.CreateBuild(job)
 				Expect(err).ToNot(HaveOccurred())
 
 				pipelineConfig := atc.Config{
@@ -908,7 +908,7 @@ var _ = Describe("Build", func() {
 						})
 
 						It("saves the output", func() {
-							build, err := job.CreateBuild()
+							build, err := buildCreator.CreateBuild(job)
 							Expect(err).ToNot(HaveOccurred())
 
 							err = build.SaveOutput(
@@ -1008,7 +1008,7 @@ var _ = Describe("Build", func() {
 		})
 
 		It("returns build inputs and outputs", func() {
-			build, err := job.CreateBuild()
+			build, err := buildCreator.CreateBuild(job)
 			Expect(err).NotTo(HaveOccurred())
 
 			// save a normal 'get'
@@ -1065,7 +1065,7 @@ var _ = Describe("Build", func() {
 
 			BeforeEach(func() {
 				var err error
-				build, err = job.CreateBuild()
+				build, err = buildCreator.CreateBuild(job)
 				Expect(err).NotTo(HaveOccurred())
 
 				// save a normal 'get'
@@ -1124,7 +1124,7 @@ var _ = Describe("Build", func() {
 
 				BeforeEach(func() {
 					var err error
-					newBuild, err = job.CreateBuild()
+					newBuild, err = buildCreator.CreateBuild(job)
 					Expect(err).NotTo(HaveOccurred())
 
 					// save a normal 'get'
@@ -1200,7 +1200,7 @@ var _ = Describe("Build", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				build, err = job.CreateBuild()
+				build, err = buildCreator.CreateBuild(job)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -1259,7 +1259,7 @@ var _ = Describe("Build", func() {
 
 			Context("when the build is started", func() {
 				BeforeEach(func() {
-					started, err := build.Start(atc.Plan{})
+					started, err := startBuild(build, atc.Plan{})
 					Expect(started).To(BeTrue())
 					Expect(err).NotTo(HaveOccurred())
 
@@ -1314,7 +1314,7 @@ var _ = Describe("Build", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				build, err = job.CreateBuild()
+				build, err = buildCreator.CreateBuild(job)
 				Expect(err).NotTo(HaveOccurred())
 
 				expectedBuildPrep.BuildID = build.ID()
@@ -1411,7 +1411,7 @@ var _ = Describe("Build", func() {
 
 					Context("when the build is started", func() {
 						BeforeEach(func() {
-							started, err := build.Start(atc.Plan{})
+							started, err := startBuild(build, atc.Plan{})
 							Expect(started).To(BeTrue())
 							Expect(err).NotTo(HaveOccurred())
 
@@ -1470,7 +1470,7 @@ var _ = Describe("Build", func() {
 							Expect(err).ToNot(HaveOccurred())
 							Expect(found).To(BeTrue())
 
-							newBuild, err := job.CreateBuild()
+							newBuild, err := buildCreator.CreateBuild(job)
 							Expect(err).NotTo(HaveOccurred())
 
 							err = job.SaveNextInputMapping(nil, true)
@@ -1571,7 +1571,7 @@ var _ = Describe("Build", func() {
 							Expect(err).ToNot(HaveOccurred())
 							Expect(found).To(BeTrue())
 
-							newBuild, err := job.CreateBuild()
+							newBuild, err := buildCreator.CreateBuild(job)
 							Expect(err).NotTo(HaveOccurred())
 
 							scheduled, err := job.ScheduleBuild(build)
@@ -1582,7 +1582,7 @@ var _ = Describe("Build", func() {
 							Expect(err).NotTo(HaveOccurred())
 							Expect(found).To(BeTrue())
 
-							err = newBuild.Finish(db.BuildStatusSucceeded)
+							err = finishBuild(newBuild, db.BuildStatusSucceeded)
 							Expect(err).NotTo(HaveOccurred())
 						})
 
@@ -1835,17 +1835,17 @@ var _ = Describe("Build", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err = job.CreateBuild()
+			build, err = buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 
 			otherJob, found, err = pipeline.Job("some-other-job")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			otherBuild, err = otherJob.CreateBuild()
+			otherBuild, err = buildCreator.CreateBuild(otherJob)
 			Expect(err).ToNot(HaveOccurred())
 
-			otherBuild2, err = otherJob.CreateBuild()
+			otherBuild2, err = buildCreator.CreateBuild(otherJob)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -2068,17 +2068,17 @@ var _ = Describe("Build", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			otherBuild, err = otherJob.CreateBuild()
+			otherBuild, err = buildCreator.CreateBuild(otherJob)
 			Expect(err).ToNot(HaveOccurred())
 
 			job, found, err = pipeline.Job("some-job")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err = job.CreateBuild()
+			build, err = buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 
-			retriggerBuild, err = job.RerunBuild(build)
+			retriggerBuild, err = buildCreator.RerunBuild(job, build)
 			Expect(err).ToNot(HaveOccurred())
 		})
 

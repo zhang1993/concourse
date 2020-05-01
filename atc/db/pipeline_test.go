@@ -1,7 +1,6 @@
 package db_test
 
 import (
-	"strconv"
 	"time"
 
 	"code.cloudfoundry.org/clock"
@@ -826,13 +825,13 @@ var _ = Describe("Pipeline", func() {
 				}))
 
 				By("including outputs of successful builds")
-				build1DB, err := aJob.CreateBuild()
+				build1DB, err := buildCreator.CreateBuild(aJob)
 				Expect(err).ToNot(HaveOccurred())
 
 				err = build1DB.SaveOutput("some-type", atc.Source{"source-config": "some-value"}, atc.VersionedResourceTypes{}, atc.Version{"version": "1"}, nil, "some-output-name", "some-resource")
 				Expect(err).ToNot(HaveOccurred())
 
-				err = build1DB.Finish(db.BuildStatusSucceeded)
+				err = finishBuild(build1DB, db.BuildStatusSucceeded)
 				Expect(err).ToNot(HaveOccurred())
 
 				versions, err = dbPipeline.LoadDebugVersionsDB()
@@ -887,13 +886,13 @@ var _ = Describe("Pipeline", func() {
 				}))
 
 				By("not including outputs of failed builds")
-				build2DB, err := aJob.CreateBuild()
+				build2DB, err := buildCreator.CreateBuild(aJob)
 				Expect(err).ToNot(HaveOccurred())
 
 				err = build2DB.SaveOutput("some-type", atc.Source{"source-config": "some-value"}, atc.VersionedResourceTypes{}, atc.Version{"version": "1"}, nil, "some-output-name", "some-resource")
 				Expect(err).ToNot(HaveOccurred())
 
-				err = build2DB.Finish(db.BuildStatusFailed)
+				err = finishBuild(build2DB, db.BuildStatusFailed)
 				Expect(err).ToNot(HaveOccurred())
 
 				versions, err = dbPipeline.LoadDebugVersionsDB()
@@ -950,13 +949,13 @@ var _ = Describe("Pipeline", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				otherPipelineBuild, err := anotherJob.CreateBuild()
+				otherPipelineBuild, err := buildCreator.CreateBuild(anotherJob)
 				Expect(err).ToNot(HaveOccurred())
 
 				err = otherPipelineBuild.SaveOutput("some-type", atc.Source{"other-source-config": "some-other-value"}, atc.VersionedResourceTypes{}, atc.Version{"version": "1"}, nil, "some-output-name", "some-other-resource")
 				Expect(err).ToNot(HaveOccurred())
 
-				err = otherPipelineBuild.Finish(db.BuildStatusSucceeded)
+				err = finishBuild(otherPipelineBuild, db.BuildStatusSucceeded)
 				Expect(err).ToNot(HaveOccurred())
 
 				versions, err = dbPipeline.LoadDebugVersionsDB()
@@ -1026,14 +1025,14 @@ var _ = Describe("Pipeline", func() {
 					}}, true)
 				Expect(err).ToNot(HaveOccurred())
 
-				build1DB, err = aJob.CreateBuild()
+				build1DB, err = buildCreator.CreateBuild(aJob)
 				Expect(err).ToNot(HaveOccurred())
 
 				_, found, err = build1DB.AdoptInputsAndPipes()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				err = build1DB.Finish(db.BuildStatusSucceeded)
+				err = finishBuild(build1DB, db.BuildStatusSucceeded)
 				Expect(err).ToNot(HaveOccurred())
 
 				versions, err = dbPipeline.LoadDebugVersionsDB()
@@ -1071,7 +1070,7 @@ var _ = Describe("Pipeline", func() {
 				}))
 
 				By("including build rerun mappings for builds")
-				build2DB, err = aJob.RerunBuild(build1DB)
+				build2DB, err = buildCreator.RerunBuild(aJob, build1DB)
 				Expect(err).ToNot(HaveOccurred())
 
 				versions, err = dbPipeline.LoadDebugVersionsDB()
@@ -1171,7 +1170,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err := job.CreateBuild()
+			build, err := buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 
 			By("populating build inputs")
@@ -1197,7 +1196,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			By("populating build events")
-			err = build.SaveEvent(event.StartTask{})
+			err = buildEventStore.Process(build, event.StartTask{})
 			Expect(err).ToNot(HaveOccurred())
 
 			err = pipeline.Destroy()
@@ -1207,6 +1206,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeFalse())
 
+			// TODO: it should also call destroy on the store. Not sure how to accomplish this, actually
 			found, err = build.Reload()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeFalse())
@@ -1277,7 +1277,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			firstJobBuild, err := job.CreateBuild()
+			firstJobBuild, err := buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 
 			actualDashboard, err = pipeline.Dashboard()
@@ -1287,7 +1287,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(actualDashboard[0].NextBuild.ID).To(Equal(firstJobBuild.ID()))
 
 			By("returning a job's most recent started build")
-			found, err = firstJobBuild.Start(atc.Plan{ID: "some-id"})
+			found, err = startBuild(firstJobBuild, atc.Plan{ID: "some-id"})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
@@ -1307,7 +1307,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			secondJobBuild, err := job.CreateBuild()
+			secondJobBuild, err := buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 
 			actualDashboard, err = pipeline.Dashboard()
@@ -1317,10 +1317,10 @@ var _ = Describe("Pipeline", func() {
 			Expect(actualDashboard[0].NextBuild.ID).To(Equal(firstJobBuild.ID()))
 
 			By("returning a job's most recent finished build")
-			err = firstJobBuild.Finish(db.BuildStatusSucceeded)
+			err = finishBuild(firstJobBuild, db.BuildStatusSucceeded)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = secondJobBuild.Finish(db.BuildStatusSucceeded)
+			err = finishBuild(secondJobBuild, db.BuildStatusSucceeded)
 			Expect(err).ToNot(HaveOccurred())
 
 			found, err = secondJobBuild.Reload()
@@ -1384,12 +1384,12 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err := job.CreateBuild()
+			build, err := buildCreator.CreateBuild(job)
 
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, build.ID())
 
-			secondBuild, err := job.CreateBuild()
+			secondBuild, err := buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, secondBuild.ID())
 
@@ -1397,7 +1397,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			_, err = someOtherJob.CreateBuild()
+			_, err = buildCreator.CreateBuild(someOtherJob)
 			Expect(err).ToNot(HaveOccurred())
 
 			dbBuild, found, err := buildFactory.Build(build.ID())
@@ -1537,11 +1537,11 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err := job.CreateBuild()
+			build, err := buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, build)
 
-			secondBuild, err = job.CreateBuild()
+			secondBuild, err = buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, secondBuild)
 
@@ -1549,7 +1549,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			_, err = someOtherJob.CreateBuild()
+			_, err = buildCreator.CreateBuild(someOtherJob)
 			Expect(err).ToNot(HaveOccurred())
 
 			dbBuild, found, err := buildFactory.Build(build.ID())
@@ -1649,11 +1649,11 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err := job.CreateBuild()
+			build, err := buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, build)
 
-			secondBuild, err := job.CreateBuild()
+			secondBuild, err := buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, secondBuild)
 
@@ -1661,7 +1661,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			thirdBuild, err := someOtherJob.CreateBuild()
+			thirdBuild, err := buildCreator.CreateBuild(someOtherJob)
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, thirdBuild)
 		})
@@ -1670,76 +1670,6 @@ var _ = Describe("Pipeline", func() {
 			builds, _, err := pipeline.Builds(db.Page{Limit: 10})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(builds).To(ConsistOf(expectedBuilds))
-		})
-	})
-
-	Describe("CreateStartedBuild", func() {
-		var (
-			plan         atc.Plan
-			startedBuild db.Build
-			err          error
-		)
-
-		BeforeEach(func() {
-			plan = atc.Plan{
-				ID: atc.PlanID("56"),
-				Get: &atc.GetPlan{
-					Type:     "some-type",
-					Name:     "some-name",
-					Resource: "some-resource",
-					Source:   atc.Source{"some": "source"},
-					Params:   atc.Params{"some": "params"},
-					Version:  &atc.Version{"some": "version"},
-					Tags:     atc.Tags{"some-tags"},
-					VersionedResourceTypes: atc.VersionedResourceTypes{
-						{
-							ResourceType: atc.ResourceType{
-								Name:       "some-name",
-								Source:     atc.Source{"some": "source"},
-								Type:       "some-type",
-								Privileged: true,
-								Tags:       atc.Tags{"some-tags"},
-							},
-							Version: atc.Version{"some-resource-type": "version"},
-						},
-					},
-				},
-			}
-
-			startedBuild, err = pipeline.CreateStartedBuild(plan)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("can create started builds with plans", func() {
-			Expect(startedBuild.ID()).ToNot(BeZero())
-			Expect(startedBuild.JobName()).To(BeZero())
-			Expect(startedBuild.PipelineName()).To(Equal("fake-pipeline"))
-			Expect(startedBuild.Name()).To(Equal(strconv.Itoa(startedBuild.ID())))
-			Expect(startedBuild.TeamName()).To(Equal(team.Name()))
-			Expect(startedBuild.Status()).To(Equal(db.BuildStatusStarted))
-		})
-
-		It("saves the public plan", func() {
-			found, err := startedBuild.Reload()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(found).To(BeTrue())
-			Expect(startedBuild.PublicPlan()).To(Equal(plan.Public()))
-		})
-
-		It("creates Start event", func() {
-			found, err := startedBuild.Reload()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(found).To(BeTrue())
-
-			events, err := startedBuild.Events(0)
-			Expect(err).NotTo(HaveOccurred())
-
-			defer db.Close(events)
-
-			Expect(events.Next()).To(Equal(envelope(event.Status{
-				Status: atc.StatusStarted,
-				Time:   startedBuild.StartTime().Unix(),
-			})))
 		})
 	})
 
@@ -1898,7 +1828,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(found).To(BeTrue())
 
 			for i := range builds {
-				builds[i], err = job.CreateBuild()
+				builds[i], err = buildCreator.CreateBuild(job)
 				Expect(err).ToNot(HaveOccurred())
 
 				buildStart := time.Date(2020, 11, i+1, 0, 0, 0, 0, time.UTC)
@@ -1917,7 +1847,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			_, err = otherJob.CreateBuild()
+			_, err = buildCreator.CreateBuild(otherJob)
 		})
 
 		Context("when not providing boundaries", func() {

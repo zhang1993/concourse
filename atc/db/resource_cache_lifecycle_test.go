@@ -28,7 +28,7 @@ var _ = Describe("ResourceCacheLifecycle", func() {
 			}
 
 			resourceCacheForJobBuild := func() (db.UsedResourceCache, db.Build) {
-				build, err := defaultJob.CreateBuild()
+				build, err := buildCreator.CreateBuild(defaultJob)
 				Expect(err).ToNot(HaveOccurred())
 				return createResourceCacheWithUser(db.ForBuild(build.ID())), build
 			}
@@ -70,7 +70,7 @@ var _ = Describe("ResourceCacheLifecycle", func() {
 						err = build.SetInterceptible(false)
 						Expect(err).ToNot(HaveOccurred())
 
-						err = build.Finish(a)
+						err = finishBuild(build, a)
 						Expect(err).ToNot(HaveOccurred())
 
 						err = resourceCacheLifecycle.CleanUsesForFinishedBuilds(logger)
@@ -115,7 +115,7 @@ var _ = Describe("ResourceCacheLifecycle", func() {
 						err = build.SetInterceptible(false)
 						Expect(err).ToNot(HaveOccurred())
 
-						err = build.Finish(a)
+						err = finishBuild(build, a)
 						Expect(err).ToNot(HaveOccurred())
 
 						err = resourceCacheLifecycle.CleanUsesForFinishedBuilds(logger)

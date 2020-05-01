@@ -299,7 +299,7 @@ var _ = Describe("Team", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err := job.CreateBuild()
+			build, err := buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 
 			metaContainers = make(map[db.ContainerMetadata][]db.Container)
@@ -425,7 +425,7 @@ var _ = Describe("Team", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				build, err := job.CreateBuild()
+				build, err := buildCreator.CreateBuild(job)
 				Expect(err).ToNot(HaveOccurred())
 
 				firstContainerCreating, err = defaultWorker.CreateContainer(db.NewBuildStepContainerOwner(build.ID(), atc.PlanID("some-job"), defaultTeam.ID()), db.ContainerMetadata{Type: "task", StepName: "some-task"})
@@ -674,7 +674,7 @@ var _ = Describe("Team", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err := job.CreateBuild()
+			build, err := buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 
 			creatingContainer, err := defaultWorker.CreateContainer(db.NewBuildStepContainerOwner(build.ID(), atc.PlanID("some-job"), defaultTeam.ID()), db.ContainerMetadata{Type: "task", StepName: "some-task"})
@@ -1053,7 +1053,7 @@ var _ = Describe("Team", func() {
 				},
 			}
 
-			startedBuild, err = team.CreateStartedBuild(plan)
+			startedBuild, err = buildCreator.CreateStartedBuild(team.ID(), 0, plan)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -1078,7 +1078,7 @@ var _ = Describe("Team", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			events, err := startedBuild.Events(0)
+			events, err := buildEventStore.Events(startedBuild, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			defer db.Close(events)
@@ -1130,7 +1130,7 @@ var _ = Describe("Team", func() {
 				Expect(found).To(BeTrue())
 
 				for i := 3; i < 5; i++ {
-					build, err := job.CreateBuild()
+					build, err := buildCreator.CreateBuild(job)
 					Expect(err).ToNot(HaveOccurred())
 					allBuilds[i] = build
 					pipelineBuilds[i-3] = build
@@ -1281,7 +1281,7 @@ var _ = Describe("Team", func() {
 			Expect(found).To(BeTrue())
 
 			for i := range builds {
-				builds[i], err = job.CreateBuild()
+				builds[i], err = buildCreator.CreateBuild(job)
 				Expect(err).ToNot(HaveOccurred())
 
 				buildStart := time.Date(2020, 11, i+1, 0, 0, 0, 0, time.UTC)
@@ -1386,11 +1386,11 @@ var _ = Describe("Team", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err = job.CreateBuild()
+			build, err = buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, build)
 
-			secondBuild, err = job.CreateBuild()
+			secondBuild, err = buildCreator.CreateBuild(job)
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, secondBuild)
 
@@ -1398,7 +1398,7 @@ var _ = Describe("Team", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			thirdBuild, err = someOtherJob.CreateBuild()
+			thirdBuild, err = buildCreator.CreateBuild(someOtherJob)
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, thirdBuild)
 		})
@@ -3077,7 +3077,7 @@ var _ = Describe("Team", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				build, err := job.CreateBuild()
+				build, err := buildCreator.CreateBuild(job)
 				Expect(err).ToNot(HaveOccurred())
 
 				creatingContainer, err := defaultWorker.CreateContainer(db.NewBuildStepContainerOwner(build.ID(), atc.PlanID("some-job"), defaultTeam.ID()), db.ContainerMetadata{Type: "task", StepName: "some-task"})

@@ -483,7 +483,7 @@ var _ = Describe("VolumeRepository", func() {
 		var usedResourceCache db.UsedResourceCache
 
 		BeforeEach(func() {
-			build, err := defaultPipeline.CreateOneOffBuild()
+			build, err := defaultTeam.CreateOneOffBuild()
 			Expect(err).NotTo(HaveOccurred())
 
 			usedResourceCache, err = resourceCacheFactory.FindOrCreateResourceCache(

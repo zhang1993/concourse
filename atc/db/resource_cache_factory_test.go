@@ -240,7 +240,7 @@ var _ = Describe("ResourceCacheFactory", func() {
 
 		Context("when the resource cache is concurrently deleted and created", func() {
 			BeforeEach(func() {
-				Expect(build.Finish(db.BuildStatusSucceeded)).To(Succeed())
+				Expect(finishBuild(build, db.BuildStatusSucceeded)).To(Succeed())
 				Expect(build.SetInterceptible(false)).To(Succeed())
 			})
 

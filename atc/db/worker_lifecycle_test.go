@@ -168,10 +168,10 @@ var _ = Describe("Worker Lifecycle", func() {
 					switch s {
 					case db.BuildStatusPending:
 					case db.BuildStatusStarted:
-						_, err = dbBuild.Start(atc.Plan{})
+						_, err = startBuild(dbBuild, atc.Plan{})
 						Expect(err).ToNot(HaveOccurred())
 					default:
-						err = dbBuild.Finish(s)
+						err = finishBuild(dbBuild, s)
 						Expect(err).ToNot(HaveOccurred())
 					}
 					_, err = dbWorker.CreateContainer(db.NewBuildStepContainerOwner(dbBuild.ID(), atc.PlanID(4), defaultTeam.ID()), db.ContainerMetadata{})
@@ -200,10 +200,10 @@ var _ = Describe("Worker Lifecycle", func() {
 				switch s {
 				case db.BuildStatusPending:
 				case db.BuildStatusStarted:
-					_, err := dbBuild.Start(atc.Plan{})
+					_, err := startBuild(dbBuild, atc.Plan{})
 					Expect(err).ToNot(HaveOccurred())
 				default:
-					err := dbBuild.Finish(s)
+					err := finishBuild(dbBuild, s)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
@@ -239,7 +239,7 @@ var _ = Describe("Worker Lifecycle", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(found).To(BeTrue())
 
-					dbBuild, err = job.CreateBuild()
+					dbBuild, err = buildCreator.CreateBuild(job)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -271,7 +271,7 @@ var _ = Describe("Worker Lifecycle", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(found).To(BeTrue())
 
-					dbBuild, err = job.CreateBuild()
+					dbBuild, err = buildCreator.CreateBuild(job)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -412,10 +412,10 @@ var _ = Describe("Worker Lifecycle", func() {
 					switch s {
 					case db.BuildStatusPending:
 					case db.BuildStatusStarted:
-						_, err := dbBuild.Start(atc.Plan{})
+						_, err := startBuild(dbBuild, atc.Plan{})
 						Expect(err).ToNot(HaveOccurred())
 					default:
-						err := dbBuild.Finish(s)
+						err := finishBuild(dbBuild, s)
 						Expect(err).ToNot(HaveOccurred())
 					}
 
@@ -446,10 +446,10 @@ var _ = Describe("Worker Lifecycle", func() {
 				switch s {
 				case db.BuildStatusPending:
 				case db.BuildStatusStarted:
-					_, err := dbBuild.Start(atc.Plan{})
+					_, err := startBuild(dbBuild, atc.Plan{})
 					Expect(err).ToNot(HaveOccurred())
 				default:
-					err := dbBuild.Finish(s)
+					err := finishBuild(dbBuild, s)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
@@ -486,7 +486,7 @@ var _ = Describe("Worker Lifecycle", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(found).To(BeTrue())
 
-					dbBuild, err = job.CreateBuild()
+					dbBuild, err = buildCreator.CreateBuild(job)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -518,7 +518,7 @@ var _ = Describe("Worker Lifecycle", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(found).To(BeTrue())
 
-					dbBuild, err = job.CreateBuild()
+					dbBuild, err = buildCreator.CreateBuild(job)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
