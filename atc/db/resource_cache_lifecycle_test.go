@@ -22,7 +22,7 @@ var _ = Describe("ResourceCacheLifecycle", func() {
 	Describe("CleanUpInvalidCaches", func() {
 		Context("the resource cache is used by a build", func() {
 			resourceCacheForOneOffBuild := func() (db.UsedResourceCache, db.Build) {
-				build, err := defaultTeam.CreateOneOffBuild()
+				build, err := buildCreator.CreateStartedBuild(defaultTeam.ID(), 0, atc.Plan{})
 				Expect(err).ToNot(HaveOccurred())
 				return createResourceCacheWithUser(db.ForBuild(build.ID())), build
 			}

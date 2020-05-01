@@ -15,7 +15,6 @@ import (
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db/lock"
-	"github.com/concourse/concourse/atc/event"
 )
 
 var ErrConfigComparisonFailed = errors.New("comparison with existing config failed during save")
@@ -43,9 +42,6 @@ type Team interface {
 	Pipelines() ([]Pipeline, error)
 	PublicPipelines() ([]Pipeline, error)
 	OrderPipelines([]string) error
-
-	CreateOneOffBuild() (Build, error)
-	CreateStartedBuild(plan atc.Plan) (Build, error)
 
 	PrivateAndPublicBuilds(Page) ([]Build, Pagination, error)
 	Builds(page Page) ([]Build, Pagination, error)
@@ -590,90 +586,6 @@ func (t *team) OrderPipelines(pipelineNames []string) error {
 	}
 
 	return tx.Commit()
-}
-
-// XXX: This is only begin used by tests, replace all tests to CreateBuild on a job
-func (t *team) CreateOneOffBuild() (Build, error) {
-	tx, err := t.conn.Begin()
-	if err != nil {
-		return nil, err
-	}
-
-	defer Rollback(tx)
-
-	build := newEmptyBuild(t.conn, t.lockFactory)
-	err = createBuild(tx, build, map[string]interface{}{
-		"name":    sq.Expr("nextval('one_off_name')"),
-		"team_id": t.id,
-		"status":  BuildStatusPending,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
-	}
-
-	return build, nil
-}
-
-func (t *team) CreateStartedBuild(plan atc.Plan) (Build, error) {
-	tx, err := t.conn.Begin()
-	if err != nil {
-		return nil, err
-	}
-
-	defer Rollback(tx)
-
-	metadata, err := json.Marshal(plan)
-	if err != nil {
-		return nil, err
-	}
-
-	encryptedPlan, nonce, err := t.conn.EncryptionStrategy().Encrypt(metadata)
-	if err != nil {
-		return nil, err
-	}
-
-	build := newEmptyBuild(t.conn, t.lockFactory)
-	err = createBuild(tx, build, map[string]interface{}{
-		"name":         sq.Expr("nextval('one_off_name')"),
-		"team_id":      t.id,
-		"status":       BuildStatusStarted,
-		"start_time":   sq.Expr("now()"),
-		"schema":       schema,
-		"private_plan": encryptedPlan,
-		"public_plan":  plan.Public(),
-		"nonce":        nonce,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = build.saveEvent(tx, event.Status{
-		Status: atc.StatusStarted,
-		Time:   build.StartTime().Unix(),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
-	}
-
-	if err = t.conn.Bus().Notify(buildStartedChannel()); err != nil {
-		return nil, err
-	}
-
-	if err = t.conn.Bus().Notify(buildEventsChannel(build.id)); err != nil {
-		return nil, err
-	}
-
-	return build, nil
 }
 
 func (t *team) PrivateAndPublicBuilds(page Page) ([]Build, Pagination, error) {

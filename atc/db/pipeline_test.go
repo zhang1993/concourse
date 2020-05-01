@@ -1642,7 +1642,7 @@ var _ = Describe("Pipeline", func() {
 		var expectedBuilds []db.Build
 
 		BeforeEach(func() {
-			_, err := team.CreateOneOffBuild()
+			_, err := buildCreator.CreateStartedBuild(team.ID(), 0, atc.Plan{})
 			Expect(err).NotTo(HaveOccurred())
 
 			job, found, err := pipeline.Job("job-name")
@@ -1653,7 +1653,7 @@ var _ = Describe("Pipeline", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, build)
 
-			secondBuild, err := buildCreator.CreateBuild(job)
+			secondBuild, err := buildCreator.CreateStartedBuild(team.ID(), pipeline.ID(), atc.Plan{})
 			Expect(err).ToNot(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, secondBuild)
 

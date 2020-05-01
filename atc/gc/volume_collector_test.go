@@ -47,9 +47,7 @@ var _ = Describe("VolumeCollector", func() {
 			team, err = teamFactory.CreateTeam(atc.Team{Name: "some-team"})
 			Expect(err).ToNot(HaveOccurred())
 
-			build, err = team.CreateOneOffBuild()
-			Expect(err).ToNot(HaveOccurred())
-
+			build, err = buildCreator.CreateStartedBuild(team.ID(), 0, atc.Plan{})
 			worker, err = workerFactory.SaveWorker(atc.Worker{
 				Name:            "some-worker",
 				GardenAddr:      "1.2.3.4:7777",

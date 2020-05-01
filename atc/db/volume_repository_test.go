@@ -20,7 +20,7 @@ var _ = Describe("VolumeRepository", func() {
 
 	BeforeEach(func() {
 		var err error
-		build, err = defaultTeam.CreateOneOffBuild()
+		build, err = buildCreator.CreateBuild(defaultJob)
 		Expect(err).ToNot(HaveOccurred())
 
 		usedResourceCache, err = resourceCacheFactory.FindOrCreateResourceCache(
@@ -483,7 +483,7 @@ var _ = Describe("VolumeRepository", func() {
 		var usedResourceCache db.UsedResourceCache
 
 		BeforeEach(func() {
-			build, err := defaultTeam.CreateOneOffBuild()
+			build, err := buildCreator.CreateBuild(defaultJob)
 			Expect(err).NotTo(HaveOccurred())
 
 			usedResourceCache, err = resourceCacheFactory.FindOrCreateResourceCache(

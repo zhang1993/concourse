@@ -36,14 +36,14 @@ var _ = Describe("Build", func() {
 
 	It("has no plan on creation", func() {
 		var err error
-		build, err := team.CreateOneOffBuild()
+		build, err := buildCreator.CreateBuild(defaultJob)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(build.HasPlan()).To(BeFalse())
 	})
 
 	Describe("Reload", func() {
 		It("updates the model", func() {
-			build, err := team.CreateOneOffBuild()
+			build, err := buildCreator.CreateBuild(defaultJob)
 			Expect(err).NotTo(HaveOccurred())
 			started, err := startBuild(build, atc.Plan{})
 			Expect(err).NotTo(HaveOccurred())
@@ -60,13 +60,13 @@ var _ = Describe("Build", func() {
 
 	Describe("Drain", func() {
 		It("defaults drain to false in the beginning", func() {
-			build, err := team.CreateOneOffBuild()
+			build, err := buildCreator.CreateBuild(defaultJob)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(build.IsDrained()).To(BeFalse())
 		})
 
 		It("has drain set to true after a drain and a reload", func() {
-			build, err := team.CreateOneOffBuild()
+			build, err := buildCreator.CreateBuild(defaultJob)
 			Expect(err).NotTo(HaveOccurred())
 
 			err = build.SetDrained(true)
@@ -114,7 +114,7 @@ var _ = Describe("Build", func() {
 				},
 			}
 
-			build, err = team.CreateOneOffBuild()
+			build, err = buildCreator.CreateBuild(defaultJob)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -573,7 +573,7 @@ var _ = Describe("Build", func() {
 		var build db.Build
 		BeforeEach(func() {
 			var err error
-			build, err = team.CreateOneOffBuild()
+			build, err = buildCreator.CreateBuild(defaultJob)
 			Expect(err).NotTo(HaveOccurred())
 
 			err = build.MarkAsAborted()
@@ -590,7 +590,7 @@ var _ = Describe("Build", func() {
 
 	Describe("Events", func() {
 		It("saves and emits status events", func() {
-			build, err := team.CreateOneOffBuild()
+			build, err := buildCreator.CreateBuild(defaultJob)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("allowing you to subscribe when no events have yet occurred")
@@ -1050,7 +1050,7 @@ var _ = Describe("Build", func() {
 		})
 
 		It("can't get no satisfaction (resources from a one-off build)", func() {
-			oneOffBuild, err := team.CreateOneOffBuild()
+			oneOffBuild, err := buildCreator.CreateStartedBuild(team.ID(), 0, atc.Plan{})
 			Expect(err).NotTo(HaveOccurred())
 
 			inputs, outputs, err := oneOffBuild.Resources()
@@ -1213,7 +1213,7 @@ var _ = Describe("Build", func() {
 		Context("when a one off build", func() {
 			BeforeEach(func() {
 				var err error
-				build, err = team.CreateOneOffBuild()
+				build, err = buildCreator.CreateStartedBuild(team.ID(), 0, atc.Plan{})
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -1244,7 +1244,7 @@ var _ = Describe("Build", func() {
 
 		Context("for one-off build", func() {
 			BeforeEach(func() {
-				build, err = team.CreateOneOffBuild()
+				build, err = buildCreator.CreateStartedBuild(team.ID(), 0, atc.Plan{})
 				Expect(err).NotTo(HaveOccurred())
 
 				expectedBuildPrep.BuildID = build.ID()
@@ -1255,25 +1255,6 @@ var _ = Describe("Build", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 				Expect(buildPrep).To(Equal(expectedBuildPrep))
-			})
-
-			Context("when the build is started", func() {
-				BeforeEach(func() {
-					started, err := startBuild(build, atc.Plan{})
-					Expect(started).To(BeTrue())
-					Expect(err).NotTo(HaveOccurred())
-
-					stillExists, err := build.Reload()
-					Expect(stillExists).To(BeTrue())
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("returns build preparation", func() {
-					buildPrep, found, err := build.Preparation()
-					Expect(err).NotTo(HaveOccurred())
-					Expect(found).To(BeTrue())
-					Expect(buildPrep).To(Equal(expectedBuildPrep))
-				})
 			})
 		})
 

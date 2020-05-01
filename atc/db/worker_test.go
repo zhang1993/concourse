@@ -372,7 +372,7 @@ var _ = Describe("Worker", func() {
 						Type: "get",
 					}
 
-					oneOffBuild, err := defaultTeam.CreateOneOffBuild()
+					oneOffBuild, err := buildCreator.CreateStartedBuild(defaultTeam.ID(), 0, atc.Plan{})
 					Expect(err).ToNot(HaveOccurred())
 
 					container, err = worker.CreateContainer(NewBuildStepContainerOwner(oneOffBuild.ID(), atc.PlanID("1"), 1), containerMetadata)

@@ -757,7 +757,7 @@ var _ = Describe("Team", func() {
 				Type:     "task",
 				StepName: "some-task",
 			}
-			defaultBuild, err = defaultTeam.CreateOneOffBuild()
+			defaultBuild, err = buildCreator.CreateStartedBuild(defaultTeam.ID(), 0, atc.Plan{})
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -999,27 +999,6 @@ var _ = Describe("Team", func() {
 		})
 	})
 
-	Describe("CreateOneOffBuild", func() {
-		var (
-			oneOffBuild db.Build
-			err         error
-		)
-
-		BeforeEach(func() {
-			oneOffBuild, err = team.CreateOneOffBuild()
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("can create one-off builds", func() {
-			Expect(oneOffBuild.ID()).ToNot(BeZero())
-			Expect(oneOffBuild.JobName()).To(BeZero())
-			Expect(oneOffBuild.PipelineName()).To(BeZero())
-			Expect(oneOffBuild.Name()).To(Equal(strconv.Itoa(oneOffBuild.ID())))
-			Expect(oneOffBuild.TeamName()).To(Equal(team.Name()))
-			Expect(oneOffBuild.Status()).To(Equal(db.BuildStatusPending))
-		})
-	})
-
 	Describe("CreateStartedBuild", func() {
 		var (
 			plan         atc.Plan
@@ -1109,7 +1088,7 @@ var _ = Describe("Team", func() {
 
 			BeforeEach(func() {
 				for i := 0; i < 3; i++ {
-					build, err := team.CreateOneOffBuild()
+					build, err := buildCreator.CreateStartedBuild(team.ID(), 0, atc.Plan{})
 					Expect(err).ToNot(HaveOccurred())
 					allBuilds[i] = build
 				}
@@ -1202,10 +1181,10 @@ var _ = Describe("Team", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					for i := 0; i < 3; i++ {
-						teamABuilds[i], err = caseInsensitiveTeamA.CreateOneOffBuild()
+						teamABuilds[i], err = buildCreator.CreateStartedBuild(caseInsensitiveTeamA.ID(), 0, atc.Plan{})
 						Expect(err).ToNot(HaveOccurred())
 
-						teamBBuilds[i], err = caseInsensitiveTeamB.CreateOneOffBuild()
+						teamBBuilds[i], err = buildCreator.CreateStartedBuild(caseInsensitiveTeamB.ID(), 0, atc.Plan{})
 						Expect(err).ToNot(HaveOccurred())
 					}
 				})
@@ -1365,7 +1344,7 @@ var _ = Describe("Team", func() {
 		BeforeEach(func() {
 			var err error
 
-			oneOffBuild, err = team.CreateOneOffBuild()
+			oneOffBuild, err = buildCreator.CreateStartedBuild(team.ID(), 0, atc.Plan{})
 			Expect(err).NotTo(HaveOccurred())
 			expectedBuilds = append(expectedBuilds, oneOffBuild)
 
@@ -1474,10 +1453,10 @@ var _ = Describe("Team", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				for i := 0; i < 3; i++ {
-					teamABuilds[i], err = caseInsensitiveTeamA.CreateOneOffBuild()
+					teamABuilds[i], err = buildCreator.CreateStartedBuild(caseInsensitiveTeamA.ID(), 0, atc.Plan{})
 					Expect(err).ToNot(HaveOccurred())
 
-					teamBBuilds[i], err = caseInsensitiveTeamB.CreateOneOffBuild()
+					teamBBuilds[i], err = buildCreator.CreateStartedBuild(caseInsensitiveTeamB.ID(), 0, atc.Plan{})
 					Expect(err).ToNot(HaveOccurred())
 				}
 			})

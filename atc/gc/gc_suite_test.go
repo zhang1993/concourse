@@ -85,7 +85,7 @@ var _ = BeforeEach(func() {
 	defaultTeam, err = teamFactory.CreateTeam(atc.Team{Name: "default-team"})
 	Expect(err).NotTo(HaveOccurred())
 
-	defaultBuild, err = defaultTeam.CreateOneOffBuild()
+	defaultBuild, err = buildCreator.CreateStartedBuild(defaultTeam.ID(), 0, atc.Plan{})
 	Expect(err).NotTo(HaveOccurred())
 
 	atcConfig := atc.Config{

@@ -249,7 +249,8 @@ var _ = Describe("Locks", func() {
 
 		BeforeEach(func() {
 			var err error
-			build, err = team.CreateOneOffBuild()
+			buildCreator := db.NewBuildCreator(dbConn, lockFactory, db.NewBuildEventStore(dbConn))
+			build, err = buildCreator.CreateStartedBuild(team.ID(), 0, atc.Plan{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 

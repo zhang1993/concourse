@@ -13,7 +13,7 @@ var _ = Describe("WorkerResourceCache", func() {
 
 	Describe("FindOrCreate", func() {
 		BeforeEach(func() {
-			build, err := defaultTeam.CreateOneOffBuild()
+			build, err := buildCreator.CreateBuild(defaultJob)
 			Expect(err).ToNot(HaveOccurred())
 
 			resourceCache, err := resourceCacheFactory.FindOrCreateResourceCache(
@@ -76,7 +76,7 @@ var _ = Describe("WorkerResourceCache", func() {
 		var findErr error
 
 		BeforeEach(func() {
-			build, err := defaultTeam.CreateOneOffBuild()
+			build, err := buildCreator.CreateBuild(defaultJob)
 			Expect(err).ToNot(HaveOccurred())
 
 			resourceCache, err := resourceCacheFactory.FindOrCreateResourceCache(
@@ -126,7 +126,7 @@ var _ = Describe("WorkerResourceCache", func() {
 				err = tx.Commit()
 				Expect(err).ToNot(HaveOccurred())
 
-				build, err := defaultTeam.CreateOneOffBuild()
+				build, err := buildCreator.CreateBuild(defaultJob)
 				Expect(err).ToNot(HaveOccurred())
 
 				resourceCache, err := resourceCacheFactory.FindOrCreateResourceCache(

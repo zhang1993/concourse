@@ -34,7 +34,7 @@ var _ = Describe("ResourceCache", func() {
 
 		BeforeEach(func() {
 			var err error
-			build, err = defaultTeam.CreateOneOffBuild()
+			build, err = buildCreator.CreateBuild(defaultJob)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -103,7 +103,7 @@ var _ = Describe("ResourceCache", func() {
 			}, 0)
 			Expect(err).ToNot(HaveOccurred())
 
-			build, err := defaultTeam.CreateOneOffBuild()
+			build, err := buildCreator.CreateBuild(defaultJob)
 			Expect(err).NotTo(HaveOccurred())
 
 			container, err = worker.CreateContainer(

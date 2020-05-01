@@ -189,7 +189,7 @@ var _ = Describe("Volume", func() {
 
 		BeforeEach(func() {
 			var err error
-			build, err = defaultTeam.CreateOneOffBuild()
+			build, err = buildCreator.CreateBuild(defaultJob)
 			Expect(err).ToNot(HaveOccurred())
 
 			resourceCache, err = resourceCacheFactory.FindOrCreateResourceCache(
@@ -304,7 +304,7 @@ var _ = Describe("Volume", func() {
 			)
 
 			BeforeEach(func() {
-				build, err := defaultTeam.CreateOneOffBuild()
+				build, err := buildCreator.CreateBuild(defaultJob)
 				Expect(err).ToNot(HaveOccurred())
 
 				creatingContainer, err := defaultWorker.CreateContainer(db.NewBuildStepContainerOwner(build.ID(), "some-plan", defaultTeam.ID()), db.ContainerMetadata{})
@@ -411,7 +411,7 @@ var _ = Describe("Volume", func() {
 
 	Describe("Resource cache volumes", func() {
 		It("returns volume type, resource type, resource version", func() {
-			build, err := defaultTeam.CreateOneOffBuild()
+			build, err := buildCreator.CreateBuild(defaultJob)
 			Expect(err).ToNot(HaveOccurred())
 
 			resourceCache, err := resourceCacheFactory.FindOrCreateResourceCache(
@@ -550,7 +550,7 @@ var _ = Describe("Volume", func() {
 		var creatingContainer db.CreatingContainer
 
 		BeforeEach(func() {
-			build, err := defaultTeam.CreateOneOffBuild()
+			build, err := buildCreator.CreateBuild(defaultJob)
 			Expect(err).ToNot(HaveOccurred())
 
 			creatingContainer, err = defaultWorker.CreateContainer(db.NewBuildStepContainerOwner(build.ID(), "some-plan", defaultTeam.ID()), db.ContainerMetadata{

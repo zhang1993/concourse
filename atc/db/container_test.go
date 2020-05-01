@@ -26,7 +26,7 @@ var _ = Describe("Container", func() {
 
 	BeforeEach(func() {
 		var err error
-		build, err = defaultTeam.CreateOneOffBuild()
+		build, err = buildCreator.CreateBuild(defaultJob)
 		Expect(err).NotTo(HaveOccurred())
 
 		creatingContainer, err = defaultWorker.CreateContainer(

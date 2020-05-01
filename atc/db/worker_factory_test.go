@@ -527,7 +527,7 @@ var _ = Describe("WorkerFactory", func() {
 				Type:     "task",
 				StepName: "some-task",
 			}
-			build, err = defaultTeam.CreateOneOffBuild()
+			build, err = buildCreator.CreateBuild(defaultJob)
 			Expect(err).ToNot(HaveOccurred())
 
 			fakeOwner = new(dbfakes.FakeContainerOwner)
@@ -733,7 +733,7 @@ var _ = Describe("WorkerFactory", func() {
 		BeforeEach(func() {
 			var err error
 
-			build, err = defaultTeam.CreateOneOffBuild()
+			build, err = buildCreator.CreateBuild(defaultJob)
 			Expect(err).ToNot(HaveOccurred())
 
 			worker, err = workerFactory.SaveWorker(atcWorker, 5*time.Minute)

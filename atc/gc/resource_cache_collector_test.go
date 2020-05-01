@@ -37,7 +37,7 @@ var _ = Describe("ResourceCacheCollector", func() {
 			BeforeEach(func() {
 				resourceCacheUseCollector = gc.NewResourceCacheUseCollector(resourceCacheLifecycle)
 
-				oneOffBuild, err = defaultTeam.CreateOneOffBuild()
+				oneOffBuild, err = buildCreator.CreateStartedBuild(defaultTeam.ID(), 0, atc.Plan{})
 				Expect(err).ToNot(HaveOccurred())
 
 				oneOffCache, err = resourceCacheFactory.FindOrCreateResourceCache(

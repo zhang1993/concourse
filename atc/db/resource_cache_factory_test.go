@@ -109,7 +109,7 @@ var _ = Describe("ResourceCacheFactory", func() {
 			Version: atc.Version{"some-image-type": "version"},
 		}
 
-		build, err = defaultTeam.CreateOneOffBuild()
+		build, err = buildCreator.CreateBuild(defaultJob)
 		Expect(err).NotTo(HaveOccurred())
 
 		logger = lagertest.NewTestLogger("test")

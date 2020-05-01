@@ -162,7 +162,7 @@ var _ = Describe("Worker Lifecycle", func() {
 
 			DescribeTable("deleting workers with builds that are",
 				func(s db.BuildStatus, expectedExistence bool) {
-					dbBuild, err := defaultTeam.CreateOneOffBuild()
+					dbBuild, err := buildCreator.CreateBuild(defaultJob)
 					Expect(err).ToNot(HaveOccurred())
 
 					switch s {
@@ -289,7 +289,7 @@ var _ = Describe("Worker Lifecycle", func() {
 			Context("when worker has one-off build", func() {
 				BeforeEach(func() {
 					var err error
-					dbBuild, err = defaultTeam.CreateOneOffBuild()
+					dbBuild, err = buildCreator.CreateStartedBuild(defaultTeam.ID(), 0, atc.Plan{})
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -406,7 +406,7 @@ var _ = Describe("Worker Lifecycle", func() {
 
 			DescribeTable("land workers with builds that are",
 				func(s db.BuildStatus, expectedState db.WorkerState) {
-					dbBuild, err := defaultTeam.CreateOneOffBuild()
+					dbBuild, err := buildCreator.CreateBuild(defaultJob)
 					Expect(err).ToNot(HaveOccurred())
 
 					switch s {
@@ -536,7 +536,7 @@ var _ = Describe("Worker Lifecycle", func() {
 			Context("when worker has one-off build", func() {
 				BeforeEach(func() {
 					var err error
-					dbBuild, err = defaultTeam.CreateOneOffBuild()
+					dbBuild, err = buildCreator.CreateStartedBuild(defaultTeam.ID(), 0, atc.Plan{})
 					Expect(err).ToNot(HaveOccurred())
 				})
 
