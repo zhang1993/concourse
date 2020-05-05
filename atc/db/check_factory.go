@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -8,10 +9,12 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagerctx"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db/lock"
+	"github.com/concourse/concourse/tracing"
 )
 
 //go:generate counterfeiter . Checkable
@@ -47,7 +50,7 @@ type CheckFactory interface {
 	Check(int) (Check, bool, error)
 	StartedChecks() ([]Check, error)
 	CreateCheck(int, bool, atc.Plan, CheckMetadata) (Check, bool, error)
-	TryCreateCheck(lager.Logger, Checkable, ResourceTypes, atc.Version, bool) (Check, bool, error)
+	TryCreateCheck(context.Context, Checkable, ResourceTypes, atc.Version, bool) (Check, bool, error)
 	Resources() ([]Resource, error)
 	ResourceTypes() ([]ResourceType, error)
 	AcquireScanningLock(lager.Logger) (lock.Lock, bool, error)
@@ -136,7 +139,8 @@ func (c *checkFactory) StartedChecks() ([]Check, error) {
 	return checks, nil
 }
 
-func (c *checkFactory) TryCreateCheck(logger lager.Logger, checkable Checkable, resourceTypes ResourceTypes, fromVersion atc.Version, manuallyTriggered bool) (Check, bool, error) {
+func (c *checkFactory) TryCreateCheck(ctx context.Context, checkable Checkable, resourceTypes ResourceTypes, fromVersion atc.Version, manuallyTriggered bool) (Check, bool, error) {
+	logger := lagerctx.FromContext(ctx)
 
 	var err error
 
@@ -196,17 +200,22 @@ func (c *checkFactory) TryCreateCheck(logger lager.Logger, checkable Checkable, 
 		}
 	}
 
-	plan := atc.Plan{
-		Check: &atc.CheckPlan{
-			Name:        checkable.Name(),
-			Type:        checkable.Type(),
-			Source:      checkable.Source(),
-			Tags:        checkable.Tags(),
-			Timeout:     timeout.String(),
-			FromVersion: fromVersion,
+	checkPlan := &atc.CheckPlan{
+		Name:        checkable.Name(),
+		Type:        checkable.Type(),
+		Source:      checkable.Source(),
+		Tags:        checkable.Tags(),
+		Timeout:     timeout.String(),
+		FromVersion: fromVersion,
+		SpanContext: map[string]string{},
 
-			VersionedResourceTypes: filteredTypes,
-		},
+		VersionedResourceTypes: filteredTypes,
+	}
+
+	tracing.Inject(ctx, checkPlan)
+
+	plan := atc.Plan{
+		Check: checkPlan,
 	}
 
 	meta := CheckMetadata{
