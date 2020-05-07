@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -304,7 +305,7 @@ func (r *resource) SaveUncheckedVersion(version atc.Version, metadata ResourceCo
 		return false, err
 	}
 
-	newVersion, err := saveResourceVersion(tx, resourceConfigScope.ID(), version, metadata)
+	newVersion, err := saveResourceVersion(context.TODO(), tx, resourceConfigScope.ID(), version, metadata)
 	if err != nil {
 		return false, err
 	}

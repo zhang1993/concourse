@@ -57,7 +57,7 @@ func (s *Scheduler) Schedule(
 		return false, fmt.Errorf("save next input mapping: %w", err)
 	}
 
-	err = s.ensurePendingBuildExists(logger, job, jobInputs, resources)
+	err = s.ensurePendingBuildExists(ctx, logger, job, jobInputs, resources)
 	if err != nil {
 		return false, err
 	}
@@ -66,6 +66,7 @@ func (s *Scheduler) Schedule(
 }
 
 func (s *Scheduler) ensurePendingBuildExists(
+	ctx context.Context,
 	logger lager.Logger,
 	job db.Job,
 	jobInputs []atc.JobInput,
@@ -87,6 +88,7 @@ func (s *Scheduler) ensurePendingBuildExists(
 	}
 
 	var hasNewInputs bool
+	causes := []db.BuildInput{}
 	for _, inputConfig := range jobInputs {
 		inputSource, ok := inputMapping[inputConfig.Name]
 
@@ -94,13 +96,21 @@ func (s *Scheduler) ensurePendingBuildExists(
 		if ok && inputSource.FirstOccurrence {
 			hasNewInputs = true
 			if inputConfig.Trigger {
-				err := job.EnsurePendingBuildExists()
-				if err != nil {
-					return fmt.Errorf("ensure pending build exists: %w", err)
-				}
-
-				break
+				causes = append(causes, inputSource)
 			}
+		}
+	}
+
+
+	if len(causes) == 1 {
+		uniqueCause := causes[0]
+		ctx = tracing.StartSpanFollowing(uniqueCause)
+	}
+
+	if len(causes) > 0 {
+		err := job.EnsurePendingBuildExists(ctx)
+		if err != nil {
+			return fmt.Errorf("ensure pending build exists: %w", err)
 		}
 	}
 

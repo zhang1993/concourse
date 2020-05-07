@@ -51,6 +51,7 @@ func (s *schedulerRunner) Run(ctx context.Context) error {
 
 	sLog.Debug("start")
 	defer sLog.Debug("done")
+	// tracing.StartSpan()
 
 	jobs, err := s.jobFactory.JobsToSchedule()
 	if err != nil {

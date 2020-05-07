@@ -49,10 +49,10 @@ func (c *checker) Run(ctx context.Context) error {
 	for _, ck := range checks {
 		if _, exists := c.running.LoadOrStore(ck.ID(), true); !exists {
 			go func(check db.Check) {
-				_, span := tracing.StartSpanFollowing(
-					ctx,
-					check.Plan().Check,
-					"checker.Run", tracing.Attrs{
+				ctx, span := tracing.StartSpanFollowing(
+					check,
+					"checker.Run",
+					tracing.Attrs{
 						"team":                     ck.TeamName(),
 						"pipeline":                 ck.PipelineName(),
 						"check_id":                 strconv.Itoa(ck.ID()),
@@ -62,7 +62,7 @@ func (c *checker) Run(ctx context.Context) error {
 				defer span.End()
 				defer c.running.Delete(check.ID())
 
-				engineCheck := c.engine.NewCheck(check)
+				engineCheck := c.engine.NewCheck(ctx, check)
 				engineCheck.Run(c.logger.WithData(lager.Data{
 					"check": check.ID(),
 				}))

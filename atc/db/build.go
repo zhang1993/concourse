@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -23,12 +24,18 @@ const schema = "exec.v2"
 var ErrAdoptRerunBuildHasNoInputs = errors.New("inputs not ready for build to rerun")
 
 type BuildInput struct {
-	Name       string
-	Version    atc.Version
-	ResourceID int
+	Name        string
+	Version     atc.Version
+	ResourceID  int
 
 	FirstOccurrence bool
 	ResolveError    string
+
+	SpanContext SpanContext
+}
+
+func (bi BulidInput) SpanContext() propagators.Supplier {
+	return bi.SpanContext
 }
 
 type BuildOutput struct {
@@ -951,7 +958,7 @@ func (b *build) SaveOutput(
 		return err
 	}
 
-	newVersion, err := saveResourceVersion(tx, resourceConfigScope.ID(), version, metadata)
+	newVersion, err := saveResourceVersion(context.TODO(), tx, resourceConfigScope.ID(), version, metadata)
 	if err != nil {
 		return err
 	}

@@ -21,7 +21,7 @@ import (
 
 type Engine interface {
 	NewBuild(db.Build) Runnable
-	NewCheck(db.Check) Runnable
+	NewCheck(context.Context, db.Check) Runnable
 	ReleaseAll(lager.Logger)
 }
 
@@ -83,12 +83,12 @@ func (engine *engine) NewBuild(build db.Build) Runnable {
 	)
 }
 
-func (engine *engine) NewCheck(check db.Check) Runnable {
+func (engine *engine) NewCheck(ctx context.Context, check db.Check) Runnable {
 
-	ctx, cancel := context.WithCancel(context.Background())
+	cancelCtx, cancel := context.WithCancel(ctx)
 
 	return NewCheck(
-		ctx,
+		cancelCtx,
 		cancel,
 		check,
 		engine.builder,

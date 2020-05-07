@@ -14,7 +14,6 @@ import (
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/creds"
 	"github.com/concourse/concourse/atc/db/lock"
-	"github.com/concourse/concourse/tracing"
 )
 
 //go:generate counterfeiter . Checkable
@@ -49,7 +48,7 @@ type Checkable interface {
 type CheckFactory interface {
 	Check(int) (Check, bool, error)
 	StartedChecks() ([]Check, error)
-	CreateCheck(int, bool, atc.Plan, CheckMetadata) (Check, bool, error)
+	CreateCheck(int, bool, atc.Plan, CheckMetadata, SpanContext) (Check, bool, error)
 	TryCreateCheck(context.Context, Checkable, ResourceTypes, atc.Version, bool) (Check, bool, error)
 	Resources() ([]Resource, error)
 	ResourceTypes() ([]ResourceType, error)
@@ -200,22 +199,18 @@ func (c *checkFactory) TryCreateCheck(ctx context.Context, checkable Checkable, 
 		}
 	}
 
-	checkPlan := &atc.CheckPlan{
-		Name:        checkable.Name(),
-		Type:        checkable.Type(),
-		Source:      checkable.Source(),
-		Tags:        checkable.Tags(),
-		Timeout:     timeout.String(),
-		FromVersion: fromVersion,
-		SpanContext: map[string]string{},
-
-		VersionedResourceTypes: filteredTypes,
-	}
-
-	tracing.Inject(ctx, checkPlan)
-
 	plan := atc.Plan{
-		Check: checkPlan,
+		Check: &atc.CheckPlan{
+			Name:        checkable.Name(),
+			Type:        checkable.Type(),
+			Source:      checkable.Source(),
+			Tags:        checkable.Tags(),
+			Timeout:     timeout.String(),
+			FromVersion: fromVersion,
+			SpanContext: map[string]string{},
+
+			VersionedResourceTypes: filteredTypes,
+		},
 	}
 
 	meta := CheckMetadata{
@@ -232,6 +227,7 @@ func (c *checkFactory) TryCreateCheck(ctx context.Context, checkable Checkable, 
 		manuallyTriggered,
 		plan,
 		meta,
+		NewSpanContext(ctx),
 	)
 	if err != nil {
 		return nil, false, err
@@ -245,6 +241,7 @@ func (c *checkFactory) CreateCheck(
 	manuallyTriggered bool,
 	plan atc.Plan,
 	meta CheckMetadata,
+	sc SpanContext,
 ) (Check, bool, error) {
 	tx, err := c.conn.Begin()
 	if err != nil {
@@ -269,6 +266,11 @@ func (c *checkFactory) CreateCheck(
 		return nil, false, err
 	}
 
+	spanContext, err := json.Marshal(sc)
+	if err != nil {
+		return nil, false, err
+	}
+
 	var id int
 	var createTime time.Time
 	err = psql.Insert("checks").
@@ -280,6 +282,7 @@ func (c *checkFactory) CreateCheck(
 			"plan",
 			"nonce",
 			"metadata",
+			"span_context",
 		).
 		Values(
 			resourceConfigScopeID,
@@ -289,6 +292,7 @@ func (c *checkFactory) CreateCheck(
 			encryptedPayload,
 			nonce,
 			metadata,
+			spanContext,
 		).
 		Suffix(`
 			ON CONFLICT DO NOTHING

@@ -3,6 +3,7 @@ package exec
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"code.cloudfoundry.org/lager"
@@ -12,6 +13,7 @@ import (
 	"github.com/concourse/concourse/atc/db"
 	"github.com/concourse/concourse/atc/resource"
 	"github.com/concourse/concourse/atc/worker"
+	"github.com/concourse/concourse/tracing"
 )
 
 type CheckStep struct {
@@ -32,7 +34,7 @@ type CheckStep struct {
 type CheckDelegate interface {
 	BuildStepDelegate
 
-	SaveVersions([]atc.Version) error
+	SaveVersions(context.Context, []atc.Version) error
 }
 
 func NewCheckStep(
@@ -136,7 +138,7 @@ func (step *CheckStep) Run(ctx context.Context, state RunState) error {
 		return fmt.Errorf("run check step: %w", err)
 	}
 
-	err = step.delegate.SaveVersions(result.Versions)
+	err = step.delegate.SaveVersions(ctx, result.Versions)
 	if err != nil {
 		return fmt.Errorf("save versions: %w", err)
 	}

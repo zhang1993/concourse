@@ -87,17 +87,24 @@ func Inject(ctx context.Context, supplier propagators.Supplier) {
 	propagators.TraceContext{}.Inject(ctx, supplier)
 }
 
-func StartSpanFollowing(ctx context.Context, supplier propagators.Supplier, component string, attrs Attrs) (context.Context, trace.Span) {
+type WithSpanContext interface {
+	SpanContext() propagators.Supplier
+}
+
+func StartSpanFollowing(following WithSpanContext, component string, attrs Attrs) (context.Context, trace.Span) {
 	if !Configured {
-		return ctx, trace.NoopSpan{}
+		return context.Background(), trace.NoopSpan{}
 	}
 
-	sc, _ := propagators.TraceContext{}.Extract(ctx, supplier)
+	spanContext, _ := propagators.TraceContext{}.Extract(
+		context.TODO(),
+		following.SpanContext(),
+	)
 
 	ctx, span := global.TraceProvider().Tracer("concourse").Start(
-		ctx,
+		context.Background(),
 		component,
-		trace.FollowsFrom(sc),
+		trace.FollowsFrom(spanContext),
 	)
 
 	if len(attrs) != 0 {

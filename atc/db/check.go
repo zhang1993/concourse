@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"github.com/concourse/concourse/atc"
 	"github.com/concourse/concourse/atc/db/lock"
 	"github.com/lib/pq"
+	"go.opentelemetry.io/otel/api/propagators"
 )
 
 type CheckStatus string
@@ -44,10 +46,12 @@ type Check interface {
 	Finish() error
 	FinishWithError(err error) error
 
-	SaveVersions([]atc.Version) error
+	SaveVersions(context.Context, []atc.Version) error
 	AllCheckables() ([]Checkable, error)
 	AcquireTrackingLock(lager.Logger) (lock.Lock, bool, error)
 	Reload() (bool, error)
+
+	SpanContext() propagators.Supplier
 }
 
 var checksQuery = psql.Select(
@@ -62,6 +66,7 @@ var checksQuery = psql.Select(
 	"c.nonce",
 	"c.check_error",
 	"c.metadata",
+	"c.span_context",
 ).
 	From("checks c")
 
@@ -80,6 +85,8 @@ type check struct {
 	createTime time.Time
 	startTime  time.Time
 	endTime    time.Time
+
+	spanContext SpanContext
 }
 
 type CheckMetadata struct {
@@ -317,8 +324,12 @@ func (c *check) AllCheckables() ([]Checkable, error) {
 	return checkables, nil
 }
 
-func (c *check) SaveVersions(versions []atc.Version) error {
-	return saveVersions(c.conn, c.resourceConfigScopeID, versions)
+func (c *check) SaveVersions(ctx context.Context, versions []atc.Version) error {
+	return saveVersions(ctx, c.conn, c.resourceConfigScopeID, versions)
+}
+
+func (c *check) SpanContext() propagators.Supplier {
+	return c.spanContext
 }
 
 func scanCheck(c *check, row scannable) error {
@@ -326,7 +337,7 @@ func scanCheck(c *check, row scannable) error {
 		createTime, startTime, endTime  pq.NullTime
 		schema, plan, nonce, checkError sql.NullString
 		status                          string
-		metadata                        sql.NullString
+		metadata, spanContext           sql.NullString
 	)
 
 	err := row.Scan(
@@ -341,6 +352,7 @@ func scanCheck(c *check, row scannable) error {
 		&nonce,
 		&checkError,
 		&metadata,
+		&spanContext,
 	)
 	if err != nil {
 		return err
@@ -366,6 +378,13 @@ func scanCheck(c *check, row scannable) error {
 
 	if len(metadata.String) > 0 {
 		err = json.Unmarshal([]byte(metadata.String), &c.metadata)
+		if err != nil {
+			return err
+		}
+	}
+
+	if spanContext.Valid {
+		err = json.Unmarshal([]byte(spanContext.String), &c.spanContext)
 		if err != nil {
 			return err
 		}

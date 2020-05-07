@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"context"
 	"io"
 	"strings"
 	"time"
@@ -316,8 +317,8 @@ type checkDelegate struct {
 	clock       clock.Clock
 }
 
-func (d *checkDelegate) SaveVersions(versions []atc.Version) error {
-	return d.check.SaveVersions(versions)
+func (d *checkDelegate) SaveVersions(ctx context.Context, versions []atc.Version) error {
+	return d.check.SaveVersions(ctx, versions)
 }
 
 type discardCloser struct {
