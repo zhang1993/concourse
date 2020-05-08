@@ -623,7 +623,9 @@ func (cmd *RunCommand) constructAPIMembers(
 		return nil, err
 	}
 
-	teamFactory := db.NewTeamFactory(dbConn, lockFactory)
+	eventStore := constructEventStore(dbConn)
+
+	teamFactory := db.NewTeamFactory(dbConn, lockFactory, eventStore)
 
 	_, err = teamFactory.CreateDefaultTeamIfNotExists()
 	if err != nil {
@@ -682,12 +684,12 @@ func (cmd *RunCommand) constructAPIMembers(
 	workerClient := worker.NewClient(pool, workerProvider, compressionLib, workerAvailabilityPollingInterval, workerStatusPublishInterval)
 
 	credsManagers := cmd.CredentialManagers
-	dbPipelineFactory := db.NewPipelineFactory(dbConn, lockFactory)
-	dbJobFactory := db.NewJobFactory(dbConn, lockFactory)
-	dbResourceFactory := db.NewResourceFactory(dbConn, lockFactory)
+	dbPipelineFactory := db.NewPipelineFactory(dbConn, lockFactory, eventStore)
+	dbJobFactory := db.NewJobFactory(dbConn, lockFactory, eventStore)
+	dbResourceFactory := db.NewResourceFactory(dbConn, lockFactory, eventStore)
 	dbContainerRepository := db.NewContainerRepository(dbConn)
 	gcContainerDestroyer := gc.NewDestroyer(logger, dbContainerRepository, dbVolumeRepository)
-	dbBuildFactory := db.NewBuildFactory(dbConn, lockFactory, cmd.GC.OneOffBuildGracePeriod, cmd.GC.FailedGracePeriod)
+	dbBuildFactory := db.NewBuildFactory(dbConn, lockFactory, eventStore, cmd.GC.OneOffBuildGracePeriod, cmd.GC.FailedGracePeriod)
 	dbCheckFactory := db.NewCheckFactory(dbConn, lockFactory, secretManager, cmd.varSourcePool, cmd.GlobalResourceCheckTimeout)
 	dbClock := db.NewClock()
 	dbWall := db.NewWall(dbConn, &dbClock)
@@ -857,7 +859,9 @@ func (cmd *RunCommand) backendComponents(
 		syslogDrainConfigured = false
 	}
 
-	teamFactory := db.NewTeamFactory(dbConn, lockFactory)
+	eventStore := constructEventStore(dbConn)
+
+	teamFactory := db.NewTeamFactory(dbConn, lockFactory, eventStore)
 
 	resourceFactory := resource.NewResourceFactory()
 	dbResourceCacheFactory := db.NewResourceCacheFactory(dbConn, lockFactory)
@@ -935,10 +939,10 @@ func (cmd *RunCommand) backendComponents(
 		lockFactory,
 	)
 
-	dbBuildFactory := db.NewBuildFactory(dbConn, lockFactory, cmd.GC.OneOffBuildGracePeriod, cmd.GC.FailedGracePeriod)
+	dbBuildFactory := db.NewBuildFactory(dbConn, lockFactory, eventStore, cmd.GC.OneOffBuildGracePeriod, cmd.GC.FailedGracePeriod)
 	dbCheckFactory := db.NewCheckFactory(dbConn, lockFactory, secretManager, cmd.varSourcePool, cmd.GlobalResourceCheckTimeout)
-	dbPipelineFactory := db.NewPipelineFactory(dbConn, lockFactory)
-	dbJobFactory := db.NewJobFactory(dbConn, lockFactory)
+	dbPipelineFactory := db.NewPipelineFactory(dbConn, lockFactory, eventStore)
+	dbJobFactory := db.NewJobFactory(dbConn, lockFactory, eventStore)
 	dbCheckableCounter := db.NewCheckableCounter(dbConn)
 
 	alg := algorithm.New(db.NewVersionsDB(dbConn, algorithmLimitRows, schedulerCache))
@@ -1063,7 +1067,8 @@ func (cmd *RunCommand) gcComponents(
 	dbArtifactLifecycle := db.NewArtifactLifecycle(gcConn)
 	dbCheckLifecycle := db.NewCheckLifecycle(gcConn)
 	resourceConfigCheckSessionLifecycle := db.NewResourceConfigCheckSessionLifecycle(gcConn)
-	dbBuildFactory := db.NewBuildFactory(gcConn, lockFactory, cmd.GC.OneOffBuildGracePeriod, cmd.GC.FailedGracePeriod)
+	eventStore := constructEventStore(gcConn)
+	dbBuildFactory := db.NewBuildFactory(gcConn, lockFactory, eventStore, cmd.GC.OneOffBuildGracePeriod, cmd.GC.FailedGracePeriod)
 	dbResourceConfigFactory := db.NewResourceConfigFactory(gcConn, lockFactory)
 
 	dbVolumeRepository := db.NewVolumeRepository(gcConn)
@@ -1093,6 +1098,11 @@ func (cmd *RunCommand) gcComponents(
 	}
 
 	return components, nil
+}
+
+func constructEventStore(dbConn db.Conn) db.EventStore {
+	// TODO: actually construct something!
+	return nil
 }
 
 func (cmd *RunCommand) validateCustomRoles() error {
