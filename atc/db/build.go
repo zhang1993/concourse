@@ -139,7 +139,7 @@ type Build interface {
 
 	SetInterceptible(bool) error
 
-	Events(uint) (EventSource, error)
+	Events() (EventSource, error)
 	SaveEvent(event atc.Event) error
 
 	Artifacts() ([]WorkerArtifact, error)
@@ -848,7 +848,7 @@ func (b *build) Preparation() (BuildPreparation, bool, error) {
 	return buildPreparation, true, nil
 }
 
-func (b *build) Events(from uint) (EventSource, error) {
+func (b *build) Events() (EventSource, error) {
 	notifier, err := newConditionNotifier(b.conn.Bus(), buildEventsChannel(b.id), func() (bool, error) {
 		return true, nil
 	})
@@ -866,7 +866,6 @@ func (b *build) Events(from uint) (EventSource, error) {
 		table,
 		b.conn,
 		notifier,
-		from,
 	), nil
 }
 

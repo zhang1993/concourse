@@ -152,7 +152,7 @@ var _ = Describe("Build", func() {
 				Expect(found).To(BeTrue())
 				Expect(build.Status()).To(Equal(db.BuildStatusStarted))
 
-				events, err := build.Events(0)
+				events, err := build.Events()
 				Expect(err).NotTo(HaveOccurred())
 
 				defer db.Close(events)
@@ -364,7 +364,7 @@ var _ = Describe("Build", func() {
 			Expect(found).To(BeTrue())
 			Expect(build.Status()).To(Equal(db.BuildStatusSucceeded))
 
-			events, err := build.Events(0)
+			events, err := build.Events()
 			Expect(err).NotTo(HaveOccurred())
 
 			defer db.Close(events)
@@ -599,7 +599,7 @@ var _ = Describe("Build", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("allowing you to subscribe when no events have yet occurred")
-			events, err := build.Events(0)
+			events, err := build.Events()
 			Expect(err).NotTo(HaveOccurred())
 
 			defer db.Close(events)
@@ -643,7 +643,7 @@ var _ = Describe("Build", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("allowing you to subscribe when no events have yet occurred")
-			events, err := build.Events(0)
+			events, err := build.Events()
 			Expect(err).NotTo(HaveOccurred())
 
 			defer db.Close(events)
@@ -664,16 +664,6 @@ var _ = Describe("Build", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(events.Next()).To(Equal(envelope(event.Log{
-				Payload: "log",
-			})))
-
-			By("allowing you to subscribe from an offset")
-			eventsFrom1, err := build.Events(1)
-			Expect(err).NotTo(HaveOccurred())
-
-			defer db.Close(eventsFrom1)
-
-			Expect(eventsFrom1.Next()).To(Equal(envelope(event.Log{
 				Payload: "log",
 			})))
 
@@ -703,7 +693,7 @@ var _ = Describe("Build", func() {
 			}))))
 
 			By("returning ErrBuildEventStreamClosed for Next calls after Close")
-			events3, err := build.Events(0)
+			events3, err := build.Events()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = events3.Close()
