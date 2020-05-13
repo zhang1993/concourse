@@ -91,6 +91,7 @@ type Job interface {
 	UpdateFirstLoggedBuildID(newFirstLoggedBuildID int) error
 	EnsurePendingBuildExists() error
 	GetPendingBuilds() ([]Build, error)
+	DeleteBuildEvents(builds []Build) error
 
 	GetNextBuildInputs() ([]BuildInput, error)
 	GetFullNextBuildInputs() ([]BuildInput, bool, error)
@@ -698,7 +699,13 @@ func (j *job) EnsurePendingBuildExists() error {
 			return err
 		}
 
-		err = createBuildEventSeq(tx, buildID)
+		build := newEmptyBuild(j.conn, j.lockFactory, j.eventStore)
+		err = scanBuild(build, buildsQuery.
+			Where(sq.Eq{"b.id": buildID}).
+			RunWith(tx).
+			QueryRow(),
+			j.conn.EncryptionStrategy(),
+		)
 		if err != nil {
 			return err
 		}
@@ -713,7 +720,12 @@ func (j *job) EnsurePendingBuildExists() error {
 			return err
 		}
 
-		return tx.Commit()
+		err = tx.Commit()
+		if err != nil {
+			return err
+		}
+
+		return build.eventStore.Initialize(build)
 	}
 
 	return nil
@@ -878,6 +890,40 @@ func (j *job) tryRerunBuild(buildToRerun Build) (Build, error) {
 	}
 
 	return rerunBuild, nil
+}
+
+func (j *job) DeleteBuildEvents(builds []Build) error {
+	if len(builds) == 0 {
+		return nil
+	}
+
+	err := j.eventStore.Delete(builds)
+	if err != nil {
+		return err
+	}
+
+	tx, err := j.conn.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer Rollback(tx)
+
+	buildIDs := make([]int, len(builds))
+	for i, build := range builds {
+		buildIDs[i] = build.ID()
+	}
+
+	_, err = psql.Update("builds").
+		Set("reap_time", sq.Expr("now()")).
+		Where(sq.Eq{"id": buildIDs}).
+		RunWith(tx).
+		Exec()
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (j *job) ClearTaskCache(stepName string, cachePath string) (int64, error) {
