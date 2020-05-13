@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"code.cloudfoundry.org/lager"
@@ -63,8 +61,6 @@ type Pipeline interface {
 	CreateStartedBuild(plan atc.Plan) (Build, error)
 
 	BuildsWithTime(page Page) ([]Build, Pagination, error)
-
-	DeleteBuildEventsByBuildIDs(buildIDs []int) error
 
 	LoadDebugVersionsDB() (*atc.DebugVersionsDB, error)
 
@@ -263,55 +259,6 @@ func (p *pipeline) Config() (atc.Config, error) {
 	}
 
 	return config, nil
-}
-
-func (p *pipeline) CreateJobBuild(jobName string) (Build, error) {
-	tx, err := p.conn.Begin()
-	if err != nil {
-		return nil, err
-	}
-
-	defer Rollback(tx)
-
-	buildName, jobID, err := getNewBuildNameForJob(tx, jobName, p.id)
-	if err != nil {
-		return nil, err
-	}
-
-	var buildID int
-	err = psql.Insert("builds").
-		Columns("name", "job_id", "team_id", "status", "manually_triggered").
-		Values(buildName, jobID, p.teamID, "pending", true).
-		Suffix("RETURNING id").
-		RunWith(tx).
-		QueryRow().
-		Scan(&buildID)
-	if err != nil {
-		return nil, err
-	}
-
-	build := newEmptyBuild(p.conn, p.lockFactory, p.eventStore)
-	err = scanBuild(build, buildsQuery.
-		Where(sq.Eq{"b.id": buildID}).
-		RunWith(tx).
-		QueryRow(),
-		p.conn.EncryptionStrategy(),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	err = createBuildEventSeq(tx, buildID)
-	if err != nil {
-		return nil, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return nil, err
-	}
-
-	return build, nil
 }
 
 // ResourceVersion is given a resource config version id and returns the
@@ -713,8 +660,10 @@ func (p *pipeline) Destroy() error {
 		}).
 		RunWith(p.conn).
 		Exec()
-
-	return err
+	if err != nil {
+		return err
+	}
+	return p.eventStore.DeletePipeline(p)
 }
 
 func (p *pipeline) LoadDebugVersionsDB() (*atc.DebugVersionsDB, error) {
@@ -935,49 +884,6 @@ func (p *pipeline) LoadDebugVersionsDB() (*atc.DebugVersionsDB, error) {
 	return db, nil
 }
 
-func (p *pipeline) DeleteBuildEventsByBuildIDs(buildIDs []int) error {
-	if len(buildIDs) == 0 {
-		return nil
-	}
-
-	interfaceBuildIDs := make([]interface{}, len(buildIDs))
-	for i, buildID := range buildIDs {
-		interfaceBuildIDs[i] = buildID
-	}
-
-	indexStrings := make([]string, len(buildIDs))
-	for i := range indexStrings {
-		indexStrings[i] = "$" + strconv.Itoa(i+1)
-	}
-
-	tx, err := p.conn.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer Rollback(tx)
-
-	_, err = tx.Exec(`
-   DELETE FROM build_events
-	 WHERE build_id IN (`+strings.Join(indexStrings, ",")+`)
-	 `, interfaceBuildIDs...)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(`
-		UPDATE builds
-		SET reap_time = now()
-		WHERE id IN (`+strings.Join(indexStrings, ",")+`)
-	`, interfaceBuildIDs...)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	return err
-}
-
 func (p *pipeline) CreateOneOffBuild() (Build, error) {
 	tx, err := p.conn.Begin()
 	if err != nil {
@@ -1039,14 +945,6 @@ func (p *pipeline) CreateStartedBuild(plan atc.Plan) (Build, error) {
 		return nil, err
 	}
 
-	err = build.saveEvent(tx, event.Status{
-		Status: atc.StatusStarted,
-		Time:   build.StartTime().Unix(),
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	err = tx.Commit()
 	if err != nil {
 		return nil, err
@@ -1056,7 +954,11 @@ func (p *pipeline) CreateStartedBuild(plan atc.Plan) (Build, error) {
 		return nil, err
 	}
 
-	if err = p.conn.Bus().Notify(buildEventsChannel(build.id)); err != nil {
+	err = build.SaveEvent(event.Status{
+		Status: atc.StatusStarted,
+		Time:   build.StartTime().Unix(),
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -1136,18 +1038,6 @@ func (p *pipeline) Variables(logger lager.Logger, globalSecrets creds.Secrets, v
 	}
 
 	return allVars, nil
-}
-
-func getNewBuildNameForJob(tx Tx, jobName string, pipelineID int) (string, int, error) {
-	var buildName string
-	var jobID int
-	err := tx.QueryRow(`
-		UPDATE jobs
-		SET build_number_seq = build_number_seq + 1
-		WHERE name = $1 AND pipeline_id = $2
-		RETURNING build_number_seq, id
-	`, jobName, pipelineID).Scan(&buildName, &jobID)
-	return buildName, jobID, err
 }
 
 func resources(pipelineID int, conn Conn, lockFactory lock.LockFactory, eventStore EventStore) (Resources, error) {
