@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"context"
 	"io"
 	"strings"
 	"time"
@@ -62,7 +63,7 @@ type getDelegate struct {
 }
 
 func (d *getDelegate) Initializing(logger lager.Logger) {
-	err := d.build.SaveEvent(event.InitializeGet{
+	err := d.build.SaveEvent(context.TODO(), event.InitializeGet{
 		Origin: d.eventOrigin,
 		Time:   time.Now().Unix(),
 	})
@@ -75,7 +76,7 @@ func (d *getDelegate) Initializing(logger lager.Logger) {
 }
 
 func (d *getDelegate) Starting(logger lager.Logger) {
-	err := d.build.SaveEvent(event.StartGet{
+	err := d.build.SaveEvent(context.TODO(), event.StartGet{
 		Time:   time.Now().Unix(),
 		Origin: d.eventOrigin,
 	})
@@ -92,7 +93,7 @@ func (d *getDelegate) Finished(logger lager.Logger, exitStatus exec.ExitStatus, 
 	d.Stdout().(io.Closer).Close()
 	d.Stderr().(io.Closer).Close()
 
-	err := d.build.SaveEvent(event.FinishGet{
+	err := d.build.SaveEvent(context.TODO(), event.FinishGet{
 		Origin:          d.eventOrigin,
 		Time:            d.clock.Now().Unix(),
 		ExitStatus:      int(exitStatus),
@@ -164,7 +165,7 @@ type putDelegate struct {
 }
 
 func (d *putDelegate) Initializing(logger lager.Logger) {
-	err := d.build.SaveEvent(event.InitializePut{
+	err := d.build.SaveEvent(context.TODO(), event.InitializePut{
 		Origin: d.eventOrigin,
 		Time:   time.Now().Unix(),
 	})
@@ -177,7 +178,7 @@ func (d *putDelegate) Initializing(logger lager.Logger) {
 }
 
 func (d *putDelegate) Starting(logger lager.Logger) {
-	err := d.build.SaveEvent(event.StartPut{
+	err := d.build.SaveEvent(context.TODO(), event.StartPut{
 		Time:   time.Now().Unix(),
 		Origin: d.eventOrigin,
 	})
@@ -194,7 +195,7 @@ func (d *putDelegate) Finished(logger lager.Logger, exitStatus exec.ExitStatus, 
 	d.Stdout().(io.Closer).Close()
 	d.Stderr().(io.Closer).Close()
 
-	err := d.build.SaveEvent(event.FinishPut{
+	err := d.build.SaveEvent(context.TODO(), event.FinishPut{
 		Origin:          d.eventOrigin,
 		Time:            d.clock.Now().Unix(),
 		ExitStatus:      int(exitStatus),
@@ -253,7 +254,7 @@ func (d *taskDelegate) SetTaskConfig(config atc.TaskConfig) {
 }
 
 func (d *taskDelegate) Initializing(logger lager.Logger) {
-	err := d.build.SaveEvent(event.InitializeTask{
+	err := d.build.SaveEvent(context.TODO(), event.InitializeTask{
 		Origin:     d.eventOrigin,
 		Time:       time.Now().Unix(),
 		TaskConfig: event.ShadowTaskConfig(d.config),
@@ -267,7 +268,7 @@ func (d *taskDelegate) Initializing(logger lager.Logger) {
 }
 
 func (d *taskDelegate) Starting(logger lager.Logger) {
-	err := d.build.SaveEvent(event.StartTask{
+	err := d.build.SaveEvent(context.TODO(), event.StartTask{
 		Origin:     d.eventOrigin,
 		Time:       time.Now().Unix(),
 		TaskConfig: event.ShadowTaskConfig(d.config),
@@ -285,7 +286,7 @@ func (d *taskDelegate) Finished(logger lager.Logger, exitStatus exec.ExitStatus)
 	d.Stdout().(io.Closer).Close()
 	d.Stderr().(io.Closer).Close()
 
-	err := d.build.SaveEvent(event.FinishTask{
+	err := d.build.SaveEvent(context.TODO(), event.FinishTask{
 		ExitStatus: int(exitStatus),
 		Time:       time.Now().Unix(),
 		Origin:     d.eventOrigin,
@@ -442,7 +443,7 @@ func (delegate *buildStepDelegate) Stderr() io.Writer {
 }
 
 func (delegate *buildStepDelegate) Initializing(logger lager.Logger) {
-	err := delegate.build.SaveEvent(event.Initialize{
+	err := delegate.build.SaveEvent(context.TODO(), event.Initialize{
 		Origin: event.Origin{
 			ID: event.OriginID(delegate.planID),
 		},
@@ -457,7 +458,7 @@ func (delegate *buildStepDelegate) Initializing(logger lager.Logger) {
 }
 
 func (delegate *buildStepDelegate) Starting(logger lager.Logger) {
-	err := delegate.build.SaveEvent(event.Start{
+	err := delegate.build.SaveEvent(context.TODO(), event.Start{
 		Origin: event.Origin{
 			ID: event.OriginID(delegate.planID),
 		},
@@ -476,7 +477,7 @@ func (delegate *buildStepDelegate) Finished(logger lager.Logger, succeeded bool)
 	delegate.Stdout().(io.Closer).Close()
 	delegate.Stderr().(io.Closer).Close()
 
-	err := delegate.build.SaveEvent(event.Finish{
+	err := delegate.build.SaveEvent(context.TODO(), event.Finish{
 		Origin: event.Origin{
 			ID: event.OriginID(delegate.planID),
 		},
@@ -492,7 +493,7 @@ func (delegate *buildStepDelegate) Finished(logger lager.Logger, succeeded bool)
 }
 
 func (delegate *buildStepDelegate) Errored(logger lager.Logger, message string) {
-	err := delegate.build.SaveEvent(event.Error{
+	err := delegate.build.SaveEvent(context.TODO(), event.Error{
 		Message: message,
 		Origin: event.Origin{
 			ID: event.OriginID(delegate.planID),
@@ -547,7 +548,7 @@ func (writer *dbEventWriter) writeDangling(data []byte) []byte {
 }
 
 func (writer *dbEventWriter) saveLog(text string) error {
-	return writer.build.SaveEvent(event.Log{
+	return writer.build.SaveEvent(context.TODO(), event.Log{
 		Time:    writer.clock.Now().Unix(),
 		Payload: text,
 		Origin:  writer.origin,
