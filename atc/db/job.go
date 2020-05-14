@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -78,8 +79,8 @@ type Job interface {
 	Unpause() error
 
 	ScheduleBuild(Build) (bool, error)
-	CreateBuild() (Build, error)
-	RerunBuild(Build) (Build, error)
+	CreateBuild(ctx context.Context) (Build, error)
+	RerunBuild(ctx context.Context, build Build) (Build, error)
 
 	RequestSchedule() error
 	UpdateLastScheduled(time.Time) error
@@ -89,9 +90,9 @@ type Job interface {
 	Build(name string) (Build, bool, error)
 	FinishedAndNextBuild() (Build, Build, error)
 	UpdateFirstLoggedBuildID(newFirstLoggedBuildID int) error
-	EnsurePendingBuildExists() error
+	EnsurePendingBuildExists(ctx context.Context) error
 	GetPendingBuilds() ([]Build, error)
-	DeleteBuildEvents(builds []Build) error
+	DeleteBuildEvents(ctx context.Context, builds []Build) error
 
 	GetNextBuildInputs() ([]BuildInput, error)
 	GetFullNextBuildInputs() ([]BuildInput, bool, error)
@@ -661,7 +662,7 @@ func (j *job) GetNextBuildInputs() ([]BuildInput, error) {
 	return buildInputs, nil
 }
 
-func (j *job) EnsurePendingBuildExists() error {
+func (j *job) EnsurePendingBuildExists(ctx context.Context) error {
 	tx, err := j.conn.Begin()
 	if err != nil {
 		return err
@@ -674,7 +675,7 @@ func (j *job) EnsurePendingBuildExists() error {
 		return err
 	}
 
-	rows, err := tx.Query(`
+	rows, err := tx.QueryContext(ctx, `
 		INSERT INTO builds (name, job_id, pipeline_id, team_id, status, needs_v6_migration)
 		SELECT $1, $2, $3, $4, 'pending', false
 		WHERE NOT EXISTS
@@ -703,19 +704,19 @@ func (j *job) EnsurePendingBuildExists() error {
 		err = scanBuild(build, buildsQuery.
 			Where(sq.Eq{"b.id": buildID}).
 			RunWith(tx).
-			QueryRow(),
+			QueryRowContext(ctx),
 			j.conn.EncryptionStrategy(),
 		)
 		if err != nil {
 			return err
 		}
 
-		latestNonRerunID, err := latestCompletedNonRerunBuild(tx, j.id)
+		latestNonRerunID, err := latestCompletedNonRerunBuild(ctx, tx, j.id)
 		if err != nil {
 			return err
 		}
 
-		err = updateNextBuildForJob(tx, j.id, latestNonRerunID)
+		err = updateNextBuildForJob(ctx, tx, j.id, latestNonRerunID)
 		if err != nil {
 			return err
 		}
@@ -725,7 +726,7 @@ func (j *job) EnsurePendingBuildExists() error {
 			return err
 		}
 
-		return build.eventStore.Initialize(build)
+		return build.eventStore.Initialize(ctx, build)
 	}
 
 	return nil
@@ -773,7 +774,7 @@ func (j *job) GetPendingBuilds() ([]Build, error) {
 	return builds, nil
 }
 
-func (j *job) CreateBuild() (Build, error) {
+func (j *job) CreateBuild(ctx context.Context) (Build, error) {
 	tx, err := j.conn.Begin()
 	if err != nil {
 		return nil, err
@@ -787,7 +788,7 @@ func (j *job) CreateBuild() (Build, error) {
 	}
 
 	build := newEmptyBuild(j.conn, j.lockFactory, j.eventStore)
-	err = createBuild(tx, build, map[string]interface{}{
+	err = createBuild(ctx, tx, build, map[string]interface{}{
 		"name":               buildName,
 		"job_id":             j.id,
 		"pipeline_id":        j.pipelineID,
@@ -799,17 +800,17 @@ func (j *job) CreateBuild() (Build, error) {
 		return nil, err
 	}
 
-	latestNonRerunID, err := latestCompletedNonRerunBuild(tx, j.id)
+	latestNonRerunID, err := latestCompletedNonRerunBuild(ctx, tx, j.id)
 	if err != nil {
 		return nil, err
 	}
 
-	err = updateNextBuildForJob(tx, j.id, latestNonRerunID)
+	err = updateNextBuildForJob(ctx, tx, j.id, latestNonRerunID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = requestSchedule(tx, j.id)
+	err = requestSchedule(ctx, tx, j.id)
 	if err != nil {
 		return nil, err
 	}
@@ -822,9 +823,9 @@ func (j *job) CreateBuild() (Build, error) {
 	return build, nil
 }
 
-func (j *job) RerunBuild(buildToRerun Build) (Build, error) {
+func (j *job) RerunBuild(ctx context.Context, build Build) (Build, error) {
 	for {
-		rerunBuild, err := j.tryRerunBuild(buildToRerun)
+		rerunBuild, err := j.tryRerunBuild(ctx, build)
 		if err != nil {
 			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code.Name() == pqUniqueViolationErrCode {
 				continue
@@ -837,7 +838,7 @@ func (j *job) RerunBuild(buildToRerun Build) (Build, error) {
 	}
 }
 
-func (j *job) tryRerunBuild(buildToRerun Build) (Build, error) {
+func (j *job) tryRerunBuild(ctx context.Context, buildToRerun Build) (Build, error) {
 	tx, err := j.conn.Begin()
 	if err != nil {
 		return nil, err
@@ -850,13 +851,13 @@ func (j *job) tryRerunBuild(buildToRerun Build) (Build, error) {
 		buildToRerunID = buildToRerun.RerunOf()
 	}
 
-	rerunBuildName, rerunNumber, err := j.getNewRerunBuildName(tx, buildToRerunID)
+	rerunBuildName, rerunNumber, err := j.getNewRerunBuildName(ctx, tx, buildToRerunID)
 	if err != nil {
 		return nil, err
 	}
 
 	rerunBuild := newEmptyBuild(j.conn, j.lockFactory, j.eventStore)
-	err = createBuild(tx, rerunBuild, map[string]interface{}{
+	err = createBuild(ctx, tx, rerunBuild, map[string]interface{}{
 		"name":         rerunBuildName,
 		"job_id":       j.id,
 		"pipeline_id":  j.pipelineID,
@@ -869,17 +870,17 @@ func (j *job) tryRerunBuild(buildToRerun Build) (Build, error) {
 		return nil, err
 	}
 
-	latestNonRerunID, err := latestCompletedNonRerunBuild(tx, j.id)
+	latestNonRerunID, err := latestCompletedNonRerunBuild(ctx, tx, j.id)
 	if err != nil {
 		return nil, err
 	}
 
-	err = updateNextBuildForJob(tx, j.id, latestNonRerunID)
+	err = updateNextBuildForJob(ctx, tx, j.id, latestNonRerunID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = requestSchedule(tx, j.id)
+	err = requestSchedule(ctx, tx, j.id)
 	if err != nil {
 		return nil, err
 	}
@@ -892,12 +893,12 @@ func (j *job) tryRerunBuild(buildToRerun Build) (Build, error) {
 	return rerunBuild, nil
 }
 
-func (j *job) DeleteBuildEvents(builds []Build) error {
+func (j *job) DeleteBuildEvents(ctx context.Context, builds []Build) error {
 	if len(builds) == 0 {
 		return nil
 	}
 
-	err := j.eventStore.Delete(builds)
+	err := j.eventStore.Delete(ctx, builds)
 	if err != nil {
 		return err
 	}
@@ -1040,7 +1041,7 @@ func (j *job) RequestSchedule() error {
 
 	defer tx.Rollback()
 
-	err = requestSchedule(tx, j.id)
+	err = requestSchedule(context.TODO(), tx, j.id)
 	if err != nil {
 		return err
 	}
@@ -1290,7 +1291,7 @@ func (j *job) finishedBuild(tx Tx) (Build, error) {
 	return finished, nil
 }
 
-func (j *job) getNewRerunBuildName(tx Tx, buildID int) (string, int, error) {
+func (j *job) getNewRerunBuildName(ctx context.Context, tx Tx, buildID int) (string, int, error) {
 	var rerunNum int
 	var buildName string
 	err := psql.Select("b.name", "( SELECT COUNT(id) FROM builds WHERE rerun_of = b.id )").
@@ -1299,7 +1300,7 @@ func (j *job) getNewRerunBuildName(tx Tx, buildID int) (string, int, error) {
 			"b.id": buildID,
 		}).
 		RunWith(tx).
-		QueryRow().
+		QueryRowContext(ctx).
 		Scan(&buildName, &rerunNum)
 	if err != nil {
 		return "", 0, err
@@ -1432,14 +1433,14 @@ func scanJobs(conn Conn, lockFactory lock.LockFactory, eventStore EventStore, ro
 	return jobs, nil
 }
 
-func requestSchedule(tx Tx, jobID int) error {
+func requestSchedule(ctx context.Context, tx Tx, jobID int) error {
 	result, err := psql.Update("jobs").
 		Set("schedule_requested", sq.Expr("now()")).
 		Where(sq.Eq{
 			"id": jobID,
 		}).
 		RunWith(tx).
-		Exec()
+		ExecContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -1459,7 +1460,7 @@ func requestSchedule(tx Tx, jobID int) error {
 // The SELECT query orders the jobs for updating to prevent deadlocking.
 // Updating multiple rows using a SELECT subquery does not preserve the same
 // order for the updates, which can lead to deadlocking.
-func requestScheduleOnDownstreamJobs(tx Tx, jobID int) error {
+func requestScheduleOnDownstreamJobs(ctx context.Context, tx Tx, jobID int) error {
 	rows, err := psql.Select("DISTINCT job_id").
 		From("job_inputs").
 		Where(sq.Eq{
@@ -1467,7 +1468,7 @@ func requestScheduleOnDownstreamJobs(tx Tx, jobID int) error {
 		}).
 		OrderBy("job_id DESC").
 		RunWith(tx).
-		Query()
+		QueryContext(ctx)
 	if err != nil {
 		return err
 	}

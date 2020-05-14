@@ -2,6 +2,7 @@
 package dbfakes
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -110,9 +111,10 @@ type FakeJob struct {
 		result1 atc.JobConfig
 		result2 error
 	}
-	CreateBuildStub        func() (db.Build, error)
+	CreateBuildStub        func(context.Context) (db.Build, error)
 	createBuildMutex       sync.RWMutex
 	createBuildArgsForCall []struct {
+		arg1 context.Context
 	}
 	createBuildReturns struct {
 		result1 db.Build
@@ -122,10 +124,11 @@ type FakeJob struct {
 		result1 db.Build
 		result2 error
 	}
-	DeleteBuildEventsStub        func([]db.Build) error
+	DeleteBuildEventsStub        func(context.Context, []db.Build) error
 	deleteBuildEventsMutex       sync.RWMutex
 	deleteBuildEventsArgsForCall []struct {
-		arg1 []db.Build
+		arg1 context.Context
+		arg2 []db.Build
 	}
 	deleteBuildEventsReturns struct {
 		result1 error
@@ -143,9 +146,10 @@ type FakeJob struct {
 	disableManualTriggerReturnsOnCall map[int]struct {
 		result1 bool
 	}
-	EnsurePendingBuildExistsStub        func() error
+	EnsurePendingBuildExistsStub        func(context.Context) error
 	ensurePendingBuildExistsMutex       sync.RWMutex
 	ensurePendingBuildExistsArgsForCall []struct {
+		arg1 context.Context
 	}
 	ensurePendingBuildExistsReturns struct {
 		result1 error
@@ -365,10 +369,11 @@ type FakeJob struct {
 	requestScheduleReturnsOnCall map[int]struct {
 		result1 error
 	}
-	RerunBuildStub        func(db.Build) (db.Build, error)
+	RerunBuildStub        func(context.Context, db.Build) (db.Build, error)
 	rerunBuildMutex       sync.RWMutex
 	rerunBuildArgsForCall []struct {
-		arg1 db.Build
+		arg1 context.Context
+		arg2 db.Build
 	}
 	rerunBuildReturns struct {
 		result1 db.Build
@@ -928,15 +933,16 @@ func (fake *FakeJob) ConfigReturnsOnCall(i int, result1 atc.JobConfig, result2 e
 	}{result1, result2}
 }
 
-func (fake *FakeJob) CreateBuild() (db.Build, error) {
+func (fake *FakeJob) CreateBuild(arg1 context.Context) (db.Build, error) {
 	fake.createBuildMutex.Lock()
 	ret, specificReturn := fake.createBuildReturnsOnCall[len(fake.createBuildArgsForCall)]
 	fake.createBuildArgsForCall = append(fake.createBuildArgsForCall, struct {
-	}{})
-	fake.recordInvocation("CreateBuild", []interface{}{})
+		arg1 context.Context
+	}{arg1})
+	fake.recordInvocation("CreateBuild", []interface{}{arg1})
 	fake.createBuildMutex.Unlock()
 	if fake.CreateBuildStub != nil {
-		return fake.CreateBuildStub()
+		return fake.CreateBuildStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -951,10 +957,17 @@ func (fake *FakeJob) CreateBuildCallCount() int {
 	return len(fake.createBuildArgsForCall)
 }
 
-func (fake *FakeJob) CreateBuildCalls(stub func() (db.Build, error)) {
+func (fake *FakeJob) CreateBuildCalls(stub func(context.Context) (db.Build, error)) {
 	fake.createBuildMutex.Lock()
 	defer fake.createBuildMutex.Unlock()
 	fake.CreateBuildStub = stub
+}
+
+func (fake *FakeJob) CreateBuildArgsForCall(i int) context.Context {
+	fake.createBuildMutex.RLock()
+	defer fake.createBuildMutex.RUnlock()
+	argsForCall := fake.createBuildArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeJob) CreateBuildReturns(result1 db.Build, result2 error) {
@@ -983,21 +996,22 @@ func (fake *FakeJob) CreateBuildReturnsOnCall(i int, result1 db.Build, result2 e
 	}{result1, result2}
 }
 
-func (fake *FakeJob) DeleteBuildEvents(arg1 []db.Build) error {
-	var arg1Copy []db.Build
-	if arg1 != nil {
-		arg1Copy = make([]db.Build, len(arg1))
-		copy(arg1Copy, arg1)
+func (fake *FakeJob) DeleteBuildEvents(arg1 context.Context, arg2 []db.Build) error {
+	var arg2Copy []db.Build
+	if arg2 != nil {
+		arg2Copy = make([]db.Build, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.deleteBuildEventsMutex.Lock()
 	ret, specificReturn := fake.deleteBuildEventsReturnsOnCall[len(fake.deleteBuildEventsArgsForCall)]
 	fake.deleteBuildEventsArgsForCall = append(fake.deleteBuildEventsArgsForCall, struct {
-		arg1 []db.Build
-	}{arg1Copy})
-	fake.recordInvocation("DeleteBuildEvents", []interface{}{arg1Copy})
+		arg1 context.Context
+		arg2 []db.Build
+	}{arg1, arg2Copy})
+	fake.recordInvocation("DeleteBuildEvents", []interface{}{arg1, arg2Copy})
 	fake.deleteBuildEventsMutex.Unlock()
 	if fake.DeleteBuildEventsStub != nil {
-		return fake.DeleteBuildEventsStub(arg1)
+		return fake.DeleteBuildEventsStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -1012,17 +1026,17 @@ func (fake *FakeJob) DeleteBuildEventsCallCount() int {
 	return len(fake.deleteBuildEventsArgsForCall)
 }
 
-func (fake *FakeJob) DeleteBuildEventsCalls(stub func([]db.Build) error) {
+func (fake *FakeJob) DeleteBuildEventsCalls(stub func(context.Context, []db.Build) error) {
 	fake.deleteBuildEventsMutex.Lock()
 	defer fake.deleteBuildEventsMutex.Unlock()
 	fake.DeleteBuildEventsStub = stub
 }
 
-func (fake *FakeJob) DeleteBuildEventsArgsForCall(i int) []db.Build {
+func (fake *FakeJob) DeleteBuildEventsArgsForCall(i int) (context.Context, []db.Build) {
 	fake.deleteBuildEventsMutex.RLock()
 	defer fake.deleteBuildEventsMutex.RUnlock()
 	argsForCall := fake.deleteBuildEventsArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeJob) DeleteBuildEventsReturns(result1 error) {
@@ -1100,15 +1114,16 @@ func (fake *FakeJob) DisableManualTriggerReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
-func (fake *FakeJob) EnsurePendingBuildExists() error {
+func (fake *FakeJob) EnsurePendingBuildExists(arg1 context.Context) error {
 	fake.ensurePendingBuildExistsMutex.Lock()
 	ret, specificReturn := fake.ensurePendingBuildExistsReturnsOnCall[len(fake.ensurePendingBuildExistsArgsForCall)]
 	fake.ensurePendingBuildExistsArgsForCall = append(fake.ensurePendingBuildExistsArgsForCall, struct {
-	}{})
-	fake.recordInvocation("EnsurePendingBuildExists", []interface{}{})
+		arg1 context.Context
+	}{arg1})
+	fake.recordInvocation("EnsurePendingBuildExists", []interface{}{arg1})
 	fake.ensurePendingBuildExistsMutex.Unlock()
 	if fake.EnsurePendingBuildExistsStub != nil {
-		return fake.EnsurePendingBuildExistsStub()
+		return fake.EnsurePendingBuildExistsStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
@@ -1123,10 +1138,17 @@ func (fake *FakeJob) EnsurePendingBuildExistsCallCount() int {
 	return len(fake.ensurePendingBuildExistsArgsForCall)
 }
 
-func (fake *FakeJob) EnsurePendingBuildExistsCalls(stub func() error) {
+func (fake *FakeJob) EnsurePendingBuildExistsCalls(stub func(context.Context) error) {
 	fake.ensurePendingBuildExistsMutex.Lock()
 	defer fake.ensurePendingBuildExistsMutex.Unlock()
 	fake.EnsurePendingBuildExistsStub = stub
+}
+
+func (fake *FakeJob) EnsurePendingBuildExistsArgsForCall(i int) context.Context {
+	fake.ensurePendingBuildExistsMutex.RLock()
+	defer fake.ensurePendingBuildExistsMutex.RUnlock()
+	argsForCall := fake.ensurePendingBuildExistsArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeJob) EnsurePendingBuildExistsReturns(result1 error) {
@@ -2173,16 +2195,17 @@ func (fake *FakeJob) RequestScheduleReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeJob) RerunBuild(arg1 db.Build) (db.Build, error) {
+func (fake *FakeJob) RerunBuild(arg1 context.Context, arg2 db.Build) (db.Build, error) {
 	fake.rerunBuildMutex.Lock()
 	ret, specificReturn := fake.rerunBuildReturnsOnCall[len(fake.rerunBuildArgsForCall)]
 	fake.rerunBuildArgsForCall = append(fake.rerunBuildArgsForCall, struct {
-		arg1 db.Build
-	}{arg1})
-	fake.recordInvocation("RerunBuild", []interface{}{arg1})
+		arg1 context.Context
+		arg2 db.Build
+	}{arg1, arg2})
+	fake.recordInvocation("RerunBuild", []interface{}{arg1, arg2})
 	fake.rerunBuildMutex.Unlock()
 	if fake.RerunBuildStub != nil {
-		return fake.RerunBuildStub(arg1)
+		return fake.RerunBuildStub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -2197,17 +2220,17 @@ func (fake *FakeJob) RerunBuildCallCount() int {
 	return len(fake.rerunBuildArgsForCall)
 }
 
-func (fake *FakeJob) RerunBuildCalls(stub func(db.Build) (db.Build, error)) {
+func (fake *FakeJob) RerunBuildCalls(stub func(context.Context, db.Build) (db.Build, error)) {
 	fake.rerunBuildMutex.Lock()
 	defer fake.rerunBuildMutex.Unlock()
 	fake.RerunBuildStub = stub
 }
 
-func (fake *FakeJob) RerunBuildArgsForCall(i int) db.Build {
+func (fake *FakeJob) RerunBuildArgsForCall(i int) (context.Context, db.Build) {
 	fake.rerunBuildMutex.RLock()
 	defer fake.rerunBuildMutex.RUnlock()
 	argsForCall := fake.rerunBuildArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeJob) RerunBuildReturns(result1 db.Build, result2 error) {

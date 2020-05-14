@@ -50,7 +50,7 @@ func (s *Scheduler) Schedule(
 		return false, fmt.Errorf("save next input mapping: %w", err)
 	}
 
-	err = s.ensurePendingBuildExists(logger, job, jobInputs)
+	err = s.ensurePendingBuildExists(ctx, logger, job, jobInputs)
 	if err != nil {
 		return false, err
 	}
@@ -59,6 +59,7 @@ func (s *Scheduler) Schedule(
 }
 
 func (s *Scheduler) ensurePendingBuildExists(
+	ctx context.Context,
 	logger lager.Logger,
 	job db.SchedulerJob,
 	jobInputs db.InputConfigs,
@@ -86,7 +87,7 @@ func (s *Scheduler) ensurePendingBuildExists(
 		if ok && inputSource.FirstOccurrence {
 			hasNewInputs = true
 			if inputConfig.Trigger {
-				err := job.EnsurePendingBuildExists()
+				err := job.EnsurePendingBuildExists(ctx)
 				if err != nil {
 					return fmt.Errorf("ensure pending build exists: %w", err)
 				}
