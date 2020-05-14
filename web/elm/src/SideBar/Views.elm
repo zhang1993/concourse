@@ -84,6 +84,5 @@ viewPipeline p =
                    ]
             )
             [ Html.text p.link.text ]
-            , Html.div (Styles.pipelineFavourite p.favIcon) []
-           
+        , Html.div (Styles.pipelineFavourite p.favIcon) []
         ]

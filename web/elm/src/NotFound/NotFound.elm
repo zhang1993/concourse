@@ -67,6 +67,7 @@ view session model =
                 , hovered = session.hovered
                 , isSideBarOpen = session.isSideBarOpen
                 , screenSize = session.screenSize
+                , favoritedPipelines = session.favoritedPipelines
                 }
                 Nothing
             , Html.div [ class "notfound" ]

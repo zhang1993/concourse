@@ -36,7 +36,7 @@ type alias Model m =
             , pipelines : WebData (List Concourse.Pipeline)
             , isSideBarOpen : Bool
             , screenSize : ScreenSize.ScreenSize
-            , isFavorited: Bool
+            , favoritedPipelines : List Concourse.PipelineIdentifier
         }
 
 
@@ -65,6 +65,18 @@ update message model =
                         Set.insert teamName model.expandedTeams
               }
             , []
+            )
+
+        Click (SideBarStarIcon pipelineID) ->
+            ( { model
+                | favoritedPipelines =
+                    if List.member pipelineID model.favoritedPipelines then
+                        List.filter ((==) pipelineID) model.favoritedPipelines
+
+                    else
+                        pipelineID :: model.favoritedPipelines
+              }
+            , [ Effects.SaveFavoritedPipelines <| model.favoritedPipelines ]
             )
 
         Hover (Just (SideBarPipeline pipelineID)) ->
@@ -160,6 +172,7 @@ allPipelines model currentPipeline =
                     { hovered = model.hovered
                     , pipelines = p :: ps
                     , currentPipeline = currentPipeline
+                    , favoritedPipelines = model.favoritedPipelines
                     }
                     { name = p.teamName
                     , isExpanded = Set.member p.teamName model.expandedTeams

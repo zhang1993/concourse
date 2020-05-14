@@ -14,6 +14,14 @@ import Test.Html.Query as Query
 import Test.Html.Selector exposing (style)
 
 
+defaultState =
+    { active = False
+    , expanded = False
+    , hovered = False
+    , hasFavorited = False
+    }
+
+
 all : Test
 all =
     describe "sidebar team"
@@ -23,9 +31,10 @@ all =
                     [ test "arrow is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = True
-                                , hovered = True
+                                { defaultState
+                                    | active = True
+                                    , expanded = True
+                                    , hovered = True
                                 }
                                 |> .arrow
                                 |> .opacity
@@ -33,9 +42,10 @@ all =
                     , test "team name is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = True
-                                , hovered = True
+                                { defaultState
+                                    | active = True
+                                    , expanded = True
+                                    , hovered = True
                                 }
                                 |> .name
                                 |> .opacity
@@ -43,9 +53,10 @@ all =
                     , test "team name has light rectangle" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = True
-                                , hovered = True
+                                { defaultState
+                                    | active = True
+                                    , expanded = True
+                                    , hovered = True
                                 }
                                 |> .name
                                 |> .rectangle
@@ -53,9 +64,10 @@ all =
                     , test "team icon is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = True
-                                , hovered = True
+                                { defaultState
+                                    | active = True
+                                    , expanded = True
+                                    , hovered = True
                                 }
                                 |> .icon
                                 |> Expect.equal Styles.Bright
@@ -64,9 +76,9 @@ all =
                     [ test "arrow is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = True
-                                , hovered = False
+                                { defaultState
+                                    | active = True
+                                    , expanded = True
                                 }
                                 |> .arrow
                                 |> .opacity
@@ -74,9 +86,9 @@ all =
                     , test "team name is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = True
-                                , hovered = False
+                                { defaultState
+                                    | active = True
+                                    , expanded = True
                                 }
                                 |> .name
                                 |> .opacity
@@ -84,9 +96,9 @@ all =
                     , test "team icon is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = True
-                                , hovered = False
+                                { defaultState
+                                    | active = True
+                                    , expanded = True
                                 }
                                 |> .icon
                                 |> Expect.equal Styles.Bright
@@ -97,9 +109,9 @@ all =
                     [ test "arrow is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = False
-                                , hovered = True
+                                { defaultState
+                                    | active = True
+                                    , hovered = True
                                 }
                                 |> .arrow
                                 |> .opacity
@@ -107,9 +119,9 @@ all =
                     , test "team name is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = False
-                                , hovered = True
+                                { defaultState
+                                    | active = True
+                                    , hovered = True
                                 }
                                 |> .name
                                 |> .opacity
@@ -117,9 +129,9 @@ all =
                     , test "team icon is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = False
-                                , hovered = True
+                                { defaultState
+                                    | active = True
+                                    , hovered = True
                                 }
                                 |> .icon
                                 |> Expect.equal Styles.Bright
@@ -128,9 +140,8 @@ all =
                     [ test "arrow is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = False
-                                , hovered = False
+                                { defaultState
+                                    | active = True
                                 }
                                 |> .arrow
                                 |> .opacity
@@ -138,9 +149,8 @@ all =
                     , test "team name is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = False
-                                , hovered = False
+                                { defaultState
+                                    | active = True
                                 }
                                 |> .name
                                 |> .opacity
@@ -148,9 +158,8 @@ all =
                     , test "team icon is bright" <|
                         \_ ->
                             team
-                                { active = True
-                                , expanded = False
-                                , hovered = False
+                                { defaultState
+                                    | active = True
                                 }
                                 |> .icon
                                 |> Expect.equal Styles.Bright
@@ -163,9 +172,9 @@ all =
                     [ test "arrow is greyed out" <|
                         \_ ->
                             team
-                                { active = False
-                                , expanded = True
-                                , hovered = True
+                                { defaultState
+                                    | expanded = True
+                                    , hovered = True
                                 }
                                 |> .arrow
                                 |> .opacity
@@ -173,9 +182,9 @@ all =
                     , test "team name is bright" <|
                         \_ ->
                             team
-                                { active = False
-                                , expanded = True
-                                , hovered = True
+                                { defaultState
+                                    | expanded = True
+                                    , hovered = True
                                 }
                                 |> .name
                                 |> .opacity
@@ -183,9 +192,9 @@ all =
                     , test "team icon is greyed out" <|
                         \_ ->
                             team
-                                { active = False
-                                , expanded = True
-                                , hovered = True
+                                { defaultState
+                                    | expanded = True
+                                    , hovered = True
                                 }
                                 |> .icon
                                 |> Expect.equal Styles.GreyedOut
@@ -194,9 +203,8 @@ all =
                     [ test "arrow is greyed out" <|
                         \_ ->
                             team
-                                { active = False
-                                , expanded = True
-                                , hovered = False
+                                { defaultState
+                                    | expanded = True
                                 }
                                 |> .arrow
                                 |> .opacity
@@ -204,9 +212,8 @@ all =
                     , test "team name is greyed out" <|
                         \_ ->
                             team
-                                { active = False
-                                , expanded = True
-                                , hovered = False
+                                { defaultState
+                                    | expanded = True
                                 }
                                 |> .name
                                 |> .opacity
@@ -214,9 +221,8 @@ all =
                     , test "team icon is greyed out" <|
                         \_ ->
                             team
-                                { active = False
-                                , expanded = True
-                                , hovered = False
+                                { defaultState
+                                    | expanded = True
                                 }
                                 |> .icon
                                 |> Expect.equal Styles.GreyedOut
@@ -227,9 +233,8 @@ all =
                     [ test "arrow is dim" <|
                         \_ ->
                             team
-                                { active = False
-                                , expanded = False
-                                , hovered = True
+                                { defaultState
+                                    | hovered = True
                                 }
                                 |> .arrow
                                 |> .opacity
@@ -237,9 +242,8 @@ all =
                     , test "team name is bright" <|
                         \_ ->
                             team
-                                { active = False
-                                , expanded = False
-                                , hovered = True
+                                { defaultState
+                                    | hovered = True
                                 }
                                 |> .name
                                 |> .opacity
@@ -247,9 +251,8 @@ all =
                     , test "team icon is greyed out" <|
                         \_ ->
                             team
-                                { active = False
-                                , expanded = False
-                                , hovered = True
+                                { defaultState
+                                    | hovered = True
                                 }
                                 |> .icon
                                 |> Expect.equal Styles.GreyedOut
@@ -257,31 +260,19 @@ all =
                 , describe "when unhovered"
                     [ test "arrow is dim" <|
                         \_ ->
-                            team
-                                { active = False
-                                , expanded = False
-                                , hovered = False
-                                }
+                            team defaultState
                                 |> .arrow
                                 |> .opacity
                                 |> Expect.equal Styles.Dim
                     , test "team name is greyed out" <|
                         \_ ->
-                            team
-                                { active = False
-                                , expanded = False
-                                , hovered = False
-                                }
+                            team defaultState
                                 |> .name
                                 |> .opacity
                                 |> Expect.equal Styles.GreyedOut
                     , test "team icon is dim" <|
                         \_ ->
-                            team
-                                { active = False
-                                , expanded = False
-                                , hovered = False
-                                }
+                            team defaultState
                                 |> .icon
                                 |> Expect.equal Styles.Dim
                     ]
@@ -298,8 +289,8 @@ all =
         ]
 
 
-team : { active : Bool, expanded : Bool, hovered : Bool } -> Views.Team
-team { active, expanded, hovered } =
+team : { active : Bool, expanded : Bool, hovered : Bool, hasFavorited : Bool } -> Views.Team
+team { active, expanded, hovered, hasFavorited } =
     let
         hoveredDomId =
             if hovered then
@@ -311,17 +302,28 @@ team { active, expanded, hovered } =
         pipelines =
             [ Data.pipeline "team" 0 |> Data.withName "pipeline" ]
 
+        pipelineIdentifier =
+            { teamName = "team", pipelineName = "pipeline" }
+
         activePipeline =
             if active then
-                Just { teamName = "team", pipelineName = "pipeline" }
+                Just pipelineIdentifier
 
             else
                 Nothing
+
+        favoritedPipelines =
+            if hasFavorited then
+                [ pipelineIdentifier ]
+
+            else
+                []
     in
     Team.team
         { hovered = hoveredDomId
         , pipelines = pipelines
         , currentPipeline = activePipeline
+        , favoritedPipelines = favoritedPipelines
         }
         { name = "team"
         , isExpanded = expanded
