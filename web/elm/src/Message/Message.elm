@@ -83,6 +83,7 @@ type DomID
     | HamburgerMenu
     | SideBarTeam String
     | SideBarPipeline Concourse.PipelineIdentifier
+    | SideBarStarIcon Concourse.PipelineIdentifier
     | Dashboard
     | DashboardGroup String
 
