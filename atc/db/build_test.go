@@ -46,7 +46,7 @@ var _ = Describe("Build", func() {
 		It("updates the model", func() {
 			build, err := team.CreateOneOffBuild()
 			Expect(err).NotTo(HaveOccurred())
-			started, err := build.Start(atc.Plan{})
+			started, err := build.Start(context.TODO(), atc.Plan{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(started).To(BeTrue())
 
@@ -120,7 +120,7 @@ var _ = Describe("Build", func() {
 		})
 
 		JustBeforeEach(func() {
-			started, err = build.Start(plan)
+			started, err = build.Start(context.TODO(), plan)
 		})
 
 		It("does not error", func() {
@@ -142,7 +142,7 @@ var _ = Describe("Build", func() {
 			build.Reload()
 
 			Expect(fakeEventStore.PutCallCount()).To(Equal(1))
-			putBuild, putEvents := fakeEventStore.PutArgsForCall(0)
+			_, putBuild, putEvents := fakeEventStore.PutArgsForCall(0)
 			Expect(putBuild).To(BeIdenticalTo(build))
 			Expect(putEvents).To(ConsistOf(event.Status{
 				Status: atc.StatusStarted,
@@ -152,7 +152,8 @@ var _ = Describe("Build", func() {
 
 		It("initializes the Build in the EventStore", func() {
 			Expect(fakeEventStore.InitializeCallCount()).To(Equal(1))
-			Expect(fakeEventStore.InitializeArgsForCall(0)).To(BeIdenticalTo(build))
+			_, initBuild := fakeEventStore.InitializeArgsForCall(0)
+			Expect(initBuild).To(BeIdenticalTo(build))
 		})
 
 		It("saves the public plan", func() {
@@ -289,7 +290,7 @@ var _ = Describe("Build", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 
-			build, err = job.CreateBuild()
+			build, err = job.CreateBuild(context.TODO())
 			Expect(err).NotTo(HaveOccurred())
 
 			err = job.SaveNextInputMapping(db.InputMapping{
@@ -369,7 +370,7 @@ var _ = Describe("Build", func() {
 		})
 
 		JustBeforeEach(func() {
-			err = build.Finish(db.BuildStatusSucceeded)
+			err = build.Finish(context.TODO(), db.BuildStatusSucceeded)
 		})
 
 		It("succeeds", func() {
@@ -387,7 +388,7 @@ var _ = Describe("Build", func() {
 			build.Reload()
 
 			Expect(fakeEventStore.PutCallCount()).To(Equal(1))
-			putBuild, putEvents := fakeEventStore.PutArgsForCall(0)
+			_, putBuild, putEvents := fakeEventStore.PutArgsForCall(0)
 			Expect(putBuild).To(BeIdenticalTo(build))
 			Expect(putEvents).To(ConsistOf(event.Status{
 				Status: atc.StatusSucceeded,
@@ -407,7 +408,8 @@ var _ = Describe("Build", func() {
 
 		It("finalizes the Build in the EventStore", func() {
 			Expect(fakeEventStore.FinalizeCallCount()).To(Equal(1))
-			Expect(fakeEventStore.FinalizeArgsForCall(0)).To(BeIdenticalTo(build))
+			_, finalizedBuild := fakeEventStore.FinalizeArgsForCall(0)
+			Expect(finalizedBuild).To(BeIdenticalTo(build))
 		})
 
 		Context("when finalizing the Build in the EventStore fails", func() {
@@ -431,19 +433,19 @@ var _ = Describe("Build", func() {
 
 			Context("when there is a pending build that is not a rerun", func() {
 				BeforeEach(func() {
-					pdBuild, err = job.CreateBuild()
+					pdBuild, err = job.CreateBuild(context.TODO())
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				Context("when rerunning the latest completed build", func() {
 					BeforeEach(func() {
-						rrBuild, err = job.RerunBuild(build)
+						rrBuild, err = job.RerunBuild(context.TODO(), build)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
 					Context("when the rerun finishes and status changed", func() {
 						JustBeforeEach(func() {
-							err = rrBuild.Finish(db.BuildStatusFailed)
+							err = rrBuild.Finish(context.TODO(), db.BuildStatusFailed)
 							Expect(err).NotTo(HaveOccurred())
 						})
 
@@ -462,10 +464,10 @@ var _ = Describe("Build", func() {
 
 					Context("when there is another pending build that is not a rerun and the first pending build finishes", func() {
 						BeforeEach(func() {
-							pdBuild2, err = job.CreateBuild()
+							pdBuild2, err = job.CreateBuild(context.TODO())
 							Expect(err).NotTo(HaveOccurred())
 
-							err = pdBuild.Finish(db.BuildStatusSucceeded)
+							err = pdBuild.Finish(context.TODO(), db.BuildStatusSucceeded)
 							Expect(err).NotTo(HaveOccurred())
 						})
 
@@ -481,10 +483,10 @@ var _ = Describe("Build", func() {
 
 				Context("when rerunning the pending build and the pending build finished", func() {
 					BeforeEach(func() {
-						rrBuild, err = job.RerunBuild(pdBuild)
+						rrBuild, err = job.RerunBuild(context.TODO(), pdBuild)
 						Expect(err).NotTo(HaveOccurred())
 
-						err = pdBuild.Finish(db.BuildStatusSucceeded)
+						err = pdBuild.Finish(context.TODO(), db.BuildStatusSucceeded)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -500,10 +502,10 @@ var _ = Describe("Build", func() {
 						var rrBuild2 db.Build
 
 						JustBeforeEach(func() {
-							err = rrBuild.Finish(db.BuildStatusSucceeded)
+							err = rrBuild.Finish(context.TODO(), db.BuildStatusSucceeded)
 							Expect(err).NotTo(HaveOccurred())
 
-							rrBuild2, err = job.RerunBuild(rrBuild)
+							rrBuild2, err = job.RerunBuild(context.TODO(), rrBuild)
 							Expect(err).NotTo(HaveOccurred())
 						})
 
@@ -519,13 +521,13 @@ var _ = Describe("Build", func() {
 
 				Context("when pending build finished and rerunning a non latest build and it finishes", func() {
 					JustBeforeEach(func() {
-						err = pdBuild.Finish(db.BuildStatusErrored)
+						err = pdBuild.Finish(context.TODO(), db.BuildStatusErrored)
 						Expect(err).NotTo(HaveOccurred())
 
-						rrBuild, err = job.RerunBuild(build)
+						rrBuild, err = job.RerunBuild(context.TODO(), build)
 						Expect(err).NotTo(HaveOccurred())
 
-						err = rrBuild.Finish(db.BuildStatusSucceeded)
+						err = rrBuild.Finish(context.TODO(), db.BuildStatusSucceeded)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -576,12 +578,12 @@ var _ = Describe("Build", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				newBuild, err := job.CreateBuild()
+				newBuild, err := job.CreateBuild(context.TODO())
 				Expect(err).NotTo(HaveOccurred())
 
 				requestedSchedule := downstreamJob.ScheduleRequestedTime()
 
-				err = newBuild.Finish(db.BuildStatusSucceeded)
+				err = newBuild.Finish(context.TODO(), db.BuildStatusSucceeded)
 				Expect(err).NotTo(HaveOccurred())
 
 				found, err = downstreamJob.Reload()
@@ -595,12 +597,12 @@ var _ = Describe("Build", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				newBuild, err := job.CreateBuild()
+				newBuild, err := job.CreateBuild(context.TODO())
 				Expect(err).NotTo(HaveOccurred())
 
 				requestedSchedule := noRequestJob.ScheduleRequestedTime()
 
-				err = newBuild.Finish(db.BuildStatusSucceeded)
+				err = newBuild.Finish(context.TODO(), db.BuildStatusSucceeded)
 				Expect(err).NotTo(HaveOccurred())
 
 				found, err = noRequestJob.Reload()
@@ -641,14 +643,14 @@ var _ = Describe("Build", func() {
 		})
 
 		It("writes to the EventStore", func() {
-			err := build.SaveEvent(event.Log{
+			err := build.SaveEvent(context.TODO(), event.Log{
 				Payload: "hello",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeEventStore.PutCallCount()).To(Equal(1))
 
-			putBuild, putEvents := fakeEventStore.PutArgsForCall(0)
+			_, putBuild, putEvents := fakeEventStore.PutArgsForCall(0)
 			Expect(putBuild).To(BeIdenticalTo(build))
 			Expect(putEvents).To(ConsistOf(event.Log{
 				Payload: "hello",
@@ -661,7 +663,7 @@ var _ = Describe("Build", func() {
 			})
 
 			It("errors", func() {
-				err := build.SaveEvent(event.Log{
+				err := build.SaveEvent(context.TODO(), event.Log{
 					Payload: "hello",
 				})
 				Expect(err).To(HaveOccurred())
@@ -672,23 +674,27 @@ var _ = Describe("Build", func() {
 	Describe("Events", func() {
 		var build db.Build
 		var events db.EventSource
+		var ctx context.Context
+		var cancel context.CancelFunc
 
 		BeforeEach(func() {
 			var err error
 			build, err = team.CreateOneOffBuild()
 			Expect(err).NotTo(HaveOccurred())
 
-			events, err = build.Events()
+			ctx, cancel = context.WithCancel(context.TODO())
+
+			events, err = build.Events(ctx)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
-			db.Close(events)
+			cancel()
 		})
 
 		It("Gets from the EventStore", func() {
 			Eventually(fakeEventStore.GetCallCount).Should(Equal(1))
-			getBuild, requested, cursor := fakeEventStore.GetArgsForCall(0)
+			_, getBuild, requested, cursor := fakeEventStore.GetArgsForCall(0)
 			Expect(getBuild).To(BeIdenticalTo(build))
 			Expect(requested).To(Equal(2000))
 			Expect(*cursor).To(BeNil())
@@ -697,7 +703,7 @@ var _ = Describe("Build", func() {
 		})
 
 		It("re-Gets from the EventStore when we save an event", func() {
-			err := build.SaveEvent(event.Start{})
+			err := build.SaveEvent(context.TODO(), event.Start{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(fakeEventStore.GetCallCount).Should(Equal(2))
@@ -711,7 +717,7 @@ var _ = Describe("Build", func() {
 
 		Context("when the build is completed", func() {
 			It("ends the build event stream", func() {
-				err := build.Finish(db.BuildStatusSucceeded)
+				err := build.Finish(context.TODO(), db.BuildStatusSucceeded)
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = events.Next()
@@ -719,12 +725,11 @@ var _ = Describe("Build", func() {
 			})
 		})
 
-		Context("when the event stream is closed", func() {
+		Context("when the context is cancelled", func() {
 			It("returns an error on Next()", func() {
-				err := events.Close()
-				Expect(err).NotTo(HaveOccurred())
+				cancel()
 
-				_, err = events.Next()
+				_, err := events.Next()
 				Expect(err).To(MatchError(db.ErrBuildEventStreamClosed))
 			})
 		})
@@ -798,7 +803,7 @@ var _ = Describe("Build", func() {
 
 		Context("when the version does not exist", func() {
 			It("can save a build's output", func() {
-				build, err := job.CreateBuild()
+				build, err := job.CreateBuild(context.TODO())
 				Expect(err).ToNot(HaveOccurred())
 
 				err = build.SaveOutput("some-type", atc.Source{"some": "explicit-source"}, atc.VersionedResourceTypes{}, atc.Version{"some": "version"}, []db.ResourceConfigMetadataField{
@@ -827,7 +832,7 @@ var _ = Describe("Build", func() {
 			It("requests schedule on all jobs using the resource config", func() {
 				atc.EnableGlobalResources = true
 
-				build, err := job.CreateBuild()
+				build, err := job.CreateBuild(context.TODO())
 				Expect(err).ToNot(HaveOccurred())
 
 				pipelineConfig := atc.Config{
@@ -904,7 +909,7 @@ var _ = Describe("Build", func() {
 			})
 
 			It("does not increment the check order", func() {
-				build, err := job.CreateBuild()
+				build, err := job.CreateBuild(context.TODO())
 				Expect(err).ToNot(HaveOccurred())
 
 				err = build.SaveOutput("some-type", atc.Source{"some": "explicit-source"}, atc.VersionedResourceTypes{}, atc.Version{"some": "version"}, []db.ResourceConfigMetadataField{
@@ -927,7 +932,7 @@ var _ = Describe("Build", func() {
 			})
 
 			It("does not request schedule on all jobs using the resource config", func() {
-				build, err := job.CreateBuild()
+				build, err := job.CreateBuild(context.TODO())
 				Expect(err).ToNot(HaveOccurred())
 
 				pipelineConfig := atc.Config{
@@ -1017,7 +1022,7 @@ var _ = Describe("Build", func() {
 						})
 
 						It("saves the output", func() {
-							build, err := job.CreateBuild()
+							build, err := job.CreateBuild(context.TODO())
 							Expect(err).ToNot(HaveOccurred())
 
 							err = build.SaveOutput(
@@ -1117,7 +1122,7 @@ var _ = Describe("Build", func() {
 		})
 
 		It("returns build inputs and outputs", func() {
-			build, err := job.CreateBuild()
+			build, err := job.CreateBuild(context.TODO())
 			Expect(err).NotTo(HaveOccurred())
 
 			// save a normal 'get'
@@ -1174,7 +1179,7 @@ var _ = Describe("Build", func() {
 
 			BeforeEach(func() {
 				var err error
-				build, err = job.CreateBuild()
+				build, err = job.CreateBuild(context.TODO())
 				Expect(err).NotTo(HaveOccurred())
 
 				// save a normal 'get'
@@ -1233,7 +1238,7 @@ var _ = Describe("Build", func() {
 
 				BeforeEach(func() {
 					var err error
-					newBuild, err = job.CreateBuild()
+					newBuild, err = job.CreateBuild(context.TODO())
 					Expect(err).NotTo(HaveOccurred())
 
 					// save a normal 'get'
@@ -1309,7 +1314,7 @@ var _ = Describe("Build", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				build, err = job.CreateBuild()
+				build, err = job.CreateBuild(context.TODO())
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -1368,7 +1373,7 @@ var _ = Describe("Build", func() {
 
 			Context("when the build is started", func() {
 				BeforeEach(func() {
-					started, err := build.Start(atc.Plan{})
+					started, err := build.Start(context.TODO(), atc.Plan{})
 					Expect(started).To(BeTrue())
 					Expect(err).NotTo(HaveOccurred())
 
@@ -1423,7 +1428,7 @@ var _ = Describe("Build", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(found).To(BeTrue())
 
-				build, err = job.CreateBuild()
+				build, err = job.CreateBuild(context.TODO())
 				Expect(err).NotTo(HaveOccurred())
 
 				expectedBuildPrep.BuildID = build.ID()
@@ -1520,7 +1525,7 @@ var _ = Describe("Build", func() {
 
 					Context("when the build is started", func() {
 						BeforeEach(func() {
-							started, err := build.Start(atc.Plan{})
+							started, err := build.Start(context.TODO(), atc.Plan{})
 							Expect(started).To(BeTrue())
 							Expect(err).NotTo(HaveOccurred())
 
@@ -1579,7 +1584,7 @@ var _ = Describe("Build", func() {
 							Expect(err).ToNot(HaveOccurred())
 							Expect(found).To(BeTrue())
 
-							newBuild, err := job.CreateBuild()
+							newBuild, err := job.CreateBuild(context.TODO())
 							Expect(err).NotTo(HaveOccurred())
 
 							err = job.SaveNextInputMapping(nil, true)
@@ -1680,7 +1685,7 @@ var _ = Describe("Build", func() {
 							Expect(err).ToNot(HaveOccurred())
 							Expect(found).To(BeTrue())
 
-							newBuild, err := job.CreateBuild()
+							newBuild, err := job.CreateBuild(context.TODO())
 							Expect(err).NotTo(HaveOccurred())
 
 							scheduled, err := job.ScheduleBuild(build)
@@ -1691,7 +1696,7 @@ var _ = Describe("Build", func() {
 							Expect(err).NotTo(HaveOccurred())
 							Expect(found).To(BeTrue())
 
-							err = newBuild.Finish(db.BuildStatusSucceeded)
+							err = newBuild.Finish(context.TODO(), db.BuildStatusSucceeded)
 							Expect(err).NotTo(HaveOccurred())
 						})
 
@@ -1944,17 +1949,17 @@ var _ = Describe("Build", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err = job.CreateBuild()
+			build, err = job.CreateBuild(context.TODO())
 			Expect(err).ToNot(HaveOccurred())
 
 			otherJob, found, err = pipeline.Job("some-other-job")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			otherBuild, err = otherJob.CreateBuild()
+			otherBuild, err = otherJob.CreateBuild(context.TODO())
 			Expect(err).ToNot(HaveOccurred())
 
-			otherBuild2, err = otherJob.CreateBuild()
+			otherBuild2, err = otherJob.CreateBuild(context.TODO())
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -2177,17 +2182,17 @@ var _ = Describe("Build", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			otherBuild, err = otherJob.CreateBuild()
+			otherBuild, err = otherJob.CreateBuild(context.TODO())
 			Expect(err).ToNot(HaveOccurred())
 
 			job, found, err = pipeline.Job("some-job")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(found).To(BeTrue())
 
-			build, err = job.CreateBuild()
+			build, err = job.CreateBuild(context.TODO())
 			Expect(err).ToNot(HaveOccurred())
 
-			retriggerBuild, err = job.RerunBuild(build)
+			retriggerBuild, err = job.RerunBuild(context.TODO(), build)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
