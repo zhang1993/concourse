@@ -1,5 +1,6 @@
 module SideBar.Views exposing (Pipeline, Team, viewTeam)
 
+import Concourse exposing (PipelineIdentifier)
 import HoverState exposing (TooltipPosition(..))
 import Html exposing (Html)
 import Html.Attributes exposing (href, id)
@@ -66,6 +67,10 @@ type alias Pipeline =
         { opacity : Styles.Opacity
         , filled : Bool
         }
+    , id :
+        { teamName : String
+        , pipelineName : String
+        }
     }
 
 
@@ -84,5 +89,9 @@ viewPipeline p =
                    ]
             )
             [ Html.text p.link.text ]
-        , Html.div (Styles.pipelineFavourite p.favIcon) []
+        , Html.div
+            (Styles.pipelineFavourite p.favIcon
+                ++ [ onClick <| Click <| SideBarStarIcon p.id ]
+            )
+            []
         ]
