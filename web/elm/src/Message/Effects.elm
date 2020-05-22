@@ -184,6 +184,7 @@ type Effect
     | GetElement DomID
     | SyncTextareaHeight DomID
     | SaveFavoritedPipelines (List Concourse.PipelineIdentifier)
+    | LoadCachedFavoritedPipelines
 
 
 type alias VersionId =
@@ -613,6 +614,9 @@ runEffect effect key csrfToken =
 
         SaveFavoritedPipelines pipelines ->
             saveToLocalStorage ( favoritedPipelinesKey, pipelines |> Json.Encode.list encodePipelineIdentifier )
+
+        LoadCachedFavoritedPipelines ->
+            loadFromLocalStorage favoritedPipelinesKey
 
         SaveCachedTeams teams ->
             saveToLocalStorage ( teamsKey, teams |> Json.Encode.list encodeTeam )

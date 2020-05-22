@@ -356,16 +356,19 @@ hasSideBar iAmLookingAtThePage =
                             , pipelineName = "pipeline"
                             }
                     )
-        , test "unfavorited pipeline has unfilled star icon" <|
-            given iHaveAnOpenSideBar_
-                >> given iClickedThePipelineGroup
-                >> when iAmLookingAtTheFirstPipeline
-                >> then_ iSeeUnfilledStarIcon
         , test "pipeline gets favorited when star icon is clicked" <|
             given iHaveAnOpenSideBar_
                 >> given iClickedThePipelineGroup
                 >> when iClickedTheFirstPipelineStar
                 >> then_ iSeeFilledStarIcon
+        , test "clicked on favorited pipeline has unfilled star icon" <|
+            given iHaveAnOpenSideBar_
+                >> given iClickedThePipelineGroup
+                >> given iClickedFavoritedPipelineStar
+                >> when iClickedTheFirstPipelineStar
+                >> then_ iSeeUnfilledStarIcon
+
+        -- zoe
         , test "pipeline list lays out vertically" <|
             given iHaveAnOpenSideBar_
                 >> given iClickedThePipelineGroup
@@ -1012,6 +1015,18 @@ iClickedThePipelineGroup =
             (TopLevelMessage.Update <| Message.Click <| Message.SideBarTeam "team")
 
 
+iClickedFavoritedPipelineStar =
+    Tuple.first
+        >> Application.update
+            (TopLevelMessage.Update <|
+                Message.Click <|
+                    Message.SideBarStarIcon
+                        { teamName = "team"
+                        , pipelineName = "pipeline"
+                        }
+            )
+
+
 iClickedTheFirstPipelineStar =
     Tuple.first
         >> Application.update
@@ -1026,6 +1041,16 @@ iClickedTheFirstPipelineStar =
         >> Common.queryView
         >> Query.findAll [ attribute <| Attr.attribute "aria-label" "Favorite Icon" ]
         >> Query.index 0
+
+
+iAmLookingAtThePreviousPipelineStar =
+    iAmLookingAtTheFirstPipeline
+        >> Query.findAll [ attribute <| Attr.attribute "aria-label" "Favorite Icon" ]
+        >> Query.index 0
+
+
+
+-- zoe
 
 
 iSeeADownPointingArrow =
