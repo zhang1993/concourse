@@ -381,7 +381,7 @@ func (b *build) Start(ctx context.Context, plan atc.Plan) (bool, error) {
 		return false, err
 	}
 
-	err = b.conn.Bus().Notify(ctx, atc.ComponentBuildTracker)
+	err = b.conn.Bus().Notify(ctx, atc.ComponentBuildTracker, "")
 	if err != nil {
 		return false, err
 	}
