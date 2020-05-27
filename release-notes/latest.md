@@ -100,3 +100,7 @@ Currently the only API action that can be limited in this way is `ListAllJobs` -
 #### <sub><sup><a name="5706" href="#5706">:link:</a></sup></sub> feature
 
 * @evanchaoli added spans for the `load_var` and `set_pipeline` steps when [distributed tracing](https://concourse-ci.org/tracing.html) is enabled. #5706
+
+#### <sub><sup><a name="5390" href="#5390">:link:</a></sup></sub> fix
+
+* Add `--include-archive` flag for `fly pipelines` command.
