@@ -89,6 +89,7 @@ import (
 
 	// dynamically registered event stores
 	_ "github.com/concourse/concourse/atc/events/elasticsearch"
+	_ "github.com/concourse/concourse/atc/events/plugin"
 )
 
 const algorithmLimitRows = 100

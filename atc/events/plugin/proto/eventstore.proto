@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package proto;
+
+import "google/protobuf/timestamp.proto";
+
+message Build {
+    int32 id = 1;
+    string name = 2;
+    int32 job_id = 3;
+    string job_name = 4;
+    int32 pipeline_id = 5;
+    string pipeline_name = 6;
+    int32 team_id = 7;
+    string team_name = 8;
+    string status = 9;
+    google.protobuf.Timestamp start_time = 10;
+    google.protobuf.Timestamp end_time = 11;
+    bool is_completed = 12;
+    int32 rerun_of = 13;
+    string rerun_of_name = 14;
+    int32 rerun_number = 15;
+}
+
+message Pipeline {
+    int32 id = 1;
+    string name = 2;
+    int32 team_id = 3;
+    string team_name = 4;
+}
+
+message Team {
+    int32 id = 1;
+    string name = 2;
+}
+
+message Event {
+    string event = 1;
+    string version = 2;
+    bytes data = 3;
+}
+
+message Key {
+    repeated int64 values = 1;
+}
+
+service EventStore {
+    rpc Setup(Setup.Request) returns (Setup.Response);
+    rpc Close(Close.Request) returns (Close.Response);
+
+    rpc Initialize(Initialize.Request) returns (Initialize.Response);
+    rpc Finalize(Finalize.Request) returns (Finalize.Response);
+
+    rpc Put(Put.Request) returns (Put.Response);
+    rpc Get(Get.Request) returns (Get.Response);
+
+    rpc Delete(Delete.Request) returns (Delete.Response);
+    rpc DeletePipeline(DeletePipeline.Request) returns (DeletePipeline.Response);
+    rpc DeleteTeam(DeleteTeam.Request) returns (DeleteTeam.Response);
+}
+
+message Setup {
+    message Request {
+    }
+    message Response {
+    }
+}
+
+message Close {
+    message Request {
+    }
+    message Response {
+    }
+}
+
+message Initialize {
+    message Request {
+        Build build = 1;
+    }
+    message Response {
+    }
+}
+
+message Finalize {
+    message Request {
+        Build build = 1;
+    }
+    message Response {
+    }
+}
+
+message Put {
+    message Request {
+        Build build = 1;
+        repeated Event events = 2;
+    }
+    message Response {
+        Key key = 1;
+    }
+}
+
+message Get {
+    message Request {
+        Build build = 1;
+        int32 requested = 2;
+        Key cursor = 3;
+    }
+    message Response {
+        repeated Event events = 1;
+        Key cursor = 2;
+    }
+}
+
+message Delete {
+    message Request {
+        repeated Build builds = 1;
+    }
+    message Response {
+    }
+}
+
+message DeletePipeline {
+    message Request {
+        Pipeline pipeline = 1;
+    }
+    message Response {
+    }
+}
+
+message DeleteTeam {
+    message Request {
+        Team team = 1;
+    }
+    message Response {
+    }
+}
