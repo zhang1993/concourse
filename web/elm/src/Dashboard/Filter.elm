@@ -44,27 +44,23 @@ filterGroups :
     , jobs : Dict ( String, String, String ) Concourse.Job
     , query : String
     , teams : List Concourse.Team
-    , pipelines : List Pipeline
+    , pipelines : Dict String (List Pipeline)
     }
     -> List Group
 filterGroups { pipelineJobs, jobs, query, teams, pipelines } =
     let
         groupsToFilter =
-            pipelines
-                |> List.foldr
-                    (\p ->
-                        Dict.update p.teamName
-                            (Maybe.withDefault []
-                                >> (::) p
-                                >> Just
-                            )
-                    )
-                    (teams
-                        |> List.map (\team -> ( team.name, [] ))
-                        |> Dict.fromList
-                    )
+            teams
+                |> List.map (\t -> ( t.name, [] ))
+                |> Dict.fromList
+                |> Dict.union pipelines
                 |> Dict.toList
-                |> List.map (\( k, v ) -> { teamName = k, pipelines = v })
+                |> List.map
+                    (\( t, p ) ->
+                        { teamName = t
+                        , pipelines = p
+                        }
+                    )
     in
     if query == "" then
         groupsToFilter
