@@ -65,6 +65,7 @@ var factoryTests = []PlannerTest{
 			},
 		},
 		PlanJSON: `{
+			"id": "(unique)",
 			"get": {
 				"name": "some-name",
 				"type": "some-resource-type",
@@ -185,6 +186,7 @@ var factoryTests = []PlannerTest{
 		`,
 
 		PlanJSON: `{
+			"id": "(unique)",
 			"task": {
 				"name": "some-task",
 				"privileged": true,
@@ -221,6 +223,7 @@ var factoryTests = []PlannerTest{
 		`,
 
 		PlanJSON: `{
+			"id": "(unique)",
 			"set_pipeline": {
 				"name": "some-pipeline",
 				"file": "some-pipeline-file",
@@ -240,6 +243,7 @@ var factoryTests = []PlannerTest{
 		`,
 
 		PlanJSON: `{
+			"id": "(unique)",
 			"load_var": {
 				"name": "some-var",
 				"file": "some-pipeline-file",
@@ -258,8 +262,10 @@ var factoryTests = []PlannerTest{
 		`,
 
 		PlanJSON: `{
+			"id": "(unique)",
 			"try": {
 				"step": {
+					"id": "(unique)",
 					"load_var": {
 						"name": "some-var",
 						"file": "some-file"
@@ -280,14 +286,17 @@ var factoryTests = []PlannerTest{
 		`,
 
 		PlanJSON: `{
+			"id": "(unique)",
 			"do": [
 				{
+					"id": "(unique)",
 					"load_var": {
 						"name": "some-var",
 						"file": "some-file"
 					}
 				},
 				{
+					"id": "(unique)",
 					"load_var": {
 						"name": "some-other-var",
 						"file": "some-other-file"
@@ -308,15 +317,18 @@ var factoryTests = []PlannerTest{
 		`,
 
 		PlanJSON: `{
+			"id": "(unique)",
 			"in_parallel": {
 				"steps": [
 					{
+						"id": "(unique)",
 						"load_var": {
 							"name": "some-var",
 							"file": "some-file"
 						}
 					},
 					{
+						"id": "(unique)",
 						"load_var": {
 							"name": "some-other-var",
 							"file": "some-other-file"
@@ -341,15 +353,18 @@ var factoryTests = []PlannerTest{
 		`,
 
 		PlanJSON: `{
+			"id": "(unique)",
 			"in_parallel": {
 				"steps": [
 					{
+						"id": "(unique)",
 						"load_var": {
 							"name": "some-var",
 							"file": "some-file"
 						}
 					},
 					{
+						"id": "(unique)",
 						"load_var": {
 							"name": "some-other-var",
 							"file": "some-other-file"
@@ -373,14 +388,17 @@ var factoryTests = []PlannerTest{
 		`,
 
 		PlanJSON: `{
+			"id": "(unique)",
 			"aggregate": [
 				{
+					"id": "(unique)",
 					"load_var": {
 						"name": "some-var",
 						"file": "some-file"
 					}
 				},
 				{
+					"id": "(unique)",
 					"load_var": {
 						"name": "some-other-var",
 						"file": "some-other-file"
@@ -399,8 +417,10 @@ var factoryTests = []PlannerTest{
 		`,
 
 		PlanJSON: `{
+			"id": "(unique)",
 			"timeout": {
 				"step": {
+					"id": "(unique)",
 					"load_var": {
 						"name": "some-var",
 						"file": "some-file"
@@ -458,10 +478,13 @@ var factoryTests = []PlannerTest{
 		`,
 
 		PlanJSON: `{
+			"id": "(unique)",
 			"retry": [
 				{
+					"id": "(unique)",
 					"timeout": {
 						"step": {
+							"id": "(unique)",
 							"load_var": {
 								"name": "some-var",
 								"file": "some-file"
@@ -471,8 +494,10 @@ var factoryTests = []PlannerTest{
 					}
 				},
 				{
+					"id": "(unique)",
 					"timeout": {
 						"step": {
+							"id": "(unique)",
 							"load_var": {
 								"name": "some-var",
 								"file": "some-file"
@@ -482,8 +507,10 @@ var factoryTests = []PlannerTest{
 					}
 				},
 				{
+					"id": "(unique)",
 					"timeout": {
 						"step": {
+							"id": "(unique)",
 							"load_var": {
 								"name": "some-var",
 								"file": "some-file"
@@ -511,14 +538,17 @@ func init() {
 			`, hookType),
 
 			PlanJSON: fmt.Sprintf(`{
+				"id": "(unique)",
 				"%s": {
 					"step": {
+						"id": "(unique)",
 						"load_var": {
 							"name": "some-var",
 							"file": "some-file"
 						}
 					},
 					"%s": {
+						"id": "(unique)",
 						"load_var": {
 							"name": "some-hook-var",
 							"file": "some-hook-file"
@@ -540,10 +570,13 @@ func init() {
 
 			// timeout applies to inner step, not hook
 			PlanJSON: fmt.Sprintf(`{
+				"id": "(unique)",
 				"%s": {
 					"step": {
+						"id": "(unique)",
 						"timeout": {
 							"step": {
+								"id": "(unique)",
 								"load_var": {
 									"name": "some-var",
 									"file": "some-file"
@@ -553,6 +586,7 @@ func init() {
 						}
 					},
 					"%s": {
+						"id": "(unique)",
 						"load_var": {
 							"name": "some-hook-var",
 							"file": "some-hook-file"
@@ -574,22 +608,27 @@ func init() {
 
 			// timeout applies to inner step, not hook
 			PlanJSON: fmt.Sprintf(`{
+				"id": "(unique)",
 				"%s": {
 					"step": {
+						"id": "(unique)",
 						"retry": [
 							{
+								"id": "(unique)",
 								"load_var": {
 									"name": "some-var",
 									"file": "some-file"
 								}
 							},
 							{
+								"id": "(unique)",
 								"load_var": {
 									"name": "some-var",
 									"file": "some-file"
 								}
 							},
 							{
+								"id": "(unique)",
 								"load_var": {
 									"name": "some-var",
 									"file": "some-file"
@@ -598,6 +637,7 @@ func init() {
 						]
 					},
 					"%s": {
+						"id": "(unique)",
 						"load_var": {
 							"name": "some-hook-var",
 							"file": "some-hook-file"
@@ -624,16 +664,20 @@ func init() {
 			`, hookType),
 
 			PlanJSON: fmt.Sprintf(`{
+				"id": "(unique)",
 				"ensure": {
 					"step": {
+						"id": "(unique)",
 						"%s": {
 							"step": {
+								"id": "(unique)",
 								"load_var": {
 									"name": "some-var",
 									"file": "some-file"
 								}
 							},
 							"%s": {
+								"id": "(unique)",
 								"load_var": {
 									"name": "some-hook-var",
 									"file": "some-hook-file"
@@ -642,6 +686,7 @@ func init() {
 						}
 					},
 					"ensure": {
+						"id": "(unique)",
 						"load_var": {
 							"name": "some-ensure-var",
 							"file": "some-ensure-file"
@@ -682,7 +727,7 @@ func (test PlannerTest) Run(s *PlannerSuite) {
 
 		// strip out the IDs, we don't really care what their value is
 		if !test.CompareIDs {
-			p.ID = ""
+			p.ID = "(unique)"
 		}
 	})
 	s.NotEmpty(seenIDs)
